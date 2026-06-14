@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "@clerk/react";
-import { useGetMyProfile } from "@workspace/api-client-react";
+import { useAuthContext } from "./AuthContext";
 import { isAdminAuthenticated } from "./adminAuth";
 
 export interface RoleState {
@@ -15,30 +14,26 @@ export interface RoleState {
 }
 
 export function useRole(): RoleState {
-  const { isSignedIn, isLoaded } = useAuth();
+  const { user, isLoading } = useAuthContext();
   const [isAdminSession, setIsAdminSession] = useState(false);
 
   useEffect(() => {
     setIsAdminSession(isAdminAuthenticated());
   }, []);
 
-  const { data: profile } = useGetMyProfile({
-    query: { enabled: isSignedIn === true },
-  });
-
-  const isClerkAdmin = (profile as any)?.isAdmin === true;
-  const isBanned = (profile as any)?.isBanned === true;
+  const isClerkAdmin = user?.isAdmin === true;
+  const isBanned = user?.isBanned === true;
   const isAdmin = isAdminSession || isClerkAdmin;
-  const isUser = isSignedIn === true && !isBanned;
+  const isUser = !!user && !isBanned;
 
   return {
-    isLoaded: isLoaded || isAdminSession,
-    isGuest: !isSignedIn && !isAdmin,
+    isLoaded: !isLoading || isAdminSession,
+    isGuest: !user && !isAdmin,
     isUser,
     isAdmin,
     isAdminSession,
     isClerkAdmin,
     isBanned,
-    profile,
+    profile: user,
   };
 }

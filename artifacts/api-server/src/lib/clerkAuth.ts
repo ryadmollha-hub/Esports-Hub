@@ -1,15 +1,9 @@
-import { getAuth } from "@clerk/express";
 import type { Request } from "express";
 
 /**
- * Safely get the Clerk userId from a request.
- * Returns null if Clerk middleware failed to initialize (e.g. missing secret key).
+ * Get the authenticated user ID from the JWT-verified request.
+ * Returns null if not authenticated.
  */
 export function safeGetUserId(req: Request): string | null {
-  try {
-    const { userId } = getAuth(req);
-    return userId ?? null;
-  } catch {
-    return null;
-  }
+  return (req as any).userId ?? null;
 }

@@ -9,9 +9,11 @@ import announcementsRouter from "./announcements";
 import usersRouter from "./users";
 import adminRouter from "./admin";
 import walletRouter from "./wallet";
+import authRouter from "./auth";
 
 const router: IRouter = Router();
 
+router.use(authRouter);
 router.use(healthRouter);
 router.use(tournamentsRouter);
 router.use(registrationsRouter);

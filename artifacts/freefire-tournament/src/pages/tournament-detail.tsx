@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import { useGetTournament, getGetTournamentQueryKey } from "@workspace/api-client-react";
-import { useAuth } from "@clerk/react";
+import { useAuth } from "@/lib/AuthContext";
 
 const modeColors: Record<string, string> = {
   solo: "bg-blue-500/20 text-blue-400 border-blue-500/30",

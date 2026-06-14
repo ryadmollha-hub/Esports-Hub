@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/react";
+import { useAuth } from "@/lib/AuthContext";
 import { useLocation } from "wouter";
 import { Shield, Users, Crown, Check, X, Plus } from "lucide-react";
 import { useForm } from "react-hook-form";

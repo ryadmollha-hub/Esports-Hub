@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { getAuth } from "@clerk/express";
+import { safeGetUserId } from "../lib/clerkAuth";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -28,9 +28,9 @@ function isValidAdminToken(req: any): boolean {
 
 async function requireAdmin(req: any, res: any): Promise<boolean> {
   if (isValidAdminToken(req)) return true;
+  const userId = safeGetUserId(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return false; }
   try {
-    const { userId } = getAuth(req);
-    if (!userId) { res.status(401).json({ error: "Unauthorized" }); return false; }
     const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
     if (!user?.isAdmin) { res.status(403).json({ error: "Forbidden" }); return false; }
     return true;

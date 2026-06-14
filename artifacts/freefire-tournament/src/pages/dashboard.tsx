@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useAuth, useUser } from "@clerk/react";
 import { useLocation, Link } from "wouter";
 import {
   Trophy, Users, Calendar, Shield, Clock, CheckCircle, XCircle,
@@ -9,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useGetMyRegistrations, useGetMyTeam, useGetMyProfile, useUpdateMyProfile } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthContext } from "@/lib/AuthContext";
 
 type DashTab = "profile" | "tournaments" | "team" | "deposits" | "withdrawals";
 
@@ -27,15 +27,14 @@ const statusIcon: Record<string, JSX.Element> = {
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function DashboardPage() {
-  const { isSignedIn, isLoaded } = useAuth();
-  const { user: clerkUser } = useUser();
+  const { user: authUser, isLoading, authFetch } = useAuthContext();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<DashTab>("profile");
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) setLocation("/sign-in");
-  }, [isLoaded, isSignedIn]);
+    if (!isLoading && !authUser) setLocation("/sign-in");
+  }, [isLoading, authUser]);
 
   const { data: registrations = [], isLoading: loadingRegs } = useGetMyRegistrations();
   const { data: myTeam } = useGetMyTeam();
@@ -46,19 +45,15 @@ export default function DashboardPage() {
   const regs = registrations as any[];
   const prof = profile as any;
 
-  // Wallet state
   const [walletTxs, setWalletTxs] = useState<any[]>([]);
   const [loadingWallet, setLoadingWallet] = useState(false);
 
-  // Edit profile state
   const [editing, setEditing] = useState(false);
   const [pForm, setPForm] = useState({ username: "", displayName: "", freefireUid: "", freefireNickname: "" });
 
-  // Deposit form
   const [showDepositForm, setShowDepositForm] = useState(false);
   const [depositForm, setDepositForm] = useState({ amount: "", method: "bkash", accountNumber: "", transactionId: "", screenshot: "" });
 
-  // Withdraw form
   const [showWithdrawForm, setShowWithdrawForm] = useState(false);
   const [withdrawForm, setWithdrawForm] = useState({ amount: "", method: "bkash", accountNumber: "" });
 
@@ -76,7 +71,7 @@ export default function DashboardPage() {
   const loadWallet = async () => {
     setLoadingWallet(true);
     try {
-      const res = await fetch(`${BASE}/api/wallet/my-transactions`, { credentials: "include" });
+      const res = await authFetch("/wallet/my-transactions");
       if (res.ok) setWalletTxs(await res.json());
     } catch {} finally { setLoadingWallet(false); }
   };
@@ -89,10 +84,7 @@ export default function DashboardPage() {
     updateProfile.mutate(
       { data: pForm },
       {
-        onSuccess: () => {
-          toast({ title: "Profile updated" });
-          setEditing(false);
-        },
+        onSuccess: () => { toast({ title: "Profile updated" }); setEditing(false); },
         onError: () => toast({ title: "Failed to update profile", variant: "destructive" }),
       }
     );
@@ -101,10 +93,8 @@ export default function DashboardPage() {
   const submitDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${BASE}/api/wallet/deposit`, {
+      const res = await authFetch("/wallet/deposit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ ...depositForm, amount: parseFloat(depositForm.amount) }),
       });
       if (res.ok) {
@@ -116,18 +106,14 @@ export default function DashboardPage() {
         const d = await res.json();
         toast({ title: "Error", description: d.error, variant: "destructive" });
       }
-    } catch {
-      toast({ title: "Connection error", variant: "destructive" });
-    }
+    } catch { toast({ title: "Connection error", variant: "destructive" }); }
   };
 
   const submitWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch(`${BASE}/api/wallet/withdraw`, {
+      const res = await authFetch("/wallet/withdraw", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ ...withdrawForm, amount: parseFloat(withdrawForm.amount) }),
       });
       if (res.ok) {
@@ -139,9 +125,7 @@ export default function DashboardPage() {
         const d = await res.json();
         toast({ title: "Error", description: d.error, variant: "destructive" });
       }
-    } catch {
-      toast({ title: "Connection error", variant: "destructive" });
-    }
+    } catch { toast({ title: "Connection error", variant: "destructive" }); }
   };
 
   const approved = regs.filter((r) => r.status === "approved").length;
@@ -163,26 +147,30 @@ export default function DashboardPage() {
     </span>
   );
 
+  if (isLoading) return (
+    <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+      <div className="text-[#a0a0b0] animate-pulse">Loading...</div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
       <div className="max-w-5xl mx-auto px-4 pt-24 pb-16">
 
-        {/* Profile header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-8">
-          {clerkUser?.imageUrl && (
-            <img src={clerkUser.imageUrl} alt={clerkUser.fullName ?? ""} className="w-16 h-16 rounded-full border-2 border-[#ff6b00]" />
-          )}
+          <div className="w-16 h-16 rounded-full bg-[#ff6b00]/20 border-2 border-[#ff6b00] flex items-center justify-center">
+            <User className="w-8 h-8 text-[#ff6b00]" />
+          </div>
           <div>
             <h1 className="text-2xl font-black">
-              Welcome, <span className="text-[#ff6b00]">{prof?.displayName ?? prof?.username ?? clerkUser?.firstName ?? "Player"}</span>
+              Welcome, <span className="text-[#ff6b00]">{prof?.displayName ?? prof?.username ?? authUser?.username ?? "Player"}</span>
             </h1>
-            <p className="text-[#a0a0b0] text-sm">{clerkUser?.primaryEmailAddress?.emailAddress}</p>
+            <p className="text-[#a0a0b0] text-sm">{authUser?.email}</p>
             {prof?.freefireNickname && <p className="text-[#a0a0b0] text-sm">FF: {prof.freefireNickname} <span className="font-mono">({prof.freefireUid})</span></p>}
           </div>
         </div>
 
-        {/* Quick stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
           {[
             { label: "Registered", value: regs.length, icon: Trophy, color: "text-[#ff6b00]" },
@@ -198,7 +186,6 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-1 overflow-x-auto pb-1 mb-6">
           {dashTabs.map((tab) => (
             <button
@@ -215,7 +202,6 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* PROFILE TAB */}
         {activeTab === "profile" && (
           <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-6">
             <div className="flex items-center justify-between mb-5">
@@ -260,7 +246,7 @@ export default function DashboardPage() {
                 {[
                   { label: "Username", value: prof?.username ?? "Not set" },
                   { label: "Display Name", value: prof?.displayName ?? "Not set" },
-                  { label: "Email", value: clerkUser?.primaryEmailAddress?.emailAddress ?? "Not set" },
+                  { label: "Email", value: authUser?.email ?? "Not set" },
                   { label: "Free Fire UID", value: prof?.freefireUid ?? "Not set" },
                   { label: "FF Nickname", value: prof?.freefireNickname ?? "Not set" },
                   { label: "Member Since", value: prof?.createdAt ? new Date(prof.createdAt).toLocaleDateString() : "—" },
@@ -277,7 +263,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* TOURNAMENTS TAB */}
         {activeTab === "tournaments" && (
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -290,9 +275,7 @@ export default function DashboardPage() {
               <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center">
                 <Trophy className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/30" />
                 <p className="text-[#a0a0b0] mb-4">No tournament registrations yet</p>
-                <Link href="/tournaments" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-bold uppercase text-sm rounded-xl hover:bg-[#e66000] transition-all">
-                  Browse Tournaments
-                </Link>
+                <Link href="/tournaments" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-bold uppercase text-sm rounded-xl hover:bg-[#e66000] transition-all">Browse Tournaments</Link>
               </div>
             ) : (
               <div className="space-y-3">
@@ -303,9 +286,7 @@ export default function DashboardPage() {
                       <div className="text-[#a0a0b0] text-xs mt-0.5">UID: <span className="font-mono">{reg.freefireUid}</span> — {reg.playerName}</div>
                       <div className="text-[#a0a0b0] text-xs">{new Date(reg.createdAt).toLocaleDateString()}</div>
                     </div>
-                    <div className="shrink-0">
-                      {txStatusBadge(reg.status)}
-                    </div>
+                    <div className="shrink-0">{txStatusBadge(reg.status)}</div>
                   </div>
                 ))}
               </div>
@@ -313,7 +294,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* TEAM TAB */}
         {activeTab === "team" && (
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -363,15 +343,12 @@ export default function DashboardPage() {
               <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center">
                 <Shield className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/30" />
                 <p className="text-[#a0a0b0] mb-4">You are not part of a team yet</p>
-                <Link href="/teams/my" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-bold uppercase text-sm rounded-xl hover:bg-[#e66000] transition-all">
-                  Create or Join a Team
-                </Link>
+                <Link href="/teams/my" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-bold uppercase text-sm rounded-xl hover:bg-[#e66000] transition-all">Create or Join a Team</Link>
               </div>
             )}
           </div>
         )}
 
-        {/* DEPOSITS TAB */}
         {activeTab === "deposits" && (
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -380,35 +357,16 @@ export default function DashboardPage() {
                 <ArrowDownCircle className="w-4 h-4" /> Request Deposit
               </button>
             </div>
-
             {showDepositForm && (
               <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-4">
                 <h3 className="font-black uppercase text-[#ff6b00] mb-4">New Deposit Request</h3>
-                <p className="text-[#a0a0b0] text-sm mb-4">Send money to admin via BKash or Nagad, then submit this form with your transaction details. Admin will approve within 24 hours.</p>
+                <p className="text-[#a0a0b0] text-sm mb-4">Send money via BKash or Nagad, then submit this form. Admin will approve within 24 hours.</p>
                 <form onSubmit={submitDeposit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Amount (৳) *</label>
-                    <input type="number" value={depositForm.amount} onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })} required min="1" placeholder="100" className="dash-input" />
-                  </div>
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Payment Method *</label>
-                    <select value={depositForm.method} onChange={(e) => setDepositForm({ ...depositForm, method: e.target.value })} className="dash-input">
-                      <option value="bkash">BKash</option>
-                      <option value="nagad">Nagad</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Your Account Number *</label>
-                    <input value={depositForm.accountNumber} onChange={(e) => setDepositForm({ ...depositForm, accountNumber: e.target.value })} required placeholder="01XXXXXXXXX" className="dash-input" />
-                  </div>
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Transaction ID</label>
-                    <input value={depositForm.transactionId} onChange={(e) => setDepositForm({ ...depositForm, transactionId: e.target.value })} placeholder="TX ID from payment app" className="dash-input" />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Screenshot URL (optional)</label>
-                    <input value={depositForm.screenshot} onChange={(e) => setDepositForm({ ...depositForm, screenshot: e.target.value })} placeholder="https://..." className="dash-input" />
-                  </div>
+                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Amount (৳) *</label><input type="number" value={depositForm.amount} onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })} required min="1" placeholder="100" className="dash-input" /></div>
+                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Payment Method *</label><select value={depositForm.method} onChange={(e) => setDepositForm({ ...depositForm, method: e.target.value })} className="dash-input"><option value="bkash">BKash</option><option value="nagad">Nagad</option></select></div>
+                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Your Account Number *</label><input value={depositForm.accountNumber} onChange={(e) => setDepositForm({ ...depositForm, accountNumber: e.target.value })} required placeholder="01XXXXXXXXX" className="dash-input" /></div>
+                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Transaction ID</label><input value={depositForm.transactionId} onChange={(e) => setDepositForm({ ...depositForm, transactionId: e.target.value })} placeholder="TX ID from payment app" className="dash-input" /></div>
+                  <div className="md:col-span-2"><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Screenshot URL (optional)</label><input value={depositForm.screenshot} onChange={(e) => setDepositForm({ ...depositForm, screenshot: e.target.value })} placeholder="https://..." className="dash-input" /></div>
                   <div className="md:col-span-2 flex gap-3">
                     <button type="submit" className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">Submit Request</button>
                     <button type="button" onClick={() => setShowDepositForm(false)} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">Cancel</button>
@@ -416,14 +374,10 @@ export default function DashboardPage() {
                 </form>
               </div>
             )}
-
             {loadingWallet ? (
               <div className="space-y-3">{[1,2].map((i) => <div key={i} className="h-16 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
             ) : deposits.length === 0 ? (
-              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center">
-                <ArrowDownCircle className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/30" />
-                <p className="text-[#a0a0b0]">No deposit requests yet</p>
-              </div>
+              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center"><ArrowDownCircle className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/30" /><p className="text-[#a0a0b0]">No deposit requests yet</p></div>
             ) : (
               <div className="space-y-3">
                 {deposits.map((tx: any) => (
@@ -442,7 +396,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* WITHDRAWALS TAB */}
         {activeTab === "withdrawals" && (
           <div>
             <div className="flex items-center justify-between mb-4">
@@ -451,27 +404,14 @@ export default function DashboardPage() {
                 <ArrowUpCircle className="w-4 h-4" /> Request Withdrawal
               </button>
             </div>
-
             {showWithdrawForm && (
               <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-4">
                 <h3 className="font-black uppercase text-[#ff6b00] mb-4">New Withdrawal Request</h3>
-                <p className="text-[#a0a0b0] text-sm mb-4">Submit a withdrawal request. Admin will send money to your BKash or Nagad account within 24 hours after approval.</p>
+                <p className="text-[#a0a0b0] text-sm mb-4">Admin will send money to your account within 24 hours after approval.</p>
                 <form onSubmit={submitWithdraw} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Amount (৳) *</label>
-                    <input type="number" value={withdrawForm.amount} onChange={(e) => setWithdrawForm({ ...withdrawForm, amount: e.target.value })} required min="1" placeholder="100" className="dash-input" />
-                  </div>
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Payment Method *</label>
-                    <select value={withdrawForm.method} onChange={(e) => setWithdrawForm({ ...withdrawForm, method: e.target.value })} className="dash-input">
-                      <option value="bkash">BKash</option>
-                      <option value="nagad">Nagad</option>
-                    </select>
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Your Account Number *</label>
-                    <input value={withdrawForm.accountNumber} onChange={(e) => setWithdrawForm({ ...withdrawForm, accountNumber: e.target.value })} required placeholder="01XXXXXXXXX" className="dash-input" />
-                  </div>
+                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Amount (৳) *</label><input type="number" value={withdrawForm.amount} onChange={(e) => setWithdrawForm({ ...withdrawForm, amount: e.target.value })} required min="1" placeholder="100" className="dash-input" /></div>
+                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Payment Method *</label><select value={withdrawForm.method} onChange={(e) => setWithdrawForm({ ...withdrawForm, method: e.target.value })} className="dash-input"><option value="bkash">BKash</option><option value="nagad">Nagad</option></select></div>
+                  <div className="md:col-span-2"><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Your Account Number *</label><input value={withdrawForm.accountNumber} onChange={(e) => setWithdrawForm({ ...withdrawForm, accountNumber: e.target.value })} required placeholder="01XXXXXXXXX" className="dash-input" /></div>
                   <div className="md:col-span-2 flex gap-3">
                     <button type="submit" className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">Submit Request</button>
                     <button type="button" onClick={() => setShowWithdrawForm(false)} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">Cancel</button>
@@ -479,14 +419,10 @@ export default function DashboardPage() {
                 </form>
               </div>
             )}
-
             {loadingWallet ? (
               <div className="space-y-3">{[1,2].map((i) => <div key={i} className="h-16 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
             ) : withdrawals.length === 0 ? (
-              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center">
-                <ArrowUpCircle className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/30" />
-                <p className="text-[#a0a0b0]">No withdrawal requests yet</p>
-              </div>
+              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center"><ArrowUpCircle className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/30" /><p className="text-[#a0a0b0]">No withdrawal requests yet</p></div>
             ) : (
               <div className="space-y-3">
                 {withdrawals.map((tx: any) => (
@@ -505,7 +441,6 @@ export default function DashboardPage() {
             )}
           </div>
         )}
-
       </div>
       <Footer />
     </div>

@@ -8,6 +8,7 @@ export const usersTable = pgTable("users", {
   username: text("username"),
   displayName: text("display_name"),
   email: text("email"),
+  passwordHash: text("password_hash"),
   avatarUrl: text("avatar_url"),
   freefireUid: text("freefire_uid"),
   freefireNickname: text("freefire_nickname"),

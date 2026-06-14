@@ -21,11 +21,16 @@ async function getOrCreateUser(clerkId: string, clerkUser?: { email?: string; us
   return created;
 }
 
+function sanitize(user: any) {
+  const { passwordHash, ...safe } = user;
+  return safe;
+}
+
 router.get("/users/me", async (req, res) => {
   const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await getOrCreateUser(userId);
-  res.json(user);
+  res.json(sanitize(user));
 });
 
 router.patch("/users/me", async (req, res) => {
@@ -48,14 +53,14 @@ router.patch("/users/me", async (req, res) => {
     })
     .where(eq(usersTable.clerkId, userId))
     .returning();
-  res.json(updated);
+  res.json(sanitize(updated));
 });
 
 router.get("/users/:id", async (req, res) => {
   const id = req.params.id;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, id));
   if (!user) return res.status(404).json({ error: "User not found" });
-  res.json(user);
+  res.json(sanitize(user));
 });
 
 export default router;

@@ -4,7 +4,7 @@ import { Link } from "wouter";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useListTeams, useRequestJoinTeam, getListTeamsQueryKey } from "@workspace/api-client-react";
-import { useAuth } from "@clerk/react";
+import { useAuth } from "@/lib/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 

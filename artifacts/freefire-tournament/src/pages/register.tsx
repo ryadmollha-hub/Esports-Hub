@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
-import { useAuth } from "@clerk/react";
+import { useAuth } from "@/lib/AuthContext";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";

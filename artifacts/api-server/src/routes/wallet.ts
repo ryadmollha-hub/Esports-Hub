@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { getAuth } from "@clerk/express";
+import { safeGetUserId } from "../lib/clerkAuth";
 import { db } from "@workspace/db";
 import { walletTransactionsTable, usersTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
@@ -13,13 +13,8 @@ function isValidAdminToken(req: any): boolean {
   return token === expected;
 }
 
-async function getClerkUserId(req: any): Promise<string | null> {
-  try {
-    const { userId } = getAuth(req);
-    return userId ?? null;
-  } catch {
-    return null;
-  }
+function getClerkUserId(req: any): string | null {
+  return safeGetUserId(req);
 }
 
 router.post("/wallet/deposit", async (req, res) => {
