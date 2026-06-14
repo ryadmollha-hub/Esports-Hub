@@ -1,4 +1,3 @@
-import { useState, useEffect } from "react";
 import { useAuthContext } from "./AuthContext";
 import { isAdminAuthenticated } from "./adminAuth";
 
@@ -15,12 +14,8 @@ export interface RoleState {
 
 export function useRole(): RoleState {
   const { user, isLoading } = useAuthContext();
-  const [isAdminSession, setIsAdminSession] = useState(false);
 
-  useEffect(() => {
-    setIsAdminSession(isAdminAuthenticated());
-  }, []);
-
+  const isAdminSession = isAdminAuthenticated();
   const isClerkAdmin = user?.isAdmin === true;
   const isBanned = user?.isBanned === true;
   const isAdmin = isAdminSession || isClerkAdmin;

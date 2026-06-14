@@ -292,7 +292,7 @@ export default function WalletPage() {
 
       {/* Deposit Modal */}
       {activeModal === "deposit" && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 backdrop-blur-sm">
           <div className="w-full max-w-lg bg-[#0d0d16] border-t border-[#ff6b00]/20 rounded-t-3xl p-6 pb-10">
             <div className="flex items-center justify-between mb-5">
               <div>
@@ -335,7 +335,7 @@ export default function WalletPage() {
 
       {/* Withdraw Modal */}
       {activeModal === "withdraw" && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 backdrop-blur-sm">
           <div className="w-full max-w-lg bg-[#0d0d16] border-t border-[#ff6b00]/20 rounded-t-3xl p-6 pb-10">
             <div className="flex items-center justify-between mb-5">
               <div>

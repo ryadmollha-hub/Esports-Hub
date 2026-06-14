@@ -50,12 +50,19 @@ export function UserRoute({ component: Component }: { component: React.Component
 
 export function AdminRoute({ component: Component }: { component: React.ComponentType }) {
   const [, setLocation] = useLocation();
-  const isAdmin = isAdminAuthenticated();
+  const { user, isLoading } = useAuthContext();
+
+  const isAdminSession = isAdminAuthenticated();
+  const isJwtAdmin = user?.isAdmin === true;
+  const isAdmin = isAdminSession || isJwtAdmin;
 
   useEffect(() => {
-    if (!isAdmin) setLocation("/admin-login");
-  }, [isAdmin]);
+    if (!isLoading && !isAdmin) {
+      setLocation("/admin-login");
+    }
+  }, [isLoading, isAdmin]);
 
-  if (!isAdmin) return <LoadingScreen />;
+  if (isLoading && !isAdminSession) return <LoadingScreen />;
+  if (!isAdmin) return null;
   return <Component />;
 }

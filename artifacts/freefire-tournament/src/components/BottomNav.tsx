@@ -16,7 +16,7 @@ export default function BottomNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user } = useAuthContext();
 
-  if (location.startsWith("/admin")) return null;
+  if (location === "/admin" || location.startsWith("/admin/")) return null;
 
   const isActive = (href: string) => {
     if (href === "/") return location === "/";

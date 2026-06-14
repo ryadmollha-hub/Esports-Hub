@@ -61,7 +61,7 @@ export default function TournamentDetailPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-5xl mx-auto px-4 pt-24 pb-16">
+      <div className="max-w-5xl mx-auto px-4 pt-24 pb-28">
         <Link href="/tournaments" data-testid="link-back-tournaments" className="inline-flex items-center gap-2 text-[#a0a0b0] hover:text-white mb-6 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Back to Tournaments
         </Link>

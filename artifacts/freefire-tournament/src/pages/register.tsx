@@ -65,7 +65,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-2xl mx-auto px-4 pt-24 pb-16">
+      <div className="max-w-2xl mx-auto px-4 pt-24 pb-28">
         <h1 className="text-4xl font-black uppercase mb-2" data-testid="heading-register">
           Tournament <span className="text-[#ff6b00]">Registration</span>
         </h1>
