@@ -1,5 +1,4 @@
 import { Router, type IRouter } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import {
   tournamentsTable,
@@ -13,6 +12,7 @@ import {
   UpdateTournamentBody,
   UpdateTournamentRoomBody,
 } from "@workspace/api-zod";
+import { safeGetUserId } from "../lib/clerkAuth";
 
 const router: IRouter = Router();
 
@@ -57,7 +57,7 @@ router.get("/tournaments/:id", async (req, res) => {
 });
 
 router.post("/tournaments", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
   if (!user[0]?.isAdmin) return res.status(403).json({ error: "Forbidden" });
@@ -89,7 +89,7 @@ router.post("/tournaments", async (req, res) => {
 });
 
 router.put("/tournaments/:id", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
   if (!user[0]?.isAdmin) return res.status(403).json({ error: "Forbidden" });
@@ -117,7 +117,7 @@ router.put("/tournaments/:id", async (req, res) => {
 });
 
 router.delete("/tournaments/:id", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
   if (!user[0]?.isAdmin) return res.status(403).json({ error: "Forbidden" });
@@ -127,7 +127,7 @@ router.delete("/tournaments/:id", async (req, res) => {
 });
 
 router.patch("/tournaments/:id/room", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
   if (!user[0]?.isAdmin) return res.status(403).json({ error: "Forbidden" });

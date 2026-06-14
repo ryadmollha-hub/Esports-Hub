@@ -8,6 +8,7 @@ import leaderboardRouter from "./leaderboard";
 import announcementsRouter from "./announcements";
 import usersRouter from "./users";
 import adminRouter from "./admin";
+import walletRouter from "./wallet";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(leaderboardRouter);
 router.use(announcementsRouter);
 router.use(usersRouter);
 router.use(adminRouter);
+router.use(walletRouter);
 
 export default router;

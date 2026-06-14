@@ -6,18 +6,50 @@ import {
   tournamentsTable,
   teamsTable,
   registrationsTable,
+  announcementsTable,
+  walletTransactionsTable,
 } from "@workspace/db";
 import { eq, desc, sql, ilike } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-async function requireAdmin(req: any, res: any): Promise<boolean> {
-  const { userId } = getAuth(req);
-  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return false; }
-  const user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
-  if (!user[0]?.isAdmin) { res.status(403).json({ error: "Forbidden" }); return false; }
-  return true;
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "BLACKCODE";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "USER505";
+const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "blackcode-admin-secret-2026";
+
+function getAdminToken(): string {
+  return Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}:${ADMIN_SECRET}`).toString("base64");
 }
+
+function isValidAdminToken(req: any): boolean {
+  const token = req.headers["x-admin-token"];
+  return token === getAdminToken();
+}
+
+async function requireAdmin(req: any, res: any): Promise<boolean> {
+  if (isValidAdminToken(req)) return true;
+  try {
+    const { userId } = getAuth(req);
+    if (!userId) { res.status(401).json({ error: "Unauthorized" }); return false; }
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
+    if (!user?.isAdmin) { res.status(403).json({ error: "Forbidden" }); return false; }
+    return true;
+  } catch {
+    res.status(401).json({ error: "Unauthorized" });
+    return false;
+  }
+}
+
+router.post("/admin/login", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: "username and password are required" });
+  }
+  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    return res.json({ success: true, token: getAdminToken() });
+  }
+  return res.status(401).json({ error: "Invalid credentials" });
+});
 
 router.get("/admin/stats", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
@@ -34,8 +66,12 @@ router.get("/admin/stats", async (req, res) => {
     .from(registrationsTable)
     .where(eq(registrationsTable.status, "pending"));
   const [prizePool] = await db
-    .select({ total: sql<number>`sum(prize_pool)` })
+    .select({ total: sql<number>`coalesce(sum(prize_pool), 0)` })
     .from(tournamentsTable);
+  const [pendingDeposits] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(walletTransactionsTable)
+    .where(eq(walletTransactionsTable.status, "pending"));
   const recentRegistrations = await db
     .select()
     .from(registrationsTable)
@@ -56,6 +92,7 @@ router.get("/admin/stats", async (req, res) => {
     activeTournaments: Number(activeTournaments.count),
     pendingRegistrations: Number(pendingRegistrations.count),
     totalPrizePool: Number(prizePool.total) || 0,
+    pendingWalletRequests: Number(pendingDeposits.count),
     recentRegistrations,
     upcomingTournaments,
   });
@@ -63,7 +100,7 @@ router.get("/admin/stats", async (req, res) => {
 
 router.get("/admin/users", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
-  const { search, page = "1", limit = "20" } = req.query as Record<string, string>;
+  const { search, page = "1", limit = "50" } = req.query as Record<string, string>;
   const rows = await db
     .select()
     .from(usersTable)
@@ -87,9 +124,33 @@ router.post("/admin/users/:id/ban", async (req, res) => {
   res.json({ success: true, isBanned: updated.isBanned });
 });
 
+router.post("/admin/users/:id/make-admin", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  const id = req.params.id;
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, id));
+  if (!user) return res.status(404).json({ error: "User not found" });
+  const [updated] = await db
+    .update(usersTable)
+    .set({ isAdmin: !user.isAdmin })
+    .where(eq(usersTable.clerkId, id))
+    .returning();
+  res.json({ success: true, isAdmin: updated.isAdmin });
+});
+
+router.get("/admin/registrations", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  const { status } = req.query as Record<string, string>;
+  const rows = await db
+    .select()
+    .from(registrationsTable)
+    .orderBy(desc(registrationsTable.createdAt))
+    .limit(100);
+  const filtered = status ? rows.filter((r) => r.status === status) : rows;
+  res.json(filtered);
+});
+
 router.post("/admin/notifications", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
-  const { title, message, userId } = req.body;
   res.json({ success: true, sent: true });
 });
 

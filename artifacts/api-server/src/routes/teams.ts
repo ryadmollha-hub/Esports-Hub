@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { teamsTable, teamMembersTable, usersTable } from "@workspace/db";
 import { eq, ilike, and } from "drizzle-orm";
 import { CreateTeamBody, UpdateTeamBody } from "@workspace/api-zod";
+import { safeGetUserId } from "../lib/clerkAuth";
 
 const router: IRouter = Router();
 
@@ -17,7 +17,7 @@ router.get("/teams", async (req, res) => {
 });
 
 router.post("/teams", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const data = CreateTeamBody.parse(req.body);
   const [team] = await db
@@ -41,7 +41,7 @@ router.post("/teams", async (req, res) => {
 });
 
 router.get("/teams/me", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const member = await db
     .select()
@@ -72,7 +72,7 @@ router.get("/teams/:id", async (req, res) => {
 });
 
 router.put("/teams/:id", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const id = parseInt(req.params.id);
   const [team] = await db.select().from(teamsTable).where(eq(teamsTable.id, id));
@@ -92,7 +92,7 @@ router.put("/teams/:id", async (req, res) => {
 });
 
 router.post("/teams/:id/join", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const id = parseInt(req.params.id);
   const [team] = await db.select().from(teamsTable).where(eq(teamsTable.id, id));
@@ -110,7 +110,7 @@ router.post("/teams/:id/join", async (req, res) => {
 });
 
 router.get("/teams/:id/join-requests", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const id = parseInt(req.params.id);
   const [team] = await db.select().from(teamsTable).where(eq(teamsTable.id, id));
@@ -124,7 +124,7 @@ router.get("/teams/:id/join-requests", async (req, res) => {
 });
 
 router.post("/teams/:teamId/members/:memberId/approve", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const teamId = parseInt(req.params.teamId);
   const memberId = parseInt(req.params.memberId);

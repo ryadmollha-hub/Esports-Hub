@@ -21,6 +21,7 @@ import TeamsPage from "@/pages/teams";
 import MyTeamPage from "@/pages/my-team";
 import DashboardPage from "@/pages/dashboard";
 import AdminPage from "@/pages/admin";
+import AdminLoginPage from "@/pages/admin-login";
 import NotFound from "@/pages/not-found";
 
 const clerkPubKey = publishableKeyFromHost(
@@ -148,6 +149,7 @@ function App() {
               <Route path="/teams/my" component={MyTeamPage} />
               <Route path="/dashboard" component={DashboardPage} />
               <Route path="/admin" component={AdminPage} />
+              <Route path="/admin-login" component={AdminLoginPage} />
               <Route path="/sign-in/*?" component={SignInPage} />
               <Route path="/sign-up/*?" component={SignUpPage} />
               <Route component={NotFound} />

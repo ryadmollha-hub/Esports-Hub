@@ -126,6 +126,68 @@
 }
 
 @layer utilities {
+  .admin-input {
+    width: 100%;
+    background: #1a1a24;
+    border: 1px solid #2a2a36;
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.875rem;
+    color: white;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .admin-input:focus {
+    border-color: #ff6b00;
+  }
+  .admin-input option {
+    background: #1a1a24;
+    color: white;
+  }
+
+  .admin-input-sm {
+    background: #1a1a24;
+    border: 1px solid #2a2a36;
+    border-radius: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    color: white;
+    font-size: 0.75rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .admin-input-sm:focus {
+    border-color: #ff6b00;
+  }
+
+  .dash-input {
+    width: 100%;
+    background: #1a1a24;
+    border: 1px solid #2a2a36;
+    border-radius: 0.75rem;
+    padding: 0.625rem 0.875rem;
+    color: white;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .dash-input:focus {
+    border-color: #ff6b00;
+  }
+  .dash-input option {
+    background: #1a1a24;
+    color: white;
+  }
+
+  .label-sm {
+    display: block;
+    color: #a0a0b0;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.375rem;
+    font-weight: 700;
+  }
+
   .glass-panel {
     background: rgba(255, 107, 0, 0.05);
     backdrop-filter: blur(10px);

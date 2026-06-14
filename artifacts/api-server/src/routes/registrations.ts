@@ -1,5 +1,4 @@
 import { Router, type IRouter } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import {
   registrationsTable,
@@ -9,6 +8,7 @@ import {
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { RegisterForTournamentBody } from "@workspace/api-zod";
+import { safeGetUserId } from "../lib/clerkAuth";
 
 const router: IRouter = Router();
 
@@ -25,7 +25,7 @@ router.get("/tournaments/:id/registrations", async (req, res) => {
 });
 
 router.post("/tournaments/:id/registrations", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const id = parseInt(req.params.id);
   const data = RegisterForTournamentBody.parse(req.body);
@@ -57,7 +57,7 @@ router.post("/tournaments/:id/registrations", async (req, res) => {
 });
 
 router.post("/registrations/:id/approve", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
   if (!user[0]?.isAdmin) return res.status(403).json({ error: "Forbidden" });
@@ -79,7 +79,7 @@ router.post("/registrations/:id/approve", async (req, res) => {
 });
 
 router.post("/registrations/:id/reject", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
   if (!user[0]?.isAdmin) return res.status(403).json({ error: "Forbidden" });
@@ -92,7 +92,7 @@ router.post("/registrations/:id/reject", async (req, res) => {
 });
 
 router.get("/registrations/me", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const rows = await db
     .select({

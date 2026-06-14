@@ -1,164 +1,896 @@
-import { useEffect } from "react";
-import { useAuth } from "@clerk/react";
-import { useLocation } from "wouter";
-import { Users, Trophy, Shield, Clock, DollarSign, AlertCircle, CheckCircle, XCircle, Bell } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import { useState, useEffect, useCallback } from "react";
+import { useLocation, Link } from "wouter";
 import {
-  useGetAdminStats, useListRegistrationsForTournament, useApproveRegistration, useRejectRegistration, useListTournaments, useSendNotification,
-  getGetAdminStatsQueryKey, getListRegistrationsForTournamentQueryKey,
-} from "@workspace/api-client-react";
+  Users, Trophy, Shield, Clock, DollarSign, CheckCircle, XCircle, Bell,
+  Plus, Trash2, Edit, LogOut, BarChart3, Megaphone, Swords, CreditCard,
+  ArrowDownCircle, ArrowUpCircle, Eye, EyeOff, RefreshCw, Home
+} from "lucide-react";
+import { isAdminAuthenticated, clearAdminSession, adminFetch } from "@/lib/adminAuth";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals";
+
+const tabs: { id: Tab; label: string; icon: any }[] = [
+  { id: "overview", label: "Overview", icon: BarChart3 },
+  { id: "tournaments", label: "Tournaments", icon: Trophy },
+  { id: "matches", label: "Matches", icon: Swords },
+  { id: "registrations", label: "Registrations", icon: CheckCircle },
+  { id: "users", label: "Users", icon: Users },
+  { id: "announcements", label: "Announcements", icon: Megaphone },
+  { id: "deposits", label: "Deposits", icon: ArrowDownCircle },
+  { id: "withdrawals", label: "Withdrawals", icon: ArrowUpCircle },
+];
 
 export default function AdminPage() {
-  const { isSignedIn } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const qc = useQueryClient();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [stats, setStats] = useState<any>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [tournaments, setTournaments] = useState<any[]>([]);
+  const [registrations, setRegistrations] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [walletTxs, setWalletTxs] = useState<any[]>([]);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showRoomPass, setShowRoomPass] = useState<Record<number, boolean>>({});
+
+  // Tournament form
+  const [tForm, setTForm] = useState({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", status: "upcoming", bannerUrl: "" });
+  const [editingTournament, setEditingTournament] = useState<any>(null);
+  const [showTForm, setShowTForm] = useState(false);
+
+  // Announcement form
+  const [annForm, setAnnForm] = useState({ title: "", content: "", type: "info" });
+  const [showAnnForm, setShowAnnForm] = useState(false);
+
+  // Match form
+  const [matchForm, setMatchForm] = useState({ matchNumber: "", scheduledAt: "", mapName: "" });
+  const [showMatchForm, setShowMatchForm] = useState(false);
+
+  // Room form
+  const [roomForm, setRoomForm] = useState<Record<number, { roomId: string; roomPassword: string }>>({});
 
   useEffect(() => {
-    if (!isSignedIn) setLocation("/sign-in");
-  }, [isSignedIn]);
+    if (!isAdminAuthenticated()) {
+      setLocation("/admin-login");
+    }
+  }, []);
 
-  const { data: stats, isLoading: loadingStats } = useGetAdminStats({
-    query: { queryKey: getGetAdminStatsQueryKey() },
-  });
+  const apiFetch = useCallback(async (path: string, init: RequestInit = {}) => {
+    return adminFetch(path, init);
+  }, []);
 
-  const { data: allTournaments = [] } = useListTournaments({});
-  const firstTournament = (allTournaments as any[])[0];
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await apiFetch("/admin/stats");
+      if (res.ok) setStats(await res.json());
+    } catch {}
+  }, [apiFetch]);
 
-  const { data: registrations = [] } = useListRegistrationsForTournament(
-    firstTournament?.id ?? 0,
-    { status: "pending" },
-    { query: { enabled: !!firstTournament, queryKey: getListRegistrationsForTournamentQueryKey(firstTournament?.id ?? 0, { status: "pending" }) } }
-  );
+  const loadTournaments = useCallback(async () => {
+    try {
+      const res = await apiFetch("/tournaments?limit=100");
+      const data = await res.json();
+      setTournaments(Array.isArray(data) ? data : data.tournaments ?? []);
+    } catch {}
+  }, [apiFetch]);
 
-  const approve = useApproveRegistration();
-  const reject = useRejectRegistration();
-  const sendNotification = useSendNotification();
+  const loadUsers = useCallback(async () => {
+    try {
+      const res = await apiFetch("/admin/users?limit=100");
+      if (res.ok) setUsers(await res.json());
+    } catch {}
+  }, [apiFetch]);
 
-  const handleApprove = (id: number) => {
-    approve.mutate({ id }, {
-      onSuccess: () => {
-        toast({ title: "Registration approved" });
-        qc.invalidateQueries({ queryKey: getGetAdminStatsQueryKey() });
-        if (firstTournament) {
-          qc.invalidateQueries({ queryKey: getListRegistrationsForTournamentQueryKey(firstTournament.id, { status: "pending" }) });
-        }
-      },
-    });
+  const loadRegistrations = useCallback(async () => {
+    try {
+      const res = await apiFetch("/admin/registrations");
+      if (res.ok) setRegistrations(await res.json());
+    } catch {}
+  }, [apiFetch]);
+
+  const loadAnnouncements = useCallback(async () => {
+    try {
+      const res = await apiFetch("/announcements");
+      if (res.ok) setAnnouncements(await res.json());
+    } catch {}
+  }, [apiFetch]);
+
+  const loadWallet = useCallback(async () => {
+    try {
+      const res = await apiFetch("/admin/wallet-transactions");
+      if (res.ok) setWalletTxs(await res.json());
+    } catch {}
+  }, [apiFetch]);
+
+  const loadMatches = useCallback(async () => {
+    if (!selectedTournament) return;
+    try {
+      const res = await apiFetch(`/tournaments/${selectedTournament}/matches`);
+      if (res.ok) setMatches(await res.json());
+    } catch {}
+  }, [apiFetch, selectedTournament]);
+
+  useEffect(() => {
+    if (!isAdminAuthenticated()) return;
+    loadStats();
+    loadTournaments();
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "users") loadUsers();
+    if (activeTab === "registrations") loadRegistrations();
+    if (activeTab === "announcements") loadAnnouncements();
+    if (activeTab === "deposits" || activeTab === "withdrawals") loadWallet();
+    if (activeTab === "matches") { loadTournaments(); if (selectedTournament) loadMatches(); }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (selectedTournament) loadMatches();
+  }, [selectedTournament]);
+
+  const handleLogout = () => {
+    clearAdminSession();
+    setLocation("/");
   };
 
-  const handleReject = (id: number) => {
-    reject.mutate({ id }, {
-      onSuccess: () => {
-        toast({ title: "Registration rejected" });
-        qc.invalidateQueries({ queryKey: getGetAdminStatsQueryKey() });
-        if (firstTournament) {
-          qc.invalidateQueries({ queryKey: getListRegistrationsForTournamentQueryKey(firstTournament.id, { status: "pending" }) });
-        }
-      },
-    });
+  // Tournament CRUD
+  const saveTournament = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const url = editingTournament ? `/tournaments/${editingTournament.id}` : "/tournaments";
+      const method = editingTournament ? "PUT" : "POST";
+      const res = await apiFetch(url, {
+        method,
+        body: JSON.stringify({
+          name: tForm.name, description: tForm.description, mode: tForm.mode,
+          startDate: tForm.startDate, endDate: tForm.endDate || undefined,
+          maxSlots: parseInt(tForm.maxSlots), prizePool: parseFloat(tForm.prizePool),
+          entryFee: parseFloat(tForm.entryFee), status: tForm.status,
+          bannerUrl: tForm.bannerUrl || undefined,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: editingTournament ? "Tournament updated" : "Tournament created" });
+        setShowTForm(false); setEditingTournament(null);
+        setTForm({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", status: "upcoming", bannerUrl: "" });
+        loadTournaments(); loadStats();
+      } else {
+        const d = await res.json();
+        toast({ title: "Error", description: d.error ?? "Failed", variant: "destructive" });
+      }
+    } finally { setLoading(false); }
   };
 
-  const s = stats as any;
+  const deleteTournament = async (id: number) => {
+    if (!confirm("Delete this tournament? This cannot be undone.")) return;
+    const res = await apiFetch(`/tournaments/${id}`, { method: "DELETE" });
+    if (res.ok) { toast({ title: "Tournament deleted" }); loadTournaments(); loadStats(); }
+  };
 
-  const statCards = [
-    { label: "Total Users", value: s?.totalUsers ?? 0, icon: Users, color: "text-blue-400", border: "border-blue-400/20" },
-    { label: "Tournaments", value: s?.totalTournaments ?? 0, icon: Trophy, color: "text-[#ff6b00]", border: "border-[#ff6b00]/20" },
-    { label: "Teams", value: s?.totalTeams ?? 0, icon: Shield, color: "text-purple-400", border: "border-purple-400/20" },
-    { label: "Registrations", value: s?.totalRegistrations ?? 0, icon: Users, color: "text-green-400", border: "border-green-400/20" },
-    { label: "Active Tournaments", value: s?.activeTournaments ?? 0, icon: Trophy, color: "text-yellow-400", border: "border-yellow-400/20" },
-    { label: "Pending Reviews", value: s?.pendingRegistrations ?? 0, icon: Clock, color: "text-red-400", border: "border-red-400/20" },
-    { label: "Total Prize Pool", value: `৳${Number(s?.totalPrizePool ?? 0).toLocaleString()}`, icon: DollarSign, color: "text-[#ffd700]", border: "border-[#ffd700]/20" },
-  ];
+  const editTournament = (t: any) => {
+    setEditingTournament(t);
+    setTForm({
+      name: t.name, description: t.description ?? "", mode: t.mode,
+      startDate: t.startDate?.slice(0, 16) ?? "", endDate: t.endDate?.slice(0, 16) ?? "",
+      maxSlots: String(t.maxSlots), prizePool: String(t.prizePool),
+      entryFee: String(t.entryFee), status: t.status, bannerUrl: t.bannerUrl ?? "",
+    });
+    setShowTForm(true);
+  };
+
+  const updateRoom = async (id: number) => {
+    const form = roomForm[id];
+    if (!form?.roomId || !form?.roomPassword) return toast({ title: "Enter Room ID and Password", variant: "destructive" });
+    const res = await apiFetch(`/tournaments/${id}/room`, {
+      method: "PATCH",
+      body: JSON.stringify({ roomId: form.roomId, roomPassword: form.roomPassword }),
+    });
+    if (res.ok) { toast({ title: "Room details updated" }); loadTournaments(); }
+  };
+
+  // Registration actions
+  const approveReg = async (id: number) => {
+    const res = await apiFetch(`/registrations/${id}/approve`, { method: "PATCH" });
+    if (res.ok) { toast({ title: "Registration approved" }); loadRegistrations(); loadStats(); }
+  };
+  const rejectReg = async (id: number) => {
+    const res = await apiFetch(`/registrations/${id}/reject`, { method: "PATCH" });
+    if (res.ok) { toast({ title: "Registration rejected" }); loadRegistrations(); loadStats(); }
+  };
+
+  // User actions
+  const toggleBan = async (id: string, isBanned: boolean) => {
+    const res = await apiFetch(`/admin/users/${id}/ban`, { method: "POST" });
+    if (res.ok) { toast({ title: isBanned ? "User unbanned" : "User banned" }); loadUsers(); }
+  };
+
+  // Announcement actions
+  const createAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const res = await apiFetch("/announcements", {
+      method: "POST",
+      body: JSON.stringify(annForm),
+    });
+    if (res.ok) {
+      toast({ title: "Announcement posted" });
+      setAnnForm({ title: "", content: "", type: "info" });
+      setShowAnnForm(false); loadAnnouncements();
+    }
+  };
+  const deleteAnnouncement = async (id: number) => {
+    if (!confirm("Delete this announcement?")) return;
+    const res = await apiFetch(`/announcements/${id}`, { method: "DELETE" });
+    if (res.ok) { toast({ title: "Announcement deleted" }); loadAnnouncements(); }
+  };
+
+  // Match actions
+  const createMatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTournament) return;
+    const res = await apiFetch(`/tournaments/${selectedTournament}/matches`, {
+      method: "POST",
+      body: JSON.stringify({
+        matchNumber: parseInt(matchForm.matchNumber),
+        scheduledAt: matchForm.scheduledAt,
+        mapName: matchForm.mapName || undefined,
+      }),
+    });
+    if (res.ok) {
+      toast({ title: "Match created" });
+      setMatchForm({ matchNumber: "", scheduledAt: "", mapName: "" });
+      setShowMatchForm(false); loadMatches();
+    }
+  };
+
+  // Wallet actions
+  const approveWallet = async (id: number) => {
+    const res = await apiFetch(`/admin/wallet-transactions/${id}/approve`, { method: "PATCH" });
+    if (res.ok) { toast({ title: "Transaction approved" }); loadWallet(); loadStats(); }
+  };
+  const rejectWallet = async (id: number) => {
+    const res = await apiFetch(`/admin/wallet-transactions/${id}/reject`, {
+      method: "PATCH",
+      body: JSON.stringify({ adminNote: "Rejected by admin" }),
+    });
+    if (res.ok) { toast({ title: "Transaction rejected" }); loadWallet(); }
+  };
+
+  const statusBadge = (status: string) => {
+    const cls: Record<string, string> = {
+      pending: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
+      approved: "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30",
+      rejected: "text-[#ff2244] bg-[#ff2244]/10 border-[#ff2244]/30",
+      upcoming: "text-blue-400 bg-blue-400/10 border-blue-400/30",
+      ongoing: "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30",
+      completed: "text-[#a0a0b0] bg-[#a0a0b0]/10 border-[#a0a0b0]/30",
+      cancelled: "text-[#ff2244] bg-[#ff2244]/10 border-[#ff2244]/30",
+    };
+    return `inline-flex items-center px-2 py-0.5 rounded border text-xs font-bold uppercase ${cls[status] ?? cls.pending}`;
+  };
+
+  const deposits = walletTxs.filter((t) => t.type === "deposit");
+  const withdrawals = walletTxs.filter((t) => t.type === "withdraw");
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      <Navbar />
-      <div className="max-w-7xl mx-auto px-4 pt-24 pb-16">
-        <h1 className="text-4xl font-black uppercase mb-2" data-testid="heading-admin">
-          Admin <span className="text-[#ff6b00]">Dashboard</span>
-        </h1>
-        <p className="text-[#a0a0b0] mb-10">Manage tournaments, registrations, and users</p>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-          {statCards.map((card) => (
-            <div key={card.label} className={`bg-[#12121a] rounded-xl border ${card.border} p-4`} data-testid={`stat-admin-${card.label.toLowerCase().replace(/ /g, "-")}`}>
-              <card.icon className={`w-5 h-5 ${card.color} mb-2`} />
-              <div className={`text-2xl font-black ${card.color}`}>{loadingStats ? "—" : card.value}</div>
-              <div className="text-[#a0a0b0] text-xs mt-1">{card.label}</div>
-            </div>
-          ))}
+    <div className="min-h-screen bg-[#0a0a0f] text-white flex">
+      {/* Sidebar */}
+      <aside className="hidden lg:flex flex-col w-64 bg-[#0d0d16] border-r border-[#ff6b00]/10 fixed inset-y-0 left-0 z-40">
+        <div className="p-6 border-b border-[#ff6b00]/10">
+          <div className="flex items-center gap-2 mb-1">
+            <Shield className="w-6 h-6 text-[#ff6b00]" />
+            <span className="font-black uppercase text-white">Admin <span className="text-[#ff6b00]">Panel</span></span>
+          </div>
+          <p className="text-[#a0a0b0] text-xs">BLACKCODE Dashboard</p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Pending Registrations */}
-          <div>
-            <h2 className="text-lg font-black uppercase text-[#ff6b00] mb-4 tracking-wider">Pending Registrations</h2>
-            <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 overflow-hidden">
-              {(registrations as any[]).length === 0 ? (
-                <div className="p-8 text-center">
-                  <CheckCircle className="w-10 h-10 mx-auto mb-3 text-[#00ff88]/50" />
-                  <p className="text-[#a0a0b0]">No pending registrations</p>
-                </div>
-              ) : (
-                (registrations as any[]).filter((r: any) => r.status === "pending").map((reg: any) => (
-                  <div key={reg.id} className="flex items-center gap-3 p-4 border-b border-[#ff6b00]/5 last:border-0 hover:bg-[#ff6b00]/5 transition-colors" data-testid={`row-pending-reg-${reg.id}`}>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-bold text-white text-sm truncate" data-testid={`text-pending-player-${reg.id}`}>{reg.playerName}</div>
-                      <div className="text-[#a0a0b0] text-xs font-mono">{reg.freefireUid}</div>
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                      <button
-                        onClick={() => handleApprove(reg.id)}
-                        disabled={approve.isPending}
-                        data-testid={`button-approve-${reg.id}`}
-                        className="p-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleReject(reg.id)}
-                        disabled={reject.isPending}
-                        data-testid={`button-reject-${reg.id}`}
-                        className="p-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors"
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                ))
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                activeTab === tab.id
+                  ? "bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/20"
+                  : "text-[#a0a0b0] hover:text-white hover:bg-[#ff6b00]/5"
+              }`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+              {tab.id === "registrations" && stats?.pendingRegistrations > 0 && (
+                <span className="ml-auto bg-[#ff6b00] text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  {stats.pendingRegistrations}
+                </span>
               )}
-            </div>
-          </div>
+              {(tab.id === "deposits" || tab.id === "withdrawals") && stats?.pendingWalletRequests > 0 && (
+                <span className="ml-auto bg-yellow-500 text-black text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  !
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
 
-          {/* Upcoming Tournaments */}
-          <div>
-            <h2 className="text-lg font-black uppercase text-[#ff6b00] mb-4 tracking-wider">Upcoming Tournaments</h2>
-            <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 overflow-hidden">
-              {!s?.upcomingTournaments || s.upcomingTournaments.length === 0 ? (
-                <div className="p-8 text-center text-[#a0a0b0]">No upcoming tournaments</div>
-              ) : (
-                s.upcomingTournaments.map((t: any) => (
-                  <div key={t.id} className="p-4 border-b border-[#ff6b00]/5 last:border-0 flex items-center justify-between" data-testid={`row-upcoming-${t.id}`}>
-                    <div>
-                      <div className="font-bold text-white text-sm" data-testid={`text-upcoming-name-${t.id}`}>{t.name}</div>
-                      <div className="text-[#a0a0b0] text-xs">{new Date(t.startDate).toLocaleDateString()} — ৳{Number(t.prizePool).toLocaleString()}</div>
-                    </div>
-                    <span className="text-xs font-bold text-yellow-400 uppercase px-2 py-0.5 bg-yellow-400/10 border border-yellow-400/20 rounded">
-                      {t.status}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
+        <div className="p-4 border-t border-[#ff6b00]/10 space-y-2">
+          <Link href="/" className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#a0a0b0] hover:text-white hover:bg-[#ff6b00]/5 transition-colors">
+            <Home className="w-4 h-4" /> View Website
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#ff2244] hover:bg-[#ff2244]/10 transition-colors"
+          >
+            <LogOut className="w-4 h-4" /> Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-[#0d0d16] border-b border-[#ff6b00]/10 px-4 h-14 flex items-center justify-between">
+        <span className="font-black uppercase text-white text-sm">Admin <span className="text-[#ff6b00]">Panel</span></span>
+        <div className="flex items-center gap-3">
+          <Link href="/" className="text-[#a0a0b0] text-xs hover:text-white">Website</Link>
+          <button onClick={handleLogout} className="text-[#ff2244] text-xs font-bold">Logout</button>
         </div>
       </div>
-      <Footer />
+
+      {/* Mobile tabs */}
+      <div className="lg:hidden fixed top-14 left-0 right-0 z-40 bg-[#0d0d16] border-b border-[#ff6b00]/10 overflow-x-auto">
+        <div className="flex px-4 gap-1 py-2 min-w-max">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                activeTab === tab.id ? "bg-[#ff6b00]/15 text-[#ff6b00]" : "text-[#a0a0b0]"
+              }`}
+            >
+              <tab.icon className="w-3 h-3" />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <main className="flex-1 lg:ml-64 pt-14 lg:pt-0 min-h-screen">
+        <div className="p-4 lg:p-8 mt-10 lg:mt-0">
+
+          {/* OVERVIEW */}
+          {activeTab === "overview" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-black uppercase">Admin <span className="text-[#ff6b00]">Overview</span></h1>
+                  <p className="text-[#a0a0b0] text-sm">Real-time platform statistics</p>
+                </div>
+                <button onClick={() => { loadStats(); loadTournaments(); }} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                {[
+                  { label: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "text-blue-400", border: "border-blue-400/20" },
+                  { label: "Tournaments", value: stats?.totalTournaments ?? 0, icon: Trophy, color: "text-[#ff6b00]", border: "border-[#ff6b00]/20" },
+                  { label: "Active", value: stats?.activeTournaments ?? 0, icon: Swords, color: "text-[#00ff88]", border: "border-[#00ff88]/20" },
+                  { label: "Registrations", value: stats?.totalRegistrations ?? 0, icon: Users, color: "text-purple-400", border: "border-purple-400/20" },
+                  { label: "Pending Regs", value: stats?.pendingRegistrations ?? 0, icon: Clock, color: "text-yellow-400", border: "border-yellow-400/20" },
+                  { label: "Teams", value: stats?.totalTeams ?? 0, icon: Shield, color: "text-pink-400", border: "border-pink-400/20" },
+                  { label: "Prize Pool", value: `৳${Number(stats?.totalPrizePool ?? 0).toLocaleString()}`, icon: DollarSign, color: "text-[#ffd700]", border: "border-[#ffd700]/20" },
+                  { label: "Wallet Pending", value: stats?.pendingWalletRequests ?? 0, icon: CreditCard, color: "text-orange-400", border: "border-orange-400/20" },
+                ].map((card) => (
+                  <div key={card.label} className={`bg-[#12121a] rounded-xl border ${card.border} p-4`}>
+                    <card.icon className={`w-5 h-5 ${card.color} mb-2`} />
+                    <div className={`text-2xl font-black ${card.color}`}>{stats === null ? "—" : card.value}</div>
+                    <div className="text-[#a0a0b0] text-xs mt-1">{card.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="grid lg:grid-cols-2 gap-6">
+                <div>
+                  <h2 className="text-sm font-black uppercase text-[#ff6b00] mb-3 tracking-wider">Upcoming Tournaments</h2>
+                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10">
+                    {!stats?.upcomingTournaments || stats.upcomingTournaments.length === 0 ? (
+                      <div className="p-6 text-center text-[#a0a0b0] text-sm">No upcoming tournaments</div>
+                    ) : stats.upcomingTournaments.map((t: any) => (
+                      <div key={t.id} className="p-4 border-b border-[#ff6b00]/5 last:border-0 flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-white text-sm">{t.name}</div>
+                          <div className="text-[#a0a0b0] text-xs">{new Date(t.startDate).toLocaleDateString()} · ৳{Number(t.prizePool).toLocaleString()}</div>
+                        </div>
+                        <span className={statusBadge(t.status)}>{t.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-sm font-black uppercase text-[#ff6b00] mb-3 tracking-wider">Recent Registrations</h2>
+                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10">
+                    {!stats?.recentRegistrations || stats.recentRegistrations.length === 0 ? (
+                      <div className="p-6 text-center text-[#a0a0b0] text-sm">No registrations yet</div>
+                    ) : stats.recentRegistrations.slice(0, 6).map((r: any) => (
+                      <div key={r.id} className="p-3 border-b border-[#ff6b00]/5 last:border-0 flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-white text-sm">{r.playerName}</div>
+                          <div className="text-[#a0a0b0] text-xs font-mono">{r.freefireUid}</div>
+                        </div>
+                        <span className={statusBadge(r.status)}>{r.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TOURNAMENTS */}
+          {activeTab === "tournaments" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-black uppercase">Manage <span className="text-[#ff6b00]">Tournaments</span></h1>
+                <button
+                  onClick={() => { setShowTForm(true); setEditingTournament(null); setTForm({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", status: "upcoming", bannerUrl: "" }); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Create Tournament
+                </button>
+              </div>
+
+              {showTForm && (
+                <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-6">
+                  <h2 className="font-black uppercase text-[#ff6b00] mb-4">{editingTournament ? "Edit Tournament" : "New Tournament"}</h2>
+                  <form onSubmit={saveTournament} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="label-sm">Tournament Name *</label>
+                      <input value={tForm.name} onChange={(e) => setTForm({ ...tForm, name: e.target.value })} required placeholder="e.g. FF Arena Grand Championship S1" className="admin-input" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="label-sm">Description</label>
+                      <textarea value={tForm.description} onChange={(e) => setTForm({ ...tForm, description: e.target.value })} rows={3} className="admin-input resize-none" placeholder="Tournament details..." />
+                    </div>
+                    <div>
+                      <label className="label-sm">Mode *</label>
+                      <select value={tForm.mode} onChange={(e) => setTForm({ ...tForm, mode: e.target.value })} className="admin-input">
+                        <option value="solo">Solo</option>
+                        <option value="duo">Duo</option>
+                        <option value="squad">Squad</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label-sm">Status</label>
+                      <select value={tForm.status} onChange={(e) => setTForm({ ...tForm, status: e.target.value })} className="admin-input">
+                        <option value="upcoming">Upcoming</option>
+                        <option value="ongoing">Ongoing</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label-sm">Start Date *</label>
+                      <input type="datetime-local" value={tForm.startDate} onChange={(e) => setTForm({ ...tForm, startDate: e.target.value })} required className="admin-input" />
+                    </div>
+                    <div>
+                      <label className="label-sm">End Date</label>
+                      <input type="datetime-local" value={tForm.endDate} onChange={(e) => setTForm({ ...tForm, endDate: e.target.value })} className="admin-input" />
+                    </div>
+                    <div>
+                      <label className="label-sm">Max Slots *</label>
+                      <input type="number" value={tForm.maxSlots} onChange={(e) => setTForm({ ...tForm, maxSlots: e.target.value })} required min="1" className="admin-input" />
+                    </div>
+                    <div>
+                      <label className="label-sm">Entry Fee (৳)</label>
+                      <input type="number" value={tForm.entryFee} onChange={(e) => setTForm({ ...tForm, entryFee: e.target.value })} min="0" step="0.01" className="admin-input" />
+                    </div>
+                    <div>
+                      <label className="label-sm">Prize Pool (৳)</label>
+                      <input type="number" value={tForm.prizePool} onChange={(e) => setTForm({ ...tForm, prizePool: e.target.value })} min="0" step="0.01" className="admin-input" />
+                    </div>
+                    <div>
+                      <label className="label-sm">Banner Image URL</label>
+                      <input value={tForm.bannerUrl} onChange={(e) => setTForm({ ...tForm, bannerUrl: e.target.value })} placeholder="https://..." className="admin-input" />
+                    </div>
+                    <div className="md:col-span-2 flex gap-3">
+                      <button type="submit" disabled={loading} className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50">
+                        {loading ? "Saving..." : editingTournament ? "Update Tournament" : "Create Tournament"}
+                      </button>
+                      <button type="button" onClick={() => { setShowTForm(false); setEditingTournament(null); }} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {tournaments.length === 0 ? (
+                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
+                    <Trophy className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>No tournaments yet. Create your first tournament above.</p>
+                  </div>
+                ) : tournaments.map((t) => (
+                  <div key={t.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-5">
+                    <div className="flex flex-col lg:flex-row lg:items-start gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <span className="font-black text-white">{t.name}</span>
+                          <span className={statusBadge(t.status)}>{t.status}</span>
+                          <span className="text-[#a0a0b0] text-xs uppercase">{t.mode}</span>
+                        </div>
+                        <div className="text-[#a0a0b0] text-sm flex flex-wrap gap-4">
+                          <span>Start: {new Date(t.startDate).toLocaleString()}</span>
+                          <span>Slots: {t.filledSlots}/{t.maxSlots}</span>
+                          <span>Prize: ৳{Number(t.prizePool).toLocaleString()}</span>
+                          <span>Entry: ৳{Number(t.entryFee).toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        <button onClick={() => editTournament(t)} className="p-2 bg-blue-400/10 border border-blue-400/20 rounded-lg text-blue-400 hover:bg-blue-400/20 transition-colors">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => deleteTournament(t.id)} className="p-2 bg-[#ff2244]/10 border border-[#ff2244]/20 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Room ID & Password */}
+                    <div className="mt-4 pt-4 border-t border-[#ff6b00]/5">
+                      <p className="text-xs text-[#a0a0b0] uppercase tracking-wider mb-2 font-bold">Room Details</p>
+                      {t.roomId ? (
+                        <div className="flex items-center gap-4 text-sm mb-3">
+                          <span className="text-[#a0a0b0]">Room ID: <span className="text-white font-mono font-bold">{t.roomId}</span></span>
+                          <span className="text-[#a0a0b0]">Password:
+                            <span className="text-white font-mono font-bold ml-1">
+                              {showRoomPass[t.id] ? t.roomPassword : "••••••"}
+                            </span>
+                            <button onClick={() => setShowRoomPass({ ...showRoomPass, [t.id]: !showRoomPass[t.id] })} className="ml-2 text-[#a0a0b0] hover:text-white">
+                              {showRoomPass[t.id] ? <EyeOff className="w-3 h-3 inline" /> : <Eye className="w-3 h-3 inline" />}
+                            </button>
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-[#a0a0b0] mb-3">No room details set yet.</p>
+                      )}
+                      <div className="flex gap-2 flex-wrap">
+                        <input
+                          placeholder="Room ID"
+                          value={roomForm[t.id]?.roomId ?? ""}
+                          onChange={(e) => setRoomForm({ ...roomForm, [t.id]: { ...roomForm[t.id], roomId: e.target.value } })}
+                          className="admin-input-sm w-36"
+                        />
+                        <input
+                          placeholder="Password"
+                          value={roomForm[t.id]?.roomPassword ?? ""}
+                          onChange={(e) => setRoomForm({ ...roomForm, [t.id]: { ...roomForm[t.id], roomPassword: e.target.value } })}
+                          className="admin-input-sm w-32"
+                        />
+                        <button onClick={() => updateRoom(t.id)} className="px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-xs uppercase rounded-lg hover:bg-[#e66000] transition-colors">
+                          Set Room
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* MATCHES */}
+          {activeTab === "matches" && (
+            <div>
+              <h1 className="text-2xl font-black uppercase mb-6">Manage <span className="text-[#ff6b00]">Matches</span></h1>
+              <div className="mb-6">
+                <label className="label-sm mb-2 block">Select Tournament</label>
+                <select
+                  value={selectedTournament ?? ""}
+                  onChange={(e) => setSelectedTournament(e.target.value ? parseInt(e.target.value) : null)}
+                  className="admin-input max-w-sm"
+                >
+                  <option value="">-- Select a tournament --</option>
+                  {tournaments.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedTournament && (
+                <>
+                  <button
+                    onClick={() => setShowMatchForm(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors mb-4"
+                  >
+                    <Plus className="w-4 h-4" /> Add Match
+                  </button>
+
+                  {showMatchForm && (
+                    <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-4">
+                      <h2 className="font-black uppercase text-[#ff6b00] mb-4">New Match</h2>
+                      <form onSubmit={createMatch} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className="label-sm">Match Number *</label>
+                          <input type="number" value={matchForm.matchNumber} onChange={(e) => setMatchForm({ ...matchForm, matchNumber: e.target.value })} required min="1" className="admin-input" />
+                        </div>
+                        <div>
+                          <label className="label-sm">Scheduled At *</label>
+                          <input type="datetime-local" value={matchForm.scheduledAt} onChange={(e) => setMatchForm({ ...matchForm, scheduledAt: e.target.value })} required className="admin-input" />
+                        </div>
+                        <div>
+                          <label className="label-sm">Map Name</label>
+                          <input value={matchForm.mapName} onChange={(e) => setMatchForm({ ...matchForm, mapName: e.target.value })} placeholder="Bermuda, Purgatory..." className="admin-input" />
+                        </div>
+                        <div className="md:col-span-3 flex gap-3">
+                          <button type="submit" className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">
+                            Create Match
+                          </button>
+                          <button type="button" onClick={() => setShowMatchForm(false)} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    {matches.length === 0 ? (
+                      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-8 text-center text-[#a0a0b0] text-sm">No matches for this tournament yet.</div>
+                    ) : matches.map((m: any) => (
+                      <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex items-center justify-between">
+                        <div>
+                          <div className="font-bold text-white">Match #{m.matchNumber} — {m.mapName ?? "TBD"}</div>
+                          <div className="text-[#a0a0b0] text-sm">{new Date(m.scheduledAt).toLocaleString()}</div>
+                        </div>
+                        <span className={statusBadge(m.status)}>{m.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* REGISTRATIONS */}
+          {activeTab === "registrations" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-black uppercase">Tournament <span className="text-[#ff6b00]">Registrations</span></h1>
+                <button onClick={loadRegistrations} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              </div>
+              <div className="space-y-3">
+                {registrations.length === 0 ? (
+                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
+                    <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>No registrations yet.</p>
+                  </div>
+                ) : registrations.map((r: any) => (
+                  <div key={r.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1">
+                      <div className="font-bold text-white">{r.playerName}</div>
+                      <div className="text-[#a0a0b0] text-sm font-mono">{r.freefireUid}</div>
+                      <div className="text-[#a0a0b0] text-xs mt-1">Tournament #{r.tournamentId} · {new Date(r.createdAt).toLocaleDateString()}</div>
+                      {r.paymentScreenshot && (
+                        <a href={r.paymentScreenshot} target="_blank" rel="noopener noreferrer" className="text-[#ff6b00] text-xs hover:underline mt-1 inline-block">
+                          View Payment Screenshot
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={statusBadge(r.status)}>{r.status}</span>
+                      {r.status === "pending" && (
+                        <>
+                          <button onClick={() => approveReg(r.id)} className="p-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">
+                            <CheckCircle className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => rejectReg(r.id)} className="p-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors">
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* USERS */}
+          {activeTab === "users" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-black uppercase">User <span className="text-[#ff6b00]">Management</span></h1>
+                <button onClick={loadUsers} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              </div>
+              <div className="space-y-3">
+                {users.length === 0 ? (
+                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
+                    <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>No users registered yet.</p>
+                  </div>
+                ) : users.map((u: any) => (
+                  <div key={u.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white">{u.displayName ?? u.username ?? "Unknown"}</span>
+                        {u.isAdmin && <span className="text-xs font-bold text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/30 px-2 py-0.5 rounded">Admin</span>}
+                        {u.isBanned && <span className="text-xs font-bold text-[#ff2244] bg-[#ff2244]/10 border border-[#ff2244]/30 px-2 py-0.5 rounded">Banned</span>}
+                      </div>
+                      <div className="text-[#a0a0b0] text-sm">{u.email ?? "No email"}</div>
+                      {u.freefireUid && <div className="text-[#a0a0b0] text-xs font-mono">FF UID: {u.freefireUid}</div>}
+                      <div className="text-[#a0a0b0] text-xs">Joined: {new Date(u.createdAt).toLocaleDateString()}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => toggleBan(u.clerkId, u.isBanned)}
+                        className={`px-3 py-1.5 font-bold text-xs uppercase rounded-lg transition-colors border ${
+                          u.isBanned
+                            ? "bg-[#00ff88]/10 border-[#00ff88]/30 text-[#00ff88] hover:bg-[#00ff88]/20"
+                            : "bg-[#ff2244]/10 border-[#ff2244]/30 text-[#ff2244] hover:bg-[#ff2244]/20"
+                        }`}
+                      >
+                        {u.isBanned ? "Unban" : "Ban"}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ANNOUNCEMENTS */}
+          {activeTab === "announcements" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-black uppercase">Manage <span className="text-[#ff6b00]">Announcements</span></h1>
+                <button onClick={() => setShowAnnForm(true)} className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">
+                  <Plus className="w-4 h-4" /> New Announcement
+                </button>
+              </div>
+
+              {showAnnForm && (
+                <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-6">
+                  <h2 className="font-black uppercase text-[#ff6b00] mb-4">Post Announcement</h2>
+                  <form onSubmit={createAnnouncement} className="space-y-4">
+                    <div>
+                      <label className="label-sm">Title *</label>
+                      <input value={annForm.title} onChange={(e) => setAnnForm({ ...annForm, title: e.target.value })} required placeholder="Announcement title..." className="admin-input" />
+                    </div>
+                    <div>
+                      <label className="label-sm">Content *</label>
+                      <textarea value={annForm.content} onChange={(e) => setAnnForm({ ...annForm, content: e.target.value })} required rows={4} placeholder="Announcement content..." className="admin-input resize-none" />
+                    </div>
+                    <div>
+                      <label className="label-sm">Type</label>
+                      <select value={annForm.type} onChange={(e) => setAnnForm({ ...annForm, type: e.target.value })} className="admin-input">
+                        <option value="info">Info (Blue)</option>
+                        <option value="success">Success (Green)</option>
+                        <option value="warning">Warning (Yellow)</option>
+                        <option value="urgent">Urgent (Red)</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-3">
+                      <button type="submit" className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">Post Announcement</button>
+                      <button type="button" onClick={() => setShowAnnForm(false)} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                {announcements.length === 0 ? (
+                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
+                    <Bell className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>No announcements yet.</p>
+                  </div>
+                ) : announcements.map((a: any) => (
+                  <div key={a.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-white">{a.title}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded border font-bold uppercase ${
+                          a.type === "urgent" ? "text-[#ff2244] border-[#ff2244]/30 bg-[#ff2244]/10" :
+                          a.type === "warning" ? "text-yellow-400 border-yellow-400/30 bg-yellow-400/10" :
+                          a.type === "success" ? "text-[#00ff88] border-[#00ff88]/30 bg-[#00ff88]/10" :
+                          "text-blue-400 border-blue-400/30 bg-blue-400/10"
+                        }`}>{a.type}</span>
+                      </div>
+                      <p className="text-[#a0a0b0] text-sm">{a.content}</p>
+                      <p className="text-[#a0a0b0] text-xs mt-1">{new Date(a.createdAt).toLocaleString()}</p>
+                    </div>
+                    <button onClick={() => deleteAnnouncement(a.id)} className="p-2 bg-[#ff2244]/10 border border-[#ff2244]/20 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors shrink-0">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* DEPOSITS */}
+          {activeTab === "deposits" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-black uppercase">Deposit <span className="text-[#ff6b00]">Requests</span></h1>
+                <button onClick={loadWallet} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              </div>
+              <div className="space-y-3">
+                {deposits.length === 0 ? (
+                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
+                    <ArrowDownCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>No deposit requests yet.</p>
+                  </div>
+                ) : deposits.map((tx: any) => (
+                  <div key={tx.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1">
+                      <div className="font-bold text-white">৳{Number(tx.amount).toLocaleString()} via {tx.method.toUpperCase()}</div>
+                      <div className="text-[#a0a0b0] text-sm">Account: <span className="font-mono">{tx.accountNumber}</span></div>
+                      {tx.transactionId && <div className="text-[#a0a0b0] text-xs font-mono">TX: {tx.transactionId}</div>}
+                      <div className="text-[#a0a0b0] text-xs">{new Date(tx.createdAt).toLocaleString()}</div>
+                      {tx.screenshot && <a href={tx.screenshot} target="_blank" rel="noopener noreferrer" className="text-[#ff6b00] text-xs hover:underline">View Screenshot</a>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={statusBadge(tx.status)}>{tx.status}</span>
+                      {tx.status === "pending" && (
+                        <>
+                          <button onClick={() => approveWallet(tx.id)} className="p-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-[#00ff88] hover:bg-[#00ff88]/20"><CheckCircle className="w-4 h-4" /></button>
+                          <button onClick={() => rejectWallet(tx.id)} className="p-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20"><XCircle className="w-4 h-4" /></button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* WITHDRAWALS */}
+          {activeTab === "withdrawals" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-black uppercase">Withdrawal <span className="text-[#ff6b00]">Requests</span></h1>
+                <button onClick={loadWallet} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              </div>
+              <div className="space-y-3">
+                {withdrawals.length === 0 ? (
+                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
+                    <ArrowUpCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p>No withdrawal requests yet.</p>
+                  </div>
+                ) : withdrawals.map((tx: any) => (
+                  <div key={tx.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1">
+                      <div className="font-bold text-white">৳{Number(tx.amount).toLocaleString()} via {tx.method.toUpperCase()}</div>
+                      <div className="text-[#a0a0b0] text-sm">To: <span className="font-mono">{tx.accountNumber}</span></div>
+                      <div className="text-[#a0a0b0] text-xs">{new Date(tx.createdAt).toLocaleString()}</div>
+                      {tx.adminNote && <div className="text-[#ff2244] text-xs mt-1">Note: {tx.adminNote}</div>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={statusBadge(tx.status)}>{tx.status}</span>
+                      {tx.status === "pending" && (
+                        <>
+                          <button onClick={() => approveWallet(tx.id)} className="p-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-[#00ff88] hover:bg-[#00ff88]/20"><CheckCircle className="w-4 h-4" /></button>
+                          <button onClick={() => rejectWallet(tx.id)} className="p-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20"><XCircle className="w-4 h-4" /></button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+      </main>
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { matchesTable, matchResultsTable, tournamentsTable, usersTable } from "@workspace/db";
 import { eq, gte, desc } from "drizzle-orm";
 import { CreateMatchBody, UpdateMatchResultsBody } from "@workspace/api-zod";
+import { safeGetUserId } from "../lib/clerkAuth";
 
 const router: IRouter = Router();
 
@@ -26,7 +26,7 @@ router.get("/tournaments/:id/matches", async (req, res) => {
 });
 
 router.post("/tournaments/:id/matches", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
   if (!user[0]?.isAdmin) return res.status(403).json({ error: "Forbidden" });
@@ -46,7 +46,7 @@ router.post("/tournaments/:id/matches", async (req, res) => {
 });
 
 router.patch("/matches/:id/results", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
   if (!user[0]?.isAdmin) return res.status(403).json({ error: "Forbidden" });

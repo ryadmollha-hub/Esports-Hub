@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
-import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { UpdateMyProfileBody } from "@workspace/api-zod";
+import { safeGetUserId } from "../lib/clerkAuth";
 
 const router: IRouter = Router();
 
@@ -22,14 +22,14 @@ async function getOrCreateUser(clerkId: string, clerkUser?: { email?: string; us
 }
 
 router.get("/users/me", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await getOrCreateUser(userId);
   res.json(user);
 });
 
 router.patch("/users/me", async (req, res) => {
-  const { userId } = getAuth(req);
+  const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const data = UpdateMyProfileBody.parse(req.body);
   let user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
