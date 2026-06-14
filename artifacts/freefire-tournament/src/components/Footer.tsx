@@ -95,9 +95,9 @@ export default function Footer() {
         target="_blank"
         rel="noopener noreferrer"
         data-testid="button-whatsapp-float"
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-[#00ff88] rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,255,136,0.4)] hover:scale-110 transition-transform"
+        className="fixed bottom-20 right-4 z-40 w-12 h-12 bg-[#00ff88] rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(0,255,136,0.4)] hover:scale-110 transition-transform"
       >
-        <MessageCircle className="w-7 h-7 text-[#0a0a0f]" />
+        <MessageCircle className="w-6 h-6 text-[#0a0a0f]" />
       </a>
     </footer>
   );

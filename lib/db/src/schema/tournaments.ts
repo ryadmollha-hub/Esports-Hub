@@ -14,6 +14,7 @@ export const tournamentsTable = pgTable("tournaments", {
   filledSlots: integer("filled_slots").notNull().default(0),
   prizePool: numeric("prize_pool", { precision: 10, scale: 2 }).notNull().default("0"),
   entryFee: numeric("entry_fee", { precision: 10, scale: 2 }).notNull().default("0"),
+  perKillReward: numeric("per_kill_reward", { precision: 10, scale: 2 }).notNull().default("0"),
   bannerUrl: text("banner_url"),
   roomId: text("room_id"),
   roomPassword: text("room_password"),
@@ -26,6 +27,7 @@ export const prizeTiersTable = pgTable("prize_tiers", {
   tournamentId: integer("tournament_id").notNull(),
   rank: text("rank").notNull(),
   amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
+  percentage: numeric("percentage", { precision: 5, scale: 2 }),
   description: text("description"),
 });
 

@@ -1,3 +1,6 @@
 - [JWT Auth Migration](jwt-auth-migration.md) — Clerk fully removed; custom JWT auth with bcryptjs + jsonwebtoken in place. See file for routes, token storage, and key patterns.
 - [Tailwind v4 @apply dark](tailwind-v4-dark.md) — never use `@apply dark` in CSS; dark is a selector variant not a utility class.
 - [Leaderboard route alias](leaderboard-route.md) — generated client calls /leaderboard/global but router only had /leaderboard; use array syntax to register both.
+- [Admin Auth Dual System](admin-auth-dual.md) — two auth paths exist: X-Admin-Token header (admin panel session) and JWT Bearer (regular users with isAdmin=true). Use requireAdmin() from middlewares/requireAdmin.ts which checks both.
+- [Wallet Balance Calculation](wallet-balance.md) — no dedicated balance column; balance is computed at runtime as sum(approved deposits) - sum(approved withdrawals). GET /wallet/balance returns {balance, totalDeposit, totalWithdraw, pendingDeposit, pendingWithdraw}.
+- [Bottom Nav Hidden on Admin](bottom-nav-admin.md) — BottomNav hides itself when location.startsWith('/admin') since admin has its own sidebar navigation.

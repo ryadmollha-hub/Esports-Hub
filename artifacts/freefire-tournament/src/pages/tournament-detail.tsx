@@ -156,8 +156,14 @@ export default function TournamentDetailPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[#a0a0b0] text-sm">Entry Fee</span>
-                <span className="text-white font-bold" data-testid="text-detail-fee">৳{Number(t.entryFee)}</span>
+                <span className="text-white font-bold" data-testid="text-detail-fee">৳{Number(t.entryFee).toLocaleString()}</span>
               </div>
+              {Number(t.perKillReward) > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-[#a0a0b0] text-sm">Per Kill Reward</span>
+                  <span className="text-[#00ff88] font-bold">+৳{Number(t.perKillReward).toLocaleString()}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <span className="text-[#a0a0b0] text-sm">Mode</span>
                 <span className={`text-xs font-bold px-2 py-0.5 rounded border uppercase ${modeColors[t.mode]}`}>{t.mode}</span>

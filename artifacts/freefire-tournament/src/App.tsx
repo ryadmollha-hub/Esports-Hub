@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/AuthContext";
 import { UserRoute, AdminRoute } from "@/components/ProtectedRoute";
+import BottomNav from "@/components/BottomNav";
 
 import Home from "@/pages/home";
 import TournamentsPage from "@/pages/tournaments";
@@ -23,6 +24,8 @@ import AdminLoginPage from "@/pages/admin-login";
 import LoginPage from "@/pages/login";
 import SignUpPage from "@/pages/signup";
 import ForgotPasswordPage from "@/pages/forgot-password";
+import WalletPage from "@/pages/wallet";
+import ProfilePage from "@/pages/profile";
 import NotFound from "@/pages/not-found";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -59,6 +62,12 @@ function App() {
               <Route path="/dashboard">
                 {() => <UserRoute component={DashboardPage} />}
               </Route>
+              <Route path="/wallet">
+                {() => <UserRoute component={WalletPage} />}
+              </Route>
+              <Route path="/profile">
+                {() => <UserRoute component={ProfilePage} />}
+              </Route>
 
               {/* Admin-only route */}
               <Route path="/admin">
@@ -67,6 +76,8 @@ function App() {
 
               <Route component={NotFound} />
             </Switch>
+
+            <BottomNav />
           </WouterRouter>
           <Toaster />
         </TooltipProvider>
