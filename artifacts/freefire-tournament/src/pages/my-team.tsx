@@ -24,14 +24,14 @@ const createSchema = z.object({
 type CreateForm = z.infer<typeof createSchema>;
 
 export default function MyTeamPage() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const qc = useQueryClient();
 
   useEffect(() => {
-    if (!isSignedIn) setLocation("/sign-in");
-  }, [isSignedIn]);
+    if (isLoaded && !isSignedIn) setLocation("/sign-in");
+  }, [isLoaded, isSignedIn]);
 
   const { data: myTeam, isLoading, error } = useGetMyTeam({
     query: { queryKey: getGetMyTeamQueryKey() },

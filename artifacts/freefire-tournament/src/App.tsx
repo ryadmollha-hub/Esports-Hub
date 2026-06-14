@@ -7,6 +7,7 @@ import { queryClient } from "@/lib/queryClient";
 import { QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { UserRoute, AdminRoute } from "@/components/ProtectedRoute";
 
 import Home from "@/pages/home";
 import TournamentsPage from "@/pages/tournaments";
@@ -136,22 +137,36 @@ function App() {
         <TooltipProvider>
           <WouterRouter base={basePath}>
             <Switch>
+              {/* Public routes — accessible to everyone */}
               <Route path="/" component={Home} />
               <Route path="/tournaments" component={TournamentsPage} />
               <Route path="/tournaments/:id" component={TournamentDetailPage} />
-              <Route path="/register" component={RegisterPage} />
               <Route path="/leaderboard" component={LeaderboardPage} />
               <Route path="/schedule" component={SchedulePage} />
               <Route path="/results" component={ResultsPage} />
               <Route path="/prizes" component={PrizesPage} />
               <Route path="/contact" component={ContactPage} />
               <Route path="/teams" component={TeamsPage} />
-              <Route path="/teams/my" component={MyTeamPage} />
-              <Route path="/dashboard" component={DashboardPage} />
-              <Route path="/admin" component={AdminPage} />
               <Route path="/admin-login" component={AdminLoginPage} />
               <Route path="/sign-in/*?" component={SignInPage} />
               <Route path="/sign-up/*?" component={SignUpPage} />
+
+              {/* User-only routes — require Clerk login */}
+              <Route path="/register">
+                {() => <UserRoute component={RegisterPage} />}
+              </Route>
+              <Route path="/teams/my">
+                {() => <UserRoute component={MyTeamPage} />}
+              </Route>
+              <Route path="/dashboard">
+                {() => <UserRoute component={DashboardPage} />}
+              </Route>
+
+              {/* Admin-only route — requires admin session token */}
+              <Route path="/admin">
+                {() => <AdminRoute component={AdminPage} />}
+              </Route>
+
               <Route component={NotFound} />
             </Switch>
           </WouterRouter>

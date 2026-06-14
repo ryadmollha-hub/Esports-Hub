@@ -21,7 +21,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function RegisterPage() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
   const [, setLocation] = useLocation();
   const search = useSearch();
   const params = new URLSearchParams(search);
@@ -30,8 +30,8 @@ export default function RegisterPage() {
   const qc = useQueryClient();
 
   useEffect(() => {
-    if (!isSignedIn) setLocation("/sign-in");
-  }, [isSignedIn]);
+    if (isLoaded && !isSignedIn) setLocation("/sign-in");
+  }, [isLoaded, isSignedIn]);
 
   const { data: tournaments = [], isLoading: loadingTournaments } = useListTournaments({ status: "upcoming" });
   const register = useRegisterForTournament();
