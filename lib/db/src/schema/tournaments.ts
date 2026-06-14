@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, numeric, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, numeric, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -7,7 +7,7 @@ export const tournamentsTable = pgTable("tournaments", {
   name: text("name").notNull(),
   description: text("description"),
   mode: text("mode").notNull().default("squad"), // solo | duo | squad
-  status: text("status").notNull().default("upcoming"), // upcoming | ongoing | completed | cancelled
+  status: text("status").notNull().default("upcoming"), // upcoming | live | ended | cancelled
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date"),
   maxSlots: integer("max_slots").notNull().default(100),
@@ -19,6 +19,9 @@ export const tournamentsTable = pgTable("tournaments", {
   roomId: text("room_id"),
   roomPassword: text("room_password"),
   countdownTo: timestamp("countdown_to"),
+  winnerId: text("winner_id"),
+  winnerName: text("winner_name"),
+  autoWinner: boolean("auto_winner").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

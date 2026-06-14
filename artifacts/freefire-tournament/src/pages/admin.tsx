@@ -3,7 +3,8 @@ import { useLocation, Link } from "wouter";
 import {
   Users, Trophy, Shield, Clock, DollarSign, CheckCircle, XCircle, Bell,
   Plus, Trash2, Edit, LogOut, BarChart3, Megaphone, Swords, CreditCard,
-  ArrowDownCircle, ArrowUpCircle, Eye, EyeOff, RefreshCw, Home
+  ArrowDownCircle, ArrowUpCircle, Eye, EyeOff, RefreshCw, Home,
+  Crown, Shuffle, X as XIcon
 } from "lucide-react";
 import { isAdminAuthenticated, clearAdminSession, adminFetch } from "@/lib/adminAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -37,6 +38,10 @@ export default function AdminPage() {
   const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [showRoomPass, setShowRoomPass] = useState<Record<number, boolean>>({});
+  const [tournamentParticipants, setTournamentParticipants] = useState<Record<number, any[]>>({});
+  const [loadingParticipants, setLoadingParticipants] = useState<Record<number, boolean>>({});
+  const [expandedWinner, setExpandedWinner] = useState<Record<number, boolean>>({});
+  const [winnerLoading, setWinnerLoading] = useState<Record<number, boolean>>({});
 
   // Tournament form
   const [tForm, setTForm] = useState({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Pct: "50", prize2Pct: "30", prize3Pct: "20" });
@@ -259,6 +264,62 @@ export default function AdminPage() {
     }
   };
 
+  // Winner / Participants actions
+  const loadTournamentParticipants = async (id: number) => {
+    setLoadingParticipants((prev) => ({ ...prev, [id]: true }));
+    try {
+      const res = await apiFetch(`/tournaments/${id}/participants`);
+      if (res.ok) {
+        const data = await res.json();
+        setTournamentParticipants((prev) => ({ ...prev, [id]: data }));
+      }
+    } catch {} finally {
+      setLoadingParticipants((prev) => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const setWinner = async (tournamentId: number, userId: string, playerName: string) => {
+    setWinnerLoading((prev) => ({ ...prev, [tournamentId]: true }));
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}/winner`, {
+        method: "POST",
+        body: JSON.stringify({ userId, playerName }),
+      });
+      if (res.ok) {
+        toast({ title: `👑 Winner set: ${playerName}` });
+        loadTournaments();
+      } else {
+        const d = await res.json();
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {} finally {
+      setWinnerLoading((prev) => ({ ...prev, [tournamentId]: false }));
+    }
+  };
+
+  const autoWinner = async (tournamentId: number) => {
+    if (!confirm("Randomly select a winner from all participants?")) return;
+    setWinnerLoading((prev) => ({ ...prev, [tournamentId]: true }));
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}/auto-winner`, { method: "POST" });
+      const d = await res.json();
+      if (res.ok) {
+        toast({ title: `🎲 Auto-winner: ${d.winnerName}` });
+        loadTournaments();
+      } else {
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {} finally {
+      setWinnerLoading((prev) => ({ ...prev, [tournamentId]: false }));
+    }
+  };
+
+  const clearWinner = async (tournamentId: number) => {
+    if (!confirm("Clear the winner for this tournament?")) return;
+    const res = await apiFetch(`/tournaments/${tournamentId}/winner`, { method: "DELETE" });
+    if (res.ok) { toast({ title: "Winner cleared" }); loadTournaments(); }
+  };
+
   // Wallet actions
   const approveWallet = async (id: number) => {
     const res = await apiFetch(`/admin/wallet-transactions/${id}/approve`, { method: "PATCH" });
@@ -278,7 +339,9 @@ export default function AdminPage() {
       approved: "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30",
       rejected: "text-[#ff2244] bg-[#ff2244]/10 border-[#ff2244]/30",
       upcoming: "text-blue-400 bg-blue-400/10 border-blue-400/30",
+      live: "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30",
       ongoing: "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30",
+      ended: "text-[#a0a0b0] bg-[#a0a0b0]/10 border-[#a0a0b0]/30",
       completed: "text-[#a0a0b0] bg-[#a0a0b0]/10 border-[#a0a0b0]/30",
       cancelled: "text-[#ff2244] bg-[#ff2244]/10 border-[#ff2244]/30",
     };
@@ -475,8 +538,10 @@ export default function AdminPage() {
                       <label className="label-sm">Status</label>
                       <select value={tForm.status} onChange={(e) => setTForm({ ...tForm, status: e.target.value })} className="admin-input">
                         <option value="upcoming">Upcoming</option>
-                        <option value="ongoing">Ongoing</option>
-                        <option value="completed">Completed</option>
+                        <option value="live">🔴 Live</option>
+                        <option value="ended">Ended</option>
+                        <option value="ongoing">Ongoing (legacy)</option>
+                        <option value="completed">Completed (legacy)</option>
                         <option value="cancelled">Cancelled</option>
                       </select>
                     </div>
@@ -578,6 +643,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* Room ID & Password */}
+                    {/* Room Details */}
                     <div className="mt-4 pt-4 border-t border-[#ff6b00]/5">
                       <p className="text-xs text-[#a0a0b0] uppercase tracking-wider mb-2 font-bold">Room Details</p>
                       {t.roomId ? (
@@ -612,6 +678,110 @@ export default function AdminPage() {
                           Set Room
                         </button>
                       </div>
+                    </div>
+
+                    {/* Winner Selection */}
+                    <div className="mt-4 pt-4 border-t border-[#ff6b00]/5">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Crown className="w-4 h-4 text-[#ffd700]" />
+                          <p className="text-xs text-[#a0a0b0] uppercase tracking-wider font-bold">
+                            Winner {t.winnerId ? <span className="text-[#ffd700] ml-1">— {t.winnerName}</span> : null}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              const newState = !expandedWinner[t.id];
+                              setExpandedWinner((prev) => ({ ...prev, [t.id]: newState }));
+                              if (newState && !tournamentParticipants[t.id]) loadTournamentParticipants(t.id);
+                            }}
+                            className="text-xs text-[#a0a0b0] hover:text-white flex items-center gap-1 transition-colors"
+                          >
+                            <Users className="w-3 h-3" />
+                            {expandedWinner[t.id] ? "Hide" : `Participants (${t.filledSlots})`}
+                          </button>
+                          {t.winnerId && (
+                            <button
+                              onClick={() => clearWinner(t.id)}
+                              className="text-xs text-[#ff2244]/70 hover:text-[#ff2244] transition-colors"
+                            >
+                              Clear Winner
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {expandedWinner[t.id] && (
+                        <div className="bg-[#0d0d16] rounded-xl border border-[#ff6b00]/10 p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-xs text-[#a0a0b0]">
+                              {loadingParticipants[t.id] ? "Loading..." :
+                                `${tournamentParticipants[t.id]?.length ?? 0} participants`}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => loadTournamentParticipants(t.id)}
+                                className="text-[#a0a0b0] hover:text-white transition-colors"
+                                title="Refresh"
+                              >
+                                <RefreshCw className="w-3 h-3" />
+                              </button>
+                              <button
+                                onClick={() => autoWinner(t.id)}
+                                disabled={winnerLoading[t.id]}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 text-purple-400 font-bold text-xs uppercase rounded-lg hover:bg-purple-500/30 transition-colors disabled:opacity-50"
+                              >
+                                <Shuffle className="w-3 h-3" />
+                                Auto Pick
+                              </button>
+                            </div>
+                          </div>
+
+                          {loadingParticipants[t.id] ? (
+                            <div className="space-y-2">
+                              {[1, 2, 3].map((i) => <div key={i} className="h-10 bg-[#1a1a24] rounded-lg animate-pulse" />)}
+                            </div>
+                          ) : !tournamentParticipants[t.id] || tournamentParticipants[t.id].length === 0 ? (
+                            <p className="text-[#a0a0b0] text-sm text-center py-4">No participants yet</p>
+                          ) : (
+                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                              {tournamentParticipants[t.id].map((p: any) => (
+                                <div
+                                  key={p.id}
+                                  className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg ${
+                                    p.userId === t.winnerId
+                                      ? "bg-[#ffd700]/10 border border-[#ffd700]/30"
+                                      : "bg-[#1a1a24] border border-transparent"
+                                  }`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                      {p.userId === t.winnerId && <Crown className="w-3 h-3 text-[#ffd700] shrink-0" />}
+                                      <span className="text-white text-sm font-bold truncate">{p.playerName}</span>
+                                    </div>
+                                    <span className="text-[#a0a0b0] text-xs font-mono">UID: {p.freefireUid}</span>
+                                  </div>
+                                  {p.userId !== t.winnerId ? (
+                                    <button
+                                      onClick={() => setWinner(t.id, p.userId, p.playerName)}
+                                      disabled={winnerLoading[t.id]}
+                                      className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-[#ffd700]/15 border border-[#ffd700]/30 text-[#ffd700] font-bold text-xs rounded-lg hover:bg-[#ffd700]/25 transition-colors disabled:opacity-50"
+                                    >
+                                      <Crown className="w-3 h-3" />
+                                      Set Winner
+                                    </button>
+                                  ) : (
+                                    <span className="text-[10px] font-black uppercase text-[#ffd700] bg-[#ffd700]/10 px-2 py-1 rounded border border-[#ffd700]/30 shrink-0">
+                                      Winner
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
