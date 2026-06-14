@@ -1,0 +1,3 @@
+- [Clerk React v6 exports](clerk-react-v6.md) — v6 does NOT export SignedIn/SignedOut; use isSignedIn from useAuth() instead.
+- [Tailwind v4 @apply dark](tailwind-v4-dark.md) — never use `@apply dark` in CSS; dark is a selector variant not a utility class.
+- [Leaderboard route alias](leaderboard-route.md) — generated client calls /leaderboard/global but router only had /leaderboard; use array syntax to register both.
