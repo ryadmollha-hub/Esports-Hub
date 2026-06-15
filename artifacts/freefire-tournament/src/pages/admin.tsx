@@ -4,14 +4,14 @@ import {
   Users, Trophy, Shield, Clock, DollarSign, CheckCircle, XCircle, Bell,
   Plus, Trash2, Edit, LogOut, BarChart3, Megaphone, Swords, CreditCard,
   ArrowDownCircle, ArrowUpCircle, Eye, EyeOff, RefreshCw, Home,
-  Crown, Shuffle, X as XIcon, Tag, BookOpen, Key, Radio, Lock
+  Crown, Shuffle, X as XIcon, Tag, BookOpen, Key, Radio, Lock, Settings, Copy
 } from "lucide-react";
 import { isAdminAuthenticated, clearAdminSession, adminFetch } from "@/lib/adminAuth";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules";
+type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings";
 
 const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
@@ -24,6 +24,7 @@ const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "deposits", label: "Deposits", icon: ArrowDownCircle },
   { id: "withdrawals", label: "Withdrawals", icon: ArrowUpCircle },
   { id: "promo-codes", label: "Promo Codes", icon: Tag },
+  { id: "payment-settings", label: "Payment Settings", icon: Settings },
 ];
 
 export default function AdminPage() {
@@ -1570,6 +1571,11 @@ export default function AdminPage() {
             <PromoCodesTab apiFetch={apiFetch} toast={toast} />
           )}
 
+          {/* PAYMENT SETTINGS */}
+          {activeTab === "payment-settings" && (
+            <PaymentSettingsTab apiFetch={apiFetch} toast={toast} />
+          )}
+
         </div>
       </main>
     </div>
@@ -1919,6 +1925,140 @@ function PromoCodesTab({ apiFetch, toast }: { apiFetch: any; toast: any }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function PaymentSettingsTab({ apiFetch, toast }: { apiFetch: any; toast: any }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ bkash_number: "", nagad_number: "", rocket_number: "" });
+  const [copied, setCopied] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    apiFetch("/payment-settings")
+      .then((r: Response) => r.json())
+      .then((d: any) => {
+        if (d?.bkash_number) setForm({ bkash_number: d.bkash_number, nagad_number: d.nagad_number, rocket_number: d.rocket_number });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.bkash_number.trim() || !form.nagad_number.trim() || !form.rocket_number.trim()) {
+      toast({ title: "All payment numbers are required.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await apiFetch("/admin/payment-settings", {
+        method: "PUT",
+        body: JSON.stringify(form),
+      });
+      if (res.ok) {
+        toast({ title: "Payment numbers updated!", description: "Users will see the new numbers immediately." });
+      } else {
+        const d = await res.json();
+        toast({ title: "Error", description: d.error ?? "Failed to save", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const copyNum = (num: string, label: string) => {
+    navigator.clipboard.writeText(num);
+    setCopied(label);
+    setTimeout(() => setCopied(null), 1500);
+  };
+
+  const methods = [
+    { key: "bkash_number" as const, label: "bKash", color: "text-pink-400 border-pink-500/30 bg-pink-500/8", dot: "bg-pink-400" },
+    { key: "nagad_number" as const, label: "Nagad", color: "text-orange-400 border-orange-500/30 bg-orange-500/8", dot: "bg-orange-400" },
+    { key: "rocket_number" as const, label: "Rocket", color: "text-purple-400 border-purple-500/30 bg-purple-500/8", dot: "bg-purple-400" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3 mb-2">
+        <Settings className="w-5 h-5 text-[#ff6b00]" />
+        <h2 className="text-white font-black uppercase tracking-wide text-lg">Payment Settings</h2>
+      </div>
+      <p className="text-[#a0a0b0] text-sm -mt-3">Set the payment numbers users see when depositing. Only admins can update these.</p>
+
+      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/15 p-5">
+        <h3 className="text-white font-black uppercase text-xs tracking-widest mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88]" /> Current Active Numbers
+        </h3>
+        {loading ? (
+          <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-12 bg-[#0a0a0f] rounded-xl animate-pulse" />)}</div>
+        ) : (
+          <div className="space-y-3">
+            {methods.map((m) => (
+              <div key={m.key} className={`flex items-center justify-between rounded-xl border px-4 py-3 ${m.color}`}>
+                <div className="flex items-center gap-3">
+                  <span className={`w-2 h-2 rounded-full ${m.dot}`} />
+                  <span className="font-black text-xs uppercase tracking-wider">{m.label}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-white">{form[m.key] || "—"}</span>
+                  <button
+                    type="button"
+                    onClick={() => copyNum(form[m.key], m.key)}
+                    className="w-7 h-7 rounded-lg bg-[#1a1a24] border border-[#2a2a36] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors"
+                  >
+                    {copied === m.key ? <CheckCircle className="w-3.5 h-3.5 text-[#00ff88]" /> : <Copy className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/15 p-5">
+        <h3 className="text-white font-black uppercase text-xs tracking-widest mb-5 flex items-center gap-2">
+          <Edit className="w-3.5 h-3.5 text-[#ff6b00]" /> Update Payment Numbers
+        </h3>
+        {loading ? (
+          <div className="space-y-4">{[1,2,3].map(i => <div key={i} className="h-16 bg-[#0a0a0f] rounded-xl animate-pulse" />)}</div>
+        ) : (
+          <form onSubmit={handleSave} className="space-y-4">
+            {methods.map((m) => (
+              <div key={m.key}>
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
+                  <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${m.dot}`} />
+                  {m.label} Number *
+                </label>
+                <input
+                  type="text"
+                  value={form[m.key]}
+                  onChange={(e) => setForm({ ...form, [m.key]: e.target.value })}
+                  required
+                  placeholder="01XXXXXXXXX"
+                  className="admin-input font-mono"
+                />
+              </div>
+            ))}
+            <div className="bg-yellow-500/8 border border-yellow-500/20 rounded-xl px-4 py-3 flex items-start gap-2">
+              <Shield className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+              <p className="text-yellow-400 text-xs">These numbers are shown to all users on the payment screen. Only admins can change them. Users cannot modify payment numbers.</p>
+            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-6 py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
+            >
+              {saving ? "Saving..." : "Save Payment Numbers"}
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import notificationsRouter from "./notifications";
 import referralsRouter from "./referrals";
 import promoCodesRouter from "./promoCodes";
 import rulesRouter from "./rules";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(notificationsRouter);
 router.use(referralsRouter);
 router.use(promoCodesRouter);
 router.use(rulesRouter);
+router.use(settingsRouter);
 
 export default router;

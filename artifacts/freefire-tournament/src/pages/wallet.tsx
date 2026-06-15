@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   Wallet, ArrowDownCircle, ArrowUpCircle, Clock, CheckCircle,
   XCircle, TrendingUp, TrendingDown, RefreshCw, AlertCircle,
-  X, History, Trophy, Zap, Tag
+  X, History, Trophy, Zap, Tag, Copy, Info, ImagePlus
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuthContext } from "@/lib/AuthContext";
@@ -72,10 +72,22 @@ export default function WalletPage() {
   });
   const [promoCode, setPromoCode] = useState("");
   const [applyingPromo, setApplyingPromo] = useState(false);
+  const [paymentSettings, setPaymentSettings] = useState<Record<string, string>>({
+    bkash_number: "01606622867",
+    nagad_number: "01606622867",
+    rocket_number: "01606622867",
+  });
 
   useEffect(() => {
     if (!isLoading && !user) setLocation("/sign-in");
   }, [isLoading, user]);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}api/payment-settings`)
+      .then((r) => r.json())
+      .then((d) => { if (d && d.bkash_number) setPaymentSettings(d); })
+      .catch(() => {});
+  }, []);
 
   const loadBalance = useCallback(async () => {
     setLoadingBalance(true);
@@ -396,38 +408,113 @@ export default function WalletPage() {
 
       {/* Deposit Modal */}
       {activeModal === "deposit" && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 backdrop-blur-sm">
-          <div className="w-full max-w-lg bg-[#0d0d16] border-t border-[#ff6b00]/20 rounded-t-3xl p-6 pb-10 shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/70 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setActiveModal(null); }}>
+          <div className="w-full max-w-lg bg-[#0d0d16] border-t border-[#ff6b00]/20 rounded-t-3xl p-6 pb-10 shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="font-black uppercase text-white text-lg">Deposit Money</h3>
-                <p className="text-[#a0a0b0] text-xs mt-0.5">Send via BKash/Nagad, then submit this form</p>
+                <p className="text-[#a0a0b0] text-xs mt-0.5">Send payment, then submit this form</p>
               </div>
               <button onClick={() => setActiveModal(null)} className="w-8 h-8 rounded-full bg-[#1a1a24] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Step 1: Select Method & See Payment Info */}
+            <div className="mb-4">
+              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold">Step 1 — Select Payment Method *</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: "bkash", label: "bKash", color: "text-pink-400 border-pink-500/40 bg-pink-500/10", activeColor: "border-pink-400 bg-pink-500/20 shadow-[0_0_12px_rgba(236,72,153,0.2)]" },
+                  { id: "nagad", label: "Nagad", color: "text-orange-400 border-orange-500/40 bg-orange-500/10", activeColor: "border-orange-400 bg-orange-500/20 shadow-[0_0_12px_rgba(249,115,22,0.2)]" },
+                  { id: "rocket", label: "Rocket", color: "text-purple-400 border-purple-500/40 bg-purple-500/10", activeColor: "border-purple-400 bg-purple-500/20 shadow-[0_0_12px_rgba(168,85,247,0.2)]" },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setDepositForm({ ...depositForm, method: m.id })}
+                    className={`py-3 rounded-xl border font-black text-sm uppercase transition-all ${depositForm.method === m.id ? m.activeColor : m.color} ${m.color}`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Payment Info Box */}
+            <div className="bg-[#0a0a14] border border-[#ff6b00]/25 rounded-xl p-4 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Info className="w-4 h-4 text-[#ff6b00] shrink-0" />
+                <span className="text-[#ff6b00] font-black text-xs uppercase tracking-wider">Payment Instructions</span>
+              </div>
+              <div className="space-y-2 text-sm text-[#a0a0b0]">
+                <p>1. Open your <span className="text-white font-bold capitalize">{depositForm.method}</span> app.</p>
+                <p>2. Send money to this number:</p>
+                <div className="flex items-center gap-2 bg-[#12121a] border border-[#ff6b00]/30 rounded-xl px-4 py-3 mt-1">
+                  <span className="text-[#ff6b00] font-mono font-black text-lg flex-1">
+                    {paymentSettings[`${depositForm.method}_number`] ?? "01606622867"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const num = paymentSettings[`${depositForm.method}_number`] ?? "01606622867";
+                      navigator.clipboard.writeText(num);
+                      toast({ title: "Copied!", description: `${num} copied to clipboard.` });
+                    }}
+                    className="w-8 h-8 rounded-lg bg-[#ff6b00]/10 border border-[#ff6b00]/30 flex items-center justify-center text-[#ff6b00] hover:bg-[#ff6b00]/20 transition-colors"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <p>3. Note the <span className="text-white font-bold">Transaction ID (TrxID)</span> shown after payment.</p>
+                <p>4. Fill the form below and submit.</p>
+              </div>
+            </div>
+
             <form onSubmit={submitDeposit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Amount (৳) *</label>
-                  <input type="number" value={depositForm.amount} onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })} required min="1" placeholder="100" className="w-full bg-[#12121a] border border-[#2a2a36] rounded-xl px-4 py-3 text-white placeholder-[#606070] focus:outline-none focus:border-[#ff6b00] text-sm transition-colors" />
-                </div>
-                <div>
-                  <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Method *</label>
-                  <select value={depositForm.method} onChange={(e) => setDepositForm({ ...depositForm, method: e.target.value })} className="w-full bg-[#12121a] border border-[#2a2a36] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff6b00] text-sm transition-colors">
-                    <option value="bkash">BKash</option>
-                    <option value="nagad">Nagad</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Step 2 — Amount Sent (৳) *</label>
+                <input type="number" value={depositForm.amount} onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })} required min="1" placeholder="Enter the amount you sent" className="w-full bg-[#12121a] border border-[#2a2a36] rounded-xl px-4 py-3 text-white placeholder-[#606070] focus:outline-none focus:border-[#ff6b00] text-sm transition-colors" />
               </div>
               <div>
-                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Your Account Number *</label>
-                <input value={depositForm.accountNumber} onChange={(e) => setDepositForm({ ...depositForm, accountNumber: e.target.value })} required placeholder="01XXXXXXXXX" className="w-full bg-[#12121a] border border-[#2a2a36] rounded-xl px-4 py-3 text-white placeholder-[#606070] focus:outline-none focus:border-[#ff6b00] text-sm transition-colors" />
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Transaction ID (TrxID) *</label>
+                <input value={depositForm.transactionId} onChange={(e) => setDepositForm({ ...depositForm, transactionId: e.target.value })} required placeholder="e.g. ABC1234XYZ" className="w-full bg-[#12121a] border border-[#2a2a36] rounded-xl px-4 py-3 text-white placeholder-[#606070] focus:outline-none focus:border-[#ff6b00] text-sm font-mono transition-colors" />
               </div>
               <div>
-                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Transaction ID</label>
-                <input value={depositForm.transactionId} onChange={(e) => setDepositForm({ ...depositForm, transactionId: e.target.value })} placeholder="TX ID from payment app" className="w-full bg-[#12121a] border border-[#2a2a36] rounded-xl px-4 py-3 text-white placeholder-[#606070] focus:outline-none focus:border-[#ff6b00] text-sm transition-colors" />
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Your Sender Number *</label>
+                <input value={depositForm.accountNumber} onChange={(e) => setDepositForm({ ...depositForm, accountNumber: e.target.value })} required placeholder="01XXXXXXXXX (number you sent from)" className="w-full bg-[#12121a] border border-[#2a2a36] rounded-xl px-4 py-3 text-white placeholder-[#606070] focus:outline-none focus:border-[#ff6b00] text-sm transition-colors" />
+              </div>
+              <div>
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Screenshot <span className="text-[#606070] normal-case font-normal">(optional but recommended)</span></label>
+                <div className="relative">
+                  {depositForm.screenshot ? (
+                    <div className="flex items-center gap-3 bg-[#12121a] border border-[#00ff88]/30 rounded-xl px-4 py-3">
+                      <CheckCircle className="w-4 h-4 text-[#00ff88] shrink-0" />
+                      <span className="text-[#00ff88] text-sm font-bold flex-1 truncate">Screenshot uploaded</span>
+                      <button type="button" onClick={() => setDepositForm({ ...depositForm, screenshot: "" })} className="text-[#606070] hover:text-white">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center gap-3 bg-[#12121a] border border-dashed border-[#2a2a36] rounded-xl px-4 py-3 cursor-pointer hover:border-[#ff6b00]/40 transition-colors">
+                      <ImagePlus className="w-4 h-4 text-[#606070]" />
+                      <span className="text-[#606070] text-sm">Click to upload payment screenshot</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 4 * 1024 * 1024) { toast({ title: "File too large", description: "Max 4MB", variant: "destructive" }); return; }
+                          const reader = new FileReader();
+                          reader.onload = () => setDepositForm({ ...depositForm, screenshot: reader.result as string });
+                          reader.readAsDataURL(file);
+                        }}
+                      />
+                    </label>
+                  )}
+                </div>
               </div>
               <button type="submit" disabled={submitting} className="w-full py-4 bg-[#00ff88] text-[#0a0a0f] font-black uppercase rounded-xl hover:bg-[#00cc70] transition-colors disabled:opacity-50 text-sm shadow-[0_0_20px_rgba(0,255,136,0.2)]">
                 {submitting ? "Submitting..." : "Submit Deposit Request"}
@@ -463,6 +550,7 @@ export default function WalletPage() {
                   <select value={withdrawForm.method} onChange={(e) => setWithdrawForm({ ...withdrawForm, method: e.target.value })} className="w-full bg-[#12121a] border border-[#2a2a36] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#ff6b00] text-sm transition-colors">
                     <option value="bkash">BKash</option>
                     <option value="nagad">Nagad</option>
+                    <option value="rocket">Rocket</option>
                   </select>
                 </div>
               </div>

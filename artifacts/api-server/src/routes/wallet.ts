@@ -90,8 +90,8 @@ router.post("/wallet/deposit", async (req, res) => {
   if (parseFloat(amount) <= 0) {
     return res.status(400).json({ error: "Amount must be greater than zero." });
   }
-  if (!["bkash", "nagad"].includes(method)) {
-    return res.status(400).json({ error: "Payment method must be BKash or Nagad." });
+  if (!["bkash", "nagad", "rocket"].includes(method)) {
+    return res.status(400).json({ error: "Payment method must be BKash, Nagad, or Rocket." });
   }
 
   try {
@@ -123,8 +123,8 @@ router.post("/wallet/withdraw", async (req, res) => {
   if (parseFloat(amount) <= 0) {
     return res.status(400).json({ error: "Amount must be greater than zero." });
   }
-  if (!["bkash", "nagad"].includes(method)) {
-    return res.status(400).json({ error: "Payment method must be BKash or Nagad." });
+  if (!["bkash", "nagad", "rocket"].includes(method)) {
+    return res.status(400).json({ error: "Payment method must be BKash, Nagad, or Rocket." });
   }
 
   try {

@@ -9,3 +9,4 @@ export * from "./notifications";
 export * from "./referrals";
 export * from "./promoCodes";
 export * from "./rules";
+export * from "./settings";
