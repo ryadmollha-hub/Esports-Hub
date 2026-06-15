@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, numeric, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -11,6 +11,10 @@ export const registrationsTable = pgTable("registrations", {
   freefireUid: text("freefire_uid").notNull(),
   playerName: text("player_name").notNull(),
   paymentScreenshot: text("payment_screenshot"),
+  // Result fields
+  kills: integer("kills").notNull().default(0),
+  earnedAmount: numeric("earned_amount", { precision: 10, scale: 2 }).notNull().default("0"),
+  resultRank: integer("result_rank"),  // 1 | 2 | 3 | null (for top 3 podium)
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

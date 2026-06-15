@@ -22,6 +22,7 @@ export const tournamentsTable = pgTable("tournaments", {
   winnerId: text("winner_id"),
   winnerName: text("winner_name"),
   autoWinner: boolean("auto_winner").notNull().default(false),
+  resultsPublished: boolean("results_published").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

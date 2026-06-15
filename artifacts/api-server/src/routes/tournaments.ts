@@ -5,6 +5,7 @@ import {
   prizeTiersTable,
   registrationsTable,
   usersTable,
+  walletTransactionsTable,
 } from "@workspace/db";
 import { eq, desc, ilike, and, sql } from "drizzle-orm";
 import {
@@ -13,6 +14,7 @@ import {
   UpdateTournamentRoomBody,
 } from "@workspace/api-zod";
 import { requireAdmin, requireAuth } from "../middlewares/requireAdmin";
+import { getUserBalance } from "./wallet";
 
 const router: IRouter = Router();
 
@@ -33,7 +35,7 @@ router.get("/tournaments", async (req, res) => {
       .limit(parseInt(limit))
       .offset((parseInt(page) - 1) * parseInt(limit));
     res.json(rows);
-  } catch (err) {
+  } catch {
     res.status(500).json({ error: "Failed to load tournaments." });
   }
 });
@@ -52,7 +54,7 @@ router.get("/tournaments/featured", async (_req, res) => {
   }
 });
 
-// ─── Single tournament with prizes + winner ─────────────────────────────────
+// ─── Single tournament with prizes ──────────────────────────────────────────
 
 router.get("/tournaments/:id", async (req, res) => {
   try {
@@ -84,6 +86,9 @@ router.get("/tournaments/:id/participants", async (req, res) => {
         freefireUid: registrationsTable.freefireUid,
         playerName: registrationsTable.playerName,
         status: registrationsTable.status,
+        kills: registrationsTable.kills,
+        earnedAmount: registrationsTable.earnedAmount,
+        resultRank: registrationsTable.resultRank,
         createdAt: registrationsTable.createdAt,
       })
       .from(registrationsTable)
@@ -100,7 +105,42 @@ router.get("/tournaments/:id/participants", async (req, res) => {
   }
 });
 
-// ─── Join tournament ─────────────────────────────────────────────────────────
+// ─── Tournament results (published) ─────────────────────────────────────────
+
+router.get("/tournaments/:id/results", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const [tournament] = await db
+      .select()
+      .from(tournamentsTable)
+      .where(eq(tournamentsTable.id, id));
+    if (!tournament) return res.status(404).json({ error: "Tournament not found." });
+    if (!tournament.resultsPublished) {
+      return res.status(404).json({ error: "Results not yet published." });
+    }
+    const participants = await db
+      .select()
+      .from(registrationsTable)
+      .where(
+        and(
+          eq(registrationsTable.tournamentId, id),
+          eq(registrationsTable.status, "approved")
+        )
+      );
+    // Sort: ranked first (1,2,3), then by kills desc
+    const sorted = participants.sort((a, b) => {
+      if (a.resultRank && b.resultRank) return a.resultRank - b.resultRank;
+      if (a.resultRank) return -1;
+      if (b.resultRank) return 1;
+      return (b.kills ?? 0) - (a.kills ?? 0);
+    });
+    res.json({ tournament, results: sorted });
+  } catch {
+    res.status(500).json({ error: "Failed to load results." });
+  }
+});
+
+// ─── Join tournament (with entry fee deduction) ──────────────────────────────
 
 router.post("/tournaments/:id/join", async (req, res) => {
   const userId = await requireAuth(req, res);
@@ -115,13 +155,14 @@ router.post("/tournaments/:id/join", async (req, res) => {
       .where(eq(tournamentsTable.id, id));
 
     if (!tournament) return res.status(404).json({ error: "Tournament not found." });
-    if (tournament.status === "ended" || tournament.status === "cancelled") {
+    if (tournament.status === "ended" || tournament.status === "completed" || tournament.status === "cancelled") {
       return res.status(400).json({ error: "This tournament is no longer accepting players." });
     }
     if (tournament.filledSlots >= tournament.maxSlots) {
       return res.status(400).json({ error: "Tournament is full. No slots available." });
     }
 
+    // Duplicate check
     const existing = await db
       .select()
       .from(registrationsTable)
@@ -152,6 +193,29 @@ router.post("/tournaments/:id/join", async (req, res) => {
       });
     }
 
+    // ── Entry fee check & deduction ──────────────────────────────────────────
+    const entryFee = Number(tournament.entryFee);
+    if (entryFee > 0) {
+      const balance = await getUserBalance(userId);
+      if (balance < entryFee) {
+        return res.status(400).json({
+          error: `Insufficient wallet balance. You need ৳${entryFee} but have ৳${balance.toFixed(2)}.`,
+          insufficientBalance: true,
+          required: entryFee,
+          balance,
+        });
+      }
+      // Deduct entry fee (auto-approved system transaction)
+      await db.insert(walletTransactionsTable).values({
+        userId,
+        type: "tournament_entry",
+        amount: String(entryFee),
+        status: "approved",
+        notes: `Entry fee for "${tournament.name}"`,
+        tournamentId: id,
+      });
+    }
+
     const [reg] = await db
       .insert(registrationsTable)
       .values({
@@ -168,7 +232,11 @@ router.post("/tournaments/:id/join", async (req, res) => {
       .set({ filledSlots: sql`${tournamentsTable.filledSlots} + 1` })
       .where(eq(tournamentsTable.id, id));
 
-    res.status(201).json({ success: true, registration: reg });
+    res.status(201).json({
+      success: true,
+      registration: reg,
+      entryFeeDeducted: entryFee > 0 ? entryFee : 0,
+    });
   } catch {
     res.status(500).json({ error: "Failed to join tournament. Please try again." });
   }
@@ -189,7 +257,7 @@ router.delete("/tournaments/:id/join", async (req, res) => {
       .where(eq(tournamentsTable.id, id));
 
     if (!tournament) return res.status(404).json({ error: "Tournament not found." });
-    if (tournament.status === "live" || tournament.status === "ended") {
+    if (tournament.status === "live" || tournament.status === "ongoing" || tournament.status === "ended" || tournament.status === "completed") {
       return res.status(400).json({ error: "You cannot leave a tournament that is live or ended." });
     }
 
@@ -214,9 +282,132 @@ router.delete("/tournaments/:id/join", async (req, res) => {
       .set({ filledSlots: sql`GREATEST(${tournamentsTable.filledSlots} - 1, 0)` })
       .where(eq(tournamentsTable.id, id));
 
-    res.json({ success: true });
+    // Refund entry fee if it was paid
+    const entryFee = Number(tournament.entryFee);
+    if (entryFee > 0) {
+      // Void the entry fee transaction by creating a refund deposit
+      await db.insert(walletTransactionsTable).values({
+        userId,
+        type: "tournament_prize",
+        amount: String(entryFee),
+        status: "approved",
+        notes: `Refund: Left "${tournament.name}" before it started`,
+        tournamentId: id,
+      });
+    }
+
+    res.json({ success: true, refunded: entryFee > 0 ? entryFee : 0 });
   } catch {
     res.status(500).json({ error: "Failed to leave tournament. Please try again." });
+  }
+});
+
+// ─── Admin: Publish results ───────────────────────────────────────────────────
+
+router.post("/tournaments/:id/publish-results", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const { results } = req.body as {
+      results: Array<{
+        registrationId: number;
+        kills: number;
+        resultRank?: number | null;
+      }>
+    };
+
+    if (!Array.isArray(results) || results.length === 0) {
+      return res.status(400).json({ error: "Results array is required." });
+    }
+
+    const [tournament] = await db
+      .select()
+      .from(tournamentsTable)
+      .where(eq(tournamentsTable.id, id));
+
+    if (!tournament) return res.status(404).json({ error: "Tournament not found." });
+
+    const prizes = await db
+      .select()
+      .from(prizeTiersTable)
+      .where(eq(prizeTiersTable.tournamentId, id))
+      .orderBy(prizeTiersTable.rank);
+
+    // Map rank index to prize amounts (prize_tiers sorted: 1st=index0, 2nd=index1, 3rd=index2)
+    const prizeByRank: Record<number, number> = {};
+    prizes.forEach((p, i) => {
+      prizeByRank[i + 1] = Number(p.amount);
+    });
+
+    const perKill = Number(tournament.perKillReward ?? 0);
+
+    // Update each participant
+    for (const r of results) {
+      const killBonus = perKill * (r.kills ?? 0);
+      const rankPrize = r.resultRank ? (prizeByRank[r.resultRank] ?? 0) : 0;
+      const totalEarned = rankPrize + killBonus;
+
+      await db
+        .update(registrationsTable)
+        .set({
+          kills: r.kills ?? 0,
+          resultRank: r.resultRank ?? null,
+          earnedAmount: String(totalEarned),
+        })
+        .where(eq(registrationsTable.id, r.registrationId));
+
+      // Pay out prizes to winner wallets
+      if (totalEarned > 0) {
+        const [reg] = await db
+          .select()
+          .from(registrationsTable)
+          .where(eq(registrationsTable.id, r.registrationId));
+
+        if (reg) {
+          const rankLabel = r.resultRank === 1 ? "🥇 1st" : r.resultRank === 2 ? "🥈 2nd" : r.resultRank === 3 ? "🥉 3rd" : null;
+          const prizeNotes = [
+            rankLabel ? `${rankLabel} Place prize in "${tournament.name}"` : null,
+            killBonus > 0 ? `Kill bonus: ${r.kills} kills × ৳${perKill} in "${tournament.name}"` : null,
+          ].filter(Boolean).join(" + ");
+
+          await db.insert(walletTransactionsTable).values({
+            userId: reg.userId,
+            type: "tournament_prize",
+            amount: String(totalEarned),
+            status: "approved",
+            notes: prizeNotes || `Tournament prize from "${tournament.name}"`,
+            tournamentId: id,
+          });
+        }
+      }
+    }
+
+    // Set top 3 winner (1st place)
+    const first = results.find((r) => r.resultRank === 1);
+    let winnerId: string | null = null;
+    let winnerName: string | null = null;
+    if (first) {
+      const [reg] = await db
+        .select()
+        .from(registrationsTable)
+        .where(eq(registrationsTable.id, first.registrationId));
+      if (reg) { winnerId = reg.userId; winnerName = reg.playerName; }
+    }
+
+    // Mark results published + ended
+    await db
+      .update(tournamentsTable)
+      .set({
+        resultsPublished: true,
+        status: "ended",
+        ...(winnerId ? { winnerId, winnerName } : {}),
+      })
+      .where(eq(tournamentsTable.id, id));
+
+    res.json({ success: true, participantsUpdated: results.length });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to publish results." });
   }
 });
 
@@ -310,7 +501,7 @@ router.post("/tournaments", async (req, res) => {
     }).returning();
     if (data.prizes && data.prizes.length > 0) {
       await db.insert(prizeTiersTable).values(
-        data.prizes.map((p: { rank: string; amount: number; percentage?: number; description?: string }) => ({
+        data.prizes.map((p: any) => ({
           tournamentId: created.id,
           rank: p.rank,
           amount: p.amount.toString(),

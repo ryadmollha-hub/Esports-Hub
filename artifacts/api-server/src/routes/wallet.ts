@@ -1,10 +1,32 @@
 import { Router, type IRouter } from "express";
 import { requireAdmin, requireAuth } from "../middlewares/requireAdmin";
 import { db } from "@workspace/db";
-import { walletTransactionsTable, usersTable } from "@workspace/db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { walletTransactionsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+export function calcBalance(txs: any[]): number {
+  const additions = txs
+    .filter((t) => (t.type === "deposit" || t.type === "tournament_prize") && t.status === "approved")
+    .reduce((s, t) => s + Number(t.amount), 0);
+  const deductions = txs
+    .filter((t) => (t.type === "withdraw" || t.type === "tournament_entry") && t.status === "approved")
+    .reduce((s, t) => s + Number(t.amount), 0);
+  return Math.max(0, additions - deductions);
+}
+
+export async function getUserBalance(userId: string): Promise<number> {
+  const txs = await db
+    .select()
+    .from(walletTransactionsTable)
+    .where(eq(walletTransactionsTable.userId, userId));
+  return calcBalance(txs);
+}
+
+// ─── Routes ─────────────────────────────────────────────────────────────────
 
 router.get("/wallet/balance", async (req, res) => {
   const userId = await requireAuth(req, res);
@@ -24,6 +46,14 @@ router.get("/wallet/balance", async (req, res) => {
       .filter((t) => t.type === "withdraw" && t.status === "approved")
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
+    const totalEntryFees = txs
+      .filter((t) => t.type === "tournament_entry" && t.status === "approved")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
+    const totalPrizes = txs
+      .filter((t) => t.type === "tournament_prize" && t.status === "approved")
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+
     const pendingDeposit = txs
       .filter((t) => t.type === "deposit" && t.status === "pending")
       .reduce((sum, t) => sum + Number(t.amount), 0);
@@ -32,12 +62,14 @@ router.get("/wallet/balance", async (req, res) => {
       .filter((t) => t.type === "withdraw" && t.status === "pending")
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
-    const balance = totalDeposit - totalWithdraw;
+    const balance = totalDeposit + totalPrizes - totalWithdraw - totalEntryFees;
 
     res.json({
       balance: Math.max(0, balance),
       totalDeposit,
       totalWithdraw,
+      totalEntryFees,
+      totalPrizes,
       pendingDeposit,
       pendingWithdraw,
     });
@@ -95,14 +127,7 @@ router.post("/wallet/withdraw", async (req, res) => {
   }
 
   try {
-    const txs = await db
-      .select()
-      .from(walletTransactionsTable)
-      .where(eq(walletTransactionsTable.userId, userId));
-
-    const balance =
-      txs.filter((t) => t.type === "deposit" && t.status === "approved").reduce((s, t) => s + Number(t.amount), 0) -
-      txs.filter((t) => t.type === "withdraw" && t.status === "approved").reduce((s, t) => s + Number(t.amount), 0);
+    const balance = await getUserBalance(userId);
 
     if (parseFloat(amount) > balance) {
       return res.status(400).json({ error: `Insufficient balance. Your available balance is ৳${balance.toFixed(2)}.` });

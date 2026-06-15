@@ -42,6 +42,10 @@ export default function AdminPage() {
   const [loadingParticipants, setLoadingParticipants] = useState<Record<number, boolean>>({});
   const [expandedWinner, setExpandedWinner] = useState<Record<number, boolean>>({});
   const [winnerLoading, setWinnerLoading] = useState<Record<number, boolean>>({});
+  // Results state: { [tournamentId]: { [registrationId]: { kills, rank } } }
+  const [resultInputs, setResultInputs] = useState<Record<number, Record<number, { kills: string; rank: string }>>>({});
+  const [publishingResults, setPublishingResults] = useState<Record<number, boolean>>({});
+  const [resultMode, setResultMode] = useState<Record<number, "winner" | "results">>({}); // toggle between winner-select and results-entry
 
   // Tournament form
   const [tForm, setTForm] = useState({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Pct: "50", prize2Pct: "30", prize3Pct: "20" });
@@ -318,6 +322,48 @@ export default function AdminPage() {
     if (!confirm("Clear the winner for this tournament?")) return;
     const res = await apiFetch(`/tournaments/${tournamentId}/winner`, { method: "DELETE" });
     if (res.ok) { toast({ title: "Winner cleared" }); loadTournaments(); }
+  };
+
+  const updateResultInput = (tournamentId: number, regId: number, field: "kills" | "rank", value: string) => {
+    setResultInputs((prev) => ({
+      ...prev,
+      [tournamentId]: {
+        ...prev[tournamentId],
+        [regId]: { ...prev[tournamentId]?.[regId], [field]: value },
+      },
+    }));
+  };
+
+  const publishResults = async (tournamentId: number) => {
+    const inputs = resultInputs[tournamentId] ?? {};
+    const participants = tournamentParticipants[tournamentId] ?? [];
+    if (participants.length === 0) return toast({ title: "No participants to publish results for.", variant: "destructive" });
+
+    const results = participants.map((p: any) => ({
+      registrationId: p.id,
+      kills: parseInt(inputs[p.id]?.kills ?? "0") || 0,
+      resultRank: inputs[p.id]?.rank ? parseInt(inputs[p.id].rank) : null,
+    }));
+
+    setPublishingResults((prev) => ({ ...prev, [tournamentId]: true }));
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}/publish-results`, {
+        method: "POST",
+        body: JSON.stringify({ results }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toast({ title: "✅ Results published!", description: `${d.participantsUpdated} players updated. Prizes distributed.` });
+        loadTournaments();
+        loadTournamentParticipants(tournamentId);
+      } else {
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setPublishingResults((prev) => ({ ...prev, [tournamentId]: false }));
+    }
   };
 
   // Wallet actions
@@ -680,104 +726,175 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Winner Selection */}
+                    {/* Participants + Results + Winner Panel */}
                     <div className="mt-4 pt-4 border-t border-[#ff6b00]/5">
+                      {/* Status badges */}
                       <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <Crown className="w-4 h-4 text-[#ffd700]" />
-                          <p className="text-xs text-[#a0a0b0] uppercase tracking-wider font-bold">
-                            Winner {t.winnerId ? <span className="text-[#ffd700] ml-1">— {t.winnerName}</span> : null}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              const newState = !expandedWinner[t.id];
-                              setExpandedWinner((prev) => ({ ...prev, [t.id]: newState }));
-                              if (newState && !tournamentParticipants[t.id]) loadTournamentParticipants(t.id);
-                            }}
-                            className="text-xs text-[#a0a0b0] hover:text-white flex items-center gap-1 transition-colors"
-                          >
-                            <Users className="w-3 h-3" />
-                            {expandedWinner[t.id] ? "Hide" : `Participants (${t.filledSlots})`}
-                          </button>
+                        <div className="flex items-center gap-2 flex-wrap">
                           {t.winnerId && (
-                            <button
-                              onClick={() => clearWinner(t.id)}
-                              className="text-xs text-[#ff2244]/70 hover:text-[#ff2244] transition-colors"
-                            >
-                              Clear Winner
-                            </button>
+                            <span className="flex items-center gap-1 text-xs text-[#ffd700] bg-[#ffd700]/10 border border-[#ffd700]/20 px-2 py-0.5 rounded-full font-bold">
+                              <Crown className="w-3 h-3" /> {t.winnerName}
+                            </span>
+                          )}
+                          {t.resultsPublished && (
+                            <span className="text-xs text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full font-bold">
+                              ✅ Results Published
+                            </span>
                           )}
                         </div>
+                        <button
+                          onClick={() => {
+                            const newState = !expandedWinner[t.id];
+                            setExpandedWinner((prev) => ({ ...prev, [t.id]: newState }));
+                            if (newState && !tournamentParticipants[t.id]) loadTournamentParticipants(t.id);
+                          }}
+                          className="text-xs text-[#a0a0b0] hover:text-white flex items-center gap-1 transition-colors"
+                        >
+                          <Users className="w-3 h-3" />
+                          {expandedWinner[t.id] ? "Hide" : `Players & Results (${t.filledSlots})`}
+                        </button>
                       </div>
 
                       {expandedWinner[t.id] && (
-                        <div className="bg-[#0d0d16] rounded-xl border border-[#ff6b00]/10 p-4">
-                          <div className="flex items-center justify-between mb-3">
+                        <div className="bg-[#0d0d16] rounded-xl border border-[#ff6b00]/10 p-4 space-y-4">
+                          {/* Mode switcher */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setResultMode((prev) => ({ ...prev, [t.id]: "winner" }))}
+                              className={`flex-1 py-1.5 text-xs font-bold uppercase rounded-lg transition-colors ${
+                                (resultMode[t.id] ?? "winner") === "winner"
+                                  ? "bg-[#ffd700]/20 text-[#ffd700] border border-[#ffd700]/30"
+                                  : "bg-[#1a1a24] text-[#a0a0b0] hover:text-white"
+                              }`}
+                            >
+                              👑 Quick Winner
+                            </button>
+                            <button
+                              onClick={() => {
+                                setResultMode((prev) => ({ ...prev, [t.id]: "results" }));
+                                loadTournamentParticipants(t.id);
+                              }}
+                              className={`flex-1 py-1.5 text-xs font-bold uppercase rounded-lg transition-colors ${
+                                resultMode[t.id] === "results"
+                                  ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                                  : "bg-[#1a1a24] text-[#a0a0b0] hover:text-white"
+                              }`}
+                            >
+                              📊 Publish Results
+                            </button>
+                          </div>
+
+                          {/* Refresh */}
+                          <div className="flex items-center justify-between">
                             <span className="text-xs text-[#a0a0b0]">
-                              {loadingParticipants[t.id] ? "Loading..." :
-                                `${tournamentParticipants[t.id]?.length ?? 0} participants`}
+                              {loadingParticipants[t.id] ? "Loading..." : `${tournamentParticipants[t.id]?.length ?? 0} participants`}
                             </span>
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => loadTournamentParticipants(t.id)}
-                                className="text-[#a0a0b0] hover:text-white transition-colors"
-                                title="Refresh"
-                              >
-                                <RefreshCw className="w-3 h-3" />
-                              </button>
-                              <button
-                                onClick={() => autoWinner(t.id)}
-                                disabled={winnerLoading[t.id]}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 text-purple-400 font-bold text-xs uppercase rounded-lg hover:bg-purple-500/30 transition-colors disabled:opacity-50"
-                              >
-                                <Shuffle className="w-3 h-3" />
-                                Auto Pick
-                              </button>
-                            </div>
+                            <button onClick={() => loadTournamentParticipants(t.id)} className="text-[#a0a0b0] hover:text-white">
+                              <RefreshCw className="w-3 h-3" />
+                            </button>
                           </div>
 
                           {loadingParticipants[t.id] ? (
                             <div className="space-y-2">
-                              {[1, 2, 3].map((i) => <div key={i} className="h-10 bg-[#1a1a24] rounded-lg animate-pulse" />)}
+                              {[1,2,3].map((i) => <div key={i} className="h-10 bg-[#1a1a24] rounded-lg animate-pulse" />)}
                             </div>
                           ) : !tournamentParticipants[t.id] || tournamentParticipants[t.id].length === 0 ? (
                             <p className="text-[#a0a0b0] text-sm text-center py-4">No participants yet</p>
-                          ) : (
-                            <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                              {tournamentParticipants[t.id].map((p: any) => (
-                                <div
-                                  key={p.id}
-                                  className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg ${
-                                    p.userId === t.winnerId
-                                      ? "bg-[#ffd700]/10 border border-[#ffd700]/30"
-                                      : "bg-[#1a1a24] border border-transparent"
-                                  }`}
+                          ) : (resultMode[t.id] ?? "winner") === "winner" ? (
+                            /* ── Quick Winner Mode ── */
+                            <div className="space-y-2">
+                              <div className="flex justify-end gap-2 mb-1">
+                                <button
+                                  onClick={() => autoWinner(t.id)}
+                                  disabled={winnerLoading[t.id]}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 text-purple-400 font-bold text-xs uppercase rounded-lg hover:bg-purple-500/30 disabled:opacity-50"
                                 >
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5">
-                                      {p.userId === t.winnerId && <Crown className="w-3 h-3 text-[#ffd700] shrink-0" />}
-                                      <span className="text-white text-sm font-bold truncate">{p.playerName}</span>
+                                  <Shuffle className="w-3 h-3" /> Auto Pick
+                                </button>
+                                {t.winnerId && (
+                                  <button onClick={() => clearWinner(t.id)} className="text-xs text-[#ff2244]/70 hover:text-[#ff2244] px-2">
+                                    Clear
+                                  </button>
+                                )}
+                              </div>
+                              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                                {tournamentParticipants[t.id].map((p: any) => (
+                                  <div key={p.id} className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg ${
+                                    p.userId === t.winnerId ? "bg-[#ffd700]/10 border border-[#ffd700]/30" : "bg-[#1a1a24]"
+                                  }`}>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5">
+                                        {p.userId === t.winnerId && <Crown className="w-3 h-3 text-[#ffd700]" />}
+                                        <span className="text-white text-sm font-bold truncate">{p.playerName}</span>
+                                      </div>
+                                      <span className="text-[#a0a0b0] text-xs font-mono">UID: {p.freefireUid}</span>
                                     </div>
-                                    <span className="text-[#a0a0b0] text-xs font-mono">UID: {p.freefireUid}</span>
+                                    {p.userId !== t.winnerId ? (
+                                      <button
+                                        onClick={() => setWinner(t.id, p.userId, p.playerName)}
+                                        disabled={winnerLoading[t.id]}
+                                        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-[#ffd700]/15 border border-[#ffd700]/30 text-[#ffd700] font-bold text-xs rounded-lg hover:bg-[#ffd700]/25 disabled:opacity-50"
+                                      >
+                                        <Crown className="w-3 h-3" /> Set
+                                      </button>
+                                    ) : (
+                                      <span className="text-[10px] font-black uppercase text-[#ffd700] bg-[#ffd700]/10 px-2 py-1 rounded border border-[#ffd700]/30">Winner</span>
+                                    )}
                                   </div>
-                                  {p.userId !== t.winnerId ? (
-                                    <button
-                                      onClick={() => setWinner(t.id, p.userId, p.playerName)}
-                                      disabled={winnerLoading[t.id]}
-                                      className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-[#ffd700]/15 border border-[#ffd700]/30 text-[#ffd700] font-bold text-xs rounded-lg hover:bg-[#ffd700]/25 transition-colors disabled:opacity-50"
-                                    >
-                                      <Crown className="w-3 h-3" />
-                                      Set Winner
-                                    </button>
-                                  ) : (
-                                    <span className="text-[10px] font-black uppercase text-[#ffd700] bg-[#ffd700]/10 px-2 py-1 rounded border border-[#ffd700]/30 shrink-0">
-                                      Winner
-                                    </span>
-                                  )}
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            /* ── Publish Results Mode ── */
+                            <div className="space-y-3">
+                              <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 text-xs text-purple-300">
+                                Enter kills for each player. Set rank (1/2/3) for top 3 placements. Click Publish to distribute prizes and end the tournament.
+                              </div>
+                              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                                {/* Table header */}
+                                <div className="grid grid-cols-[1fr_80px_80px] gap-2 px-2 text-xs text-[#a0a0b0] uppercase font-bold">
+                                  <span>Player</span>
+                                  <span className="text-center">Kills</span>
+                                  <span className="text-center">Rank</span>
                                 </div>
-                              ))}
+                                {tournamentParticipants[t.id].map((p: any) => (
+                                  <div key={p.id} className="grid grid-cols-[1fr_80px_80px] gap-2 items-center bg-[#1a1a24] rounded-lg px-3 py-2">
+                                    <div className="min-w-0">
+                                      <div className="text-white text-xs font-bold truncate">{p.playerName}</div>
+                                      <div className="text-[#a0a0b0] text-[10px] font-mono">{p.freefireUid}</div>
+                                    </div>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      placeholder="0"
+                                      value={resultInputs[t.id]?.[p.id]?.kills ?? ""}
+                                      onChange={(e) => updateResultInput(t.id, p.id, "kills", e.target.value)}
+                                      className="w-full bg-[#0d0d16] border border-[#2a2a36] rounded-lg px-2 py-1.5 text-white text-xs text-center focus:outline-none focus:border-[#ff6b00]"
+                                    />
+                                    <select
+                                      value={resultInputs[t.id]?.[p.id]?.rank ?? ""}
+                                      onChange={(e) => updateResultInput(t.id, p.id, "rank", e.target.value)}
+                                      className="w-full bg-[#0d0d16] border border-[#2a2a36] rounded-lg px-1 py-1.5 text-white text-xs text-center focus:outline-none focus:border-[#ff6b00]"
+                                    >
+                                      <option value="">—</option>
+                                      <option value="1">🥇 1st</option>
+                                      <option value="2">🥈 2nd</option>
+                                      <option value="3">🥉 3rd</option>
+                                    </select>
+                                  </div>
+                                ))}
+                              </div>
+                              <button
+                                onClick={() => publishResults(t.id)}
+                                disabled={publishingResults[t.id]}
+                                className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                              >
+                                {publishingResults[t.id] ? (
+                                  <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Publishing...</>
+                                ) : (
+                                  <>🏆 Publish Results & Distribute Prizes</>
+                                )}
+                              </button>
                             </div>
                           )}
                         </div>
