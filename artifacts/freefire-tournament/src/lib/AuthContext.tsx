@@ -33,6 +33,12 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function safeJson(res: Response): Promise<any> {
+  const text = await res.text();
+  if (!text || text.trim() === "") return {};
+  try { return JSON.parse(text); } catch { return {}; }
+}
+
 function getStoredToken(): string | null {
   try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
 }
@@ -89,8 +95,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Login failed");
+    const data = await safeJson(res);
+    if (!res.ok) throw new Error(data?.message ?? data?.error ?? "Login failed");
     storeToken(data.token);
     setUser({ ...data.user, userId: data.user.clerkId });
   }, []);
@@ -101,8 +107,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password, username }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Registration failed");
+    const data = await safeJson(res);
+    if (!res.ok) throw new Error(data?.message ?? data?.error ?? "Registration failed");
     storeToken(data.token);
     setUser({ ...data.user, userId: data.user.clerkId });
   }, []);
