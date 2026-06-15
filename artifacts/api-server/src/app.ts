@@ -5,6 +5,7 @@ import pinoHttp from "pino-http";
 import { jwtMiddleware } from "./middlewares/jwtMiddleware";
 import { apiLimiter } from "./middlewares/rateLimiter";
 import { errorHandler } from "./middlewares/errorHandler";
+import { maintenanceModeMiddleware } from "./middlewares/maintenanceMode";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -39,6 +40,7 @@ app.use(express.urlencoded({ extended: true, limit: "6mb" }));
 
 app.use(apiLimiter);
 app.use(jwtMiddleware);
+app.use(maintenanceModeMiddleware);
 
 app.use("/api", router);
 

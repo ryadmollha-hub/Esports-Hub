@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -8,6 +8,8 @@ import { ThemeProvider } from "@/lib/ThemeContext";
 import { UserRoute, AdminRoute } from "@/components/ProtectedRoute";
 import BottomNav from "@/components/BottomNav";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
+import { useMaintenanceMode } from "@/lib/useMaintenanceMode";
+import { isAdminAuthenticated } from "@/lib/adminAuth";
 
 import Home from "@/pages/home";
 import TournamentsPage from "@/pages/tournaments";
@@ -30,8 +32,25 @@ import WalletPage from "@/pages/wallet";
 import ProfilePage from "@/pages/profile";
 import ReferralPage from "@/pages/referral";
 import NotFound from "@/pages/not-found";
+import MaintenancePage from "@/pages/maintenance";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+function MaintenanceGuard({ children }: { children: React.ReactNode }) {
+  const maintenance = useMaintenanceMode();
+  const [location] = useLocation();
+
+  if (maintenance === null) return null;
+
+  const isAdminArea = location.startsWith("/admin");
+  const isAdminLoggedIn = isAdminAuthenticated();
+
+  if (maintenance && !isAdminArea && !isAdminLoggedIn) {
+    return <MaintenancePage />;
+  }
+
+  return <>{children}</>;
+}
 
 function App() {
   return (
@@ -40,52 +59,54 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <WouterRouter base={basePath}>
-              <Switch>
-                {/* Public routes */}
-                <Route path="/" component={Home} />
-                <Route path="/tournaments" component={TournamentsPage} />
-                <Route path="/tournaments/:id" component={TournamentDetailPage} />
-                <Route path="/leaderboard" component={LeaderboardPage} />
-                <Route path="/schedule" component={SchedulePage} />
-                <Route path="/results" component={ResultsPage} />
-                <Route path="/prizes" component={PrizesPage} />
-                <Route path="/contact" component={ContactPage} />
-                <Route path="/teams" component={TeamsPage} />
-                <Route path="/admin-login" component={AdminLoginPage} />
-                <Route path="/sign-in" component={LoginPage} />
-                <Route path="/sign-up" component={SignUpPage} />
-                <Route path="/forgot-password" component={ForgotPasswordPage} />
+              <MaintenanceGuard>
+                <Switch>
+                  {/* Public routes */}
+                  <Route path="/" component={Home} />
+                  <Route path="/tournaments" component={TournamentsPage} />
+                  <Route path="/tournaments/:id" component={TournamentDetailPage} />
+                  <Route path="/leaderboard" component={LeaderboardPage} />
+                  <Route path="/schedule" component={SchedulePage} />
+                  <Route path="/results" component={ResultsPage} />
+                  <Route path="/prizes" component={PrizesPage} />
+                  <Route path="/contact" component={ContactPage} />
+                  <Route path="/teams" component={TeamsPage} />
+                  <Route path="/admin-login" component={AdminLoginPage} />
+                  <Route path="/sign-in" component={LoginPage} />
+                  <Route path="/sign-up" component={SignUpPage} />
+                  <Route path="/forgot-password" component={ForgotPasswordPage} />
 
-                {/* User-only routes */}
-                <Route path="/register">
-                  {() => <UserRoute component={RegisterPage} />}
-                </Route>
-                <Route path="/teams/my">
-                  {() => <UserRoute component={MyTeamPage} />}
-                </Route>
-                <Route path="/dashboard">
-                  {() => <UserRoute component={DashboardPage} />}
-                </Route>
-                <Route path="/wallet">
-                  {() => <UserRoute component={WalletPage} />}
-                </Route>
-                <Route path="/profile">
-                  {() => <UserRoute component={ProfilePage} />}
-                </Route>
-                <Route path="/referral">
-                  {() => <UserRoute component={ReferralPage} />}
-                </Route>
+                  {/* User-only routes */}
+                  <Route path="/register">
+                    {() => <UserRoute component={RegisterPage} />}
+                  </Route>
+                  <Route path="/teams/my">
+                    {() => <UserRoute component={MyTeamPage} />}
+                  </Route>
+                  <Route path="/dashboard">
+                    {() => <UserRoute component={DashboardPage} />}
+                  </Route>
+                  <Route path="/wallet">
+                    {() => <UserRoute component={WalletPage} />}
+                  </Route>
+                  <Route path="/profile">
+                    {() => <UserRoute component={ProfilePage} />}
+                  </Route>
+                  <Route path="/referral">
+                    {() => <UserRoute component={ReferralPage} />}
+                  </Route>
 
-                {/* Admin-only route */}
-                <Route path="/admin">
-                  {() => <AdminRoute component={AdminPage} />}
-                </Route>
+                  {/* Admin-only route */}
+                  <Route path="/admin">
+                    {() => <AdminRoute component={AdminPage} />}
+                  </Route>
 
-                <Route component={NotFound} />
-              </Switch>
+                  <Route component={NotFound} />
+                </Switch>
 
-              <BottomNav />
-              <PwaInstallBanner />
+                <BottomNav />
+                <PwaInstallBanner />
+              </MaintenanceGuard>
             </WouterRouter>
             <Toaster />
           </TooltipProvider>

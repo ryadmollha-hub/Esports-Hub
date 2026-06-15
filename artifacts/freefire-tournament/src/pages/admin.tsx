@@ -21,7 +21,7 @@ async function safeJson(res: Response): Promise<any> {
   }
 }
 
-type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings";
+type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings" | "maintenance";
 
 const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
@@ -35,6 +35,7 @@ const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "withdrawals", label: "Withdrawals", icon: ArrowUpCircle },
   { id: "promo-codes", label: "Promo Codes", icon: Tag },
   { id: "payment-settings", label: "Payment Settings", icon: Settings },
+  { id: "maintenance", label: "Maintenance", icon: Lock },
 ];
 
 export default function AdminPage() {
@@ -83,6 +84,10 @@ export default function AdminPage() {
 
   // Room form
   const [roomForm, setRoomForm] = useState<Record<number, { roomId: string; roomPassword: string }>>({});
+
+  // Maintenance mode
+  const [maintenanceMode, setMaintenanceModeState] = useState<boolean>(false);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
 
   useEffect(() => {
     if (!isAdminAuthenticated()) {
@@ -147,10 +152,42 @@ export default function AdminPage() {
     } catch {}
   }, [apiFetch, selectedTournament]);
 
+  const loadMaintenance = useCallback(async () => {
+    try {
+      const res = await apiFetch("/settings/maintenance");
+      if (res.ok) {
+        const data = await safeJson(res);
+        setMaintenanceModeState(!!data.maintenance);
+      }
+    } catch {}
+  }, [apiFetch]);
+
+  const toggleMaintenance = useCallback(async (enabled: boolean) => {
+    setMaintenanceLoading(true);
+    try {
+      const res = await apiFetch("/admin/maintenance", {
+        method: "POST",
+        body: JSON.stringify({ enabled }),
+      });
+      if (res.ok) {
+        setMaintenanceModeState(enabled);
+        toast({ title: enabled ? "Maintenance mode enabled" : "Maintenance mode disabled", description: enabled ? "Users will see the maintenance page." : "Site is live for all users." });
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error ?? "Failed to update", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setMaintenanceLoading(false);
+    }
+  }, [apiFetch, toast]);
+
   useEffect(() => {
     if (!isAdminAuthenticated()) return;
     loadStats();
     loadTournaments();
+    loadMaintenance();
   }, []);
 
   useEffect(() => {
@@ -159,6 +196,7 @@ export default function AdminPage() {
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "deposits" || activeTab === "withdrawals") loadWallet();
     if (activeTab === "matches") { loadTournaments(); if (selectedTournament) loadMatches(); }
+    if (activeTab === "maintenance") loadMaintenance();
   }, [activeTab]);
 
   useEffect(() => {
@@ -623,6 +661,32 @@ export default function AdminPage() {
                   <RefreshCw className="w-4 h-4" /> Refresh
                 </button>
               </div>
+              {/* Maintenance mode quick card */}
+              <div
+                className={`mb-6 rounded-xl border p-4 flex items-center justify-between cursor-pointer transition-all ${maintenanceMode ? "bg-[#ff2244]/10 border-[#ff2244]/30" : "bg-[#12121a] border-[#2a2a36] hover:border-[#ff6b00]/30"}`}
+                onClick={() => setActiveTab("maintenance")}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${maintenanceMode ? "bg-[#ff2244]/20" : "bg-[#1a1a24]"}`}>
+                    <Lock className={`w-5 h-5 ${maintenanceMode ? "text-[#ff2244]" : "text-[#a0a0b0]"}`} />
+                  </div>
+                  <div>
+                    <div className="font-bold text-white text-sm">Maintenance Mode</div>
+                    <div className={`text-xs ${maintenanceMode ? "text-[#ff2244]" : "text-[#00ff88]"}`}>
+                      {maintenanceMode ? "⚠ Site is offline for regular users" : "✓ Site is live and accessible"}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs font-bold uppercase px-2 py-1 rounded-full ${maintenanceMode ? "bg-[#ff2244]/20 text-[#ff2244]" : "bg-[#00ff88]/10 text-[#00ff88]"}`}>
+                    {maintenanceMode ? "ON" : "OFF"}
+                  </span>
+                  <svg className="w-4 h-4 text-[#a0a0b0]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 {[
                   { label: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "text-blue-400", border: "border-blue-400/20" },
@@ -1586,6 +1650,79 @@ export default function AdminPage() {
           {/* PAYMENT SETTINGS */}
           {activeTab === "payment-settings" && (
             <PaymentSettingsTab apiFetch={apiFetch} toast={toast} />
+          )}
+
+          {/* MAINTENANCE */}
+          {activeTab === "maintenance" && (
+            <div className="max-w-xl">
+              <div className="mb-6">
+                <h1 className="text-2xl font-black uppercase">
+                  Maintenance <span className="text-[#ff6b00]">Mode</span>
+                </h1>
+                <p className="text-[#a0a0b0] text-sm mt-1">
+                  Control site-wide availability. When enabled, only admins can access the platform.
+                </p>
+              </div>
+
+              {/* Status card */}
+              <div className={`rounded-2xl border p-6 mb-6 transition-all ${maintenanceMode ? "bg-[#ff2244]/8 border-[#ff2244]/30" : "bg-[#00ff88]/5 border-[#00ff88]/20"}`}>
+                <div className="flex items-center gap-4 mb-5">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${maintenanceMode ? "bg-[#ff2244]/15" : "bg-[#00ff88]/10"}`}>
+                    <Lock className={`w-7 h-7 ${maintenanceMode ? "text-[#ff2244]" : "text-[#00ff88]"}`} />
+                  </div>
+                  <div>
+                    <div className="text-white font-black text-lg">
+                      {maintenanceMode ? "Site is in Maintenance" : "Site is Live"}
+                    </div>
+                    <div className={`text-sm ${maintenanceMode ? "text-[#ff2244]" : "text-[#00ff88]"}`}>
+                      {maintenanceMode
+                        ? "Regular users see the maintenance page"
+                        : "All users can access the platform normally"}
+                    </div>
+                  </div>
+                  <div className={`ml-auto px-3 py-1.5 rounded-full text-xs font-black uppercase ${maintenanceMode ? "bg-[#ff2244]/20 text-[#ff2244]" : "bg-[#00ff88]/15 text-[#00ff88]"}`}>
+                    {maintenanceMode ? "ON" : "OFF"}
+                  </div>
+                </div>
+
+                {/* Toggle */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => toggleMaintenance(true)}
+                    disabled={maintenanceLoading || maintenanceMode}
+                    className="flex-1 py-3 rounded-xl font-black uppercase text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[#ff2244] text-white hover:bg-[#e61f3c] shadow-[0_0_20px_rgba(255,34,68,0.3)]"
+                  >
+                    {maintenanceLoading && maintenanceMode === false ? "Enabling…" : "Enable Maintenance"}
+                  </button>
+                  <button
+                    onClick={() => toggleMaintenance(false)}
+                    disabled={maintenanceLoading || !maintenanceMode}
+                    className="flex-1 py-3 rounded-xl font-black uppercase text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-[#00ff88] text-[#0a0a0f] hover:bg-[#00e07a]"
+                  >
+                    {maintenanceLoading && maintenanceMode === true ? "Disabling…" : "Disable Maintenance"}
+                  </button>
+                </div>
+              </div>
+
+              {/* What happens card */}
+              <div className="bg-[#12121a] rounded-xl border border-[#2a2a36] p-5">
+                <div className="text-xs font-black uppercase text-[#ff6b00] tracking-wider mb-4">What happens when maintenance is ON</div>
+                <ul className="space-y-3">
+                  {[
+                    { icon: "🚫", text: "Regular users are redirected to the maintenance page" },
+                    { icon: "✅", text: "Admins can still access all admin panel features" },
+                    { icon: "🔐", text: "Admin login page remains accessible" },
+                    { icon: "⚡", text: "Changes take effect within 10 seconds (cached)" },
+                    { icon: "💾", text: "Status is persisted in the database — survives restarts" },
+                  ].map((item) => (
+                    <li key={item.text} className="flex items-start gap-3 text-sm text-[#a0a0b0]">
+                      <span className="text-base leading-none mt-0.5">{item.icon}</span>
+                      {item.text}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           )}
 
         </div>

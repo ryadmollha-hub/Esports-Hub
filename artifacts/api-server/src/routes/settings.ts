@@ -3,6 +3,7 @@ import { requireAdmin } from "../middlewares/requireAdmin";
 import { db } from "@workspace/db";
 import { settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { getMaintenanceMode, setMaintenanceMode, invalidateMaintenanceCache } from "../middlewares/maintenanceMode";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,29 @@ async function setSetting(key: string, value: string): Promise<void> {
     await db.insert(settingsTable).values({ key, value });
   }
 }
+
+router.get("/settings/maintenance", async (_req, res) => {
+  try {
+    const enabled = await getMaintenanceMode();
+    res.json({ maintenance: enabled });
+  } catch {
+    res.status(500).json({ error: "Failed to check maintenance status." });
+  }
+});
+
+router.post("/admin/maintenance", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const { enabled } = req.body;
+    if (typeof enabled !== "boolean") {
+      return res.status(400).json({ error: "enabled (boolean) is required." });
+    }
+    await setMaintenanceMode(enabled);
+    res.json({ success: true, maintenance: enabled });
+  } catch {
+    res.status(500).json({ error: "Failed to update maintenance mode." });
+  }
+});
 
 router.get("/payment-settings", async (_req, res) => {
   try {
