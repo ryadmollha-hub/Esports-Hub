@@ -10,6 +10,7 @@ import usersRouter from "./users";
 import adminRouter from "./admin";
 import walletRouter from "./wallet";
 import authRouter from "./auth";
+import captchaRouter from "./captcha";
 import notificationsRouter from "./notifications";
 import referralsRouter from "./referrals";
 import promoCodesRouter from "./promoCodes";
@@ -18,6 +19,7 @@ import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
+router.use(captchaRouter);
 router.use(authRouter);
 router.use(healthRouter);
 router.use(tournamentsRouter);

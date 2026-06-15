@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
+import { useInactivityLogout } from "./useInactivityLogout";
 
 const TOKEN_KEY = "ff_auth_token";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -24,9 +25,9 @@ export interface AuthUser {
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, captchaToken: string, captchaAnswer: string) => Promise<void>;
   logout: () => void;
-  register: (email: string, password: string, username: string) => Promise<void>;
+  register: (email: string, password: string, username: string, captchaToken: string, captchaAnswer: string) => Promise<void>;
   authFetch: (path: string, init?: RequestInit) => Promise<Response>;
   refreshUser: () => Promise<void>;
 }
@@ -71,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const res = await authFetch("/auth/me");
       if (res.ok) {
-        const data = await res.json();
+        const data = await safeJson(res);
         setUser({ ...data, userId: data.clerkId });
       } else {
         removeToken();
@@ -89,11 +90,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchMe();
   }, [fetchMe]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const logout = useCallback(() => {
+    removeToken();
+    setUser(null);
+  }, []);
+
+  useInactivityLogout(logout, !!user);
+
+  const login = useCallback(async (email: string, password: string, captchaToken: string, captchaAnswer: string) => {
     const res = await fetch(`${BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, captchaToken, captchaAnswer }),
     });
     const data = await safeJson(res);
     if (!res.ok) throw new Error(data?.message ?? data?.error ?? "Login failed");
@@ -101,21 +109,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser({ ...data.user, userId: data.user.clerkId });
   }, []);
 
-  const register = useCallback(async (email: string, password: string, username: string) => {
+  const register = useCallback(async (email: string, password: string, username: string, captchaToken: string, captchaAnswer: string) => {
     const res = await fetch(`${BASE}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, username }),
+      body: JSON.stringify({ email, password, username, captchaToken, captchaAnswer }),
     });
     const data = await safeJson(res);
     if (!res.ok) throw new Error(data?.message ?? data?.error ?? "Registration failed");
     storeToken(data.token);
     setUser({ ...data.user, userId: data.user.clerkId });
-  }, []);
-
-  const logout = useCallback(() => {
-    removeToken();
-    setUser(null);
   }, []);
 
   const refreshUser = useCallback(async () => {

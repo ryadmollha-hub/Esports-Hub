@@ -19,6 +19,12 @@ export const usersTable = pgTable("users", {
   tournamentsPlayed: integer("tournaments_played").notNull().default(0),
   referralCode: text("referral_code").unique(),
   referredBy: text("referred_by"),
+  totpSecret: text("totp_secret"),
+  totpEnabled: boolean("totp_enabled").notNull().default(false),
+  lastLoginAt: timestamp("last_login_at"),
+  lastLoginIp: text("last_login_ip"),
+  loginAttempts: integer("login_attempts").notNull().default(0),
+  lockedUntil: timestamp("locked_until"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
