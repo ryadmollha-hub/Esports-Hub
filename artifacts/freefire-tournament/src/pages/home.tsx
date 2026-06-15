@@ -16,9 +16,13 @@ const announcementTypeColors: Record<string, string> = {
 const rankColors = ["text-[#ffd700]", "text-gray-300", "text-amber-600"];
 
 export default function Home() {
-  const { data: featured = [], isLoading: loadingFeatured } = useGetFeaturedTournaments();
-  const { data: announcements = [], isLoading: loadingAnn } = useListAnnouncements();
-  const { data: leaderboard = [], isLoading: loadingLb } = useGetGlobalLeaderboard();
+  const { data: _featured, isLoading: loadingFeatured } = useGetFeaturedTournaments();
+  const { data: _announcements, isLoading: loadingAnn } = useListAnnouncements();
+  const { data: _leaderboard, isLoading: loadingLb } = useGetGlobalLeaderboard();
+
+  const featured = Array.isArray(_featured) ? _featured : [];
+  const announcements = Array.isArray(_announcements) ? _announcements : [];
+  const leaderboard = Array.isArray(_leaderboard) ? _leaderboard : [];
 
   const nextTournament = featured[0];
 
