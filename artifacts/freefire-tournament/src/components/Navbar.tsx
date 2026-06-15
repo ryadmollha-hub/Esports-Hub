@@ -3,6 +3,8 @@ import { Link, useLocation } from "wouter";
 import { Flame, Shield, LayoutDashboard } from "lucide-react";
 import { useRole } from "@/lib/useRole";
 import { useAuthContext } from "@/lib/AuthContext";
+import NotificationBell from "./NotificationBell";
+import ThemeToggle from "./ThemeToggle";
 
 const guestNavLinks = [
   { href: "/tournaments", label: "Tournaments" },
@@ -28,12 +30,12 @@ export default function Navbar() {
   const isActive = (href: string) => location === href;
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-[#ff6b00]/20">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-[#ff6b00]/20 light:bg-white/95 light:border-[#ff6b00]/30">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
           <Flame className="w-7 h-7 text-[#ff6b00]" />
-          <span className="text-xl font-black uppercase tracking-wider text-white">
+          <span className="text-xl font-black uppercase tracking-wider text-white light:text-gray-900">
             FF <span className="text-[#ff6b00]">Arena</span>
           </span>
         </Link>
@@ -54,7 +56,10 @@ export default function Navbar() {
         </div>
 
         {/* Desktop right side */}
-        <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-2">
+          <ThemeToggle />
+          <NotificationBell />
+
           {isAdmin && (
             <Link
               href="/admin"
@@ -97,8 +102,10 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile: show login button if not signed in */}
-        <div className="lg:hidden flex items-center gap-2">
+        {/* Mobile right side */}
+        <div className="lg:hidden flex items-center gap-1">
+          <ThemeToggle />
+          <NotificationBell />
           {isUser && (
             <Link href="/profile" className="w-8 h-8 rounded-full bg-[#ff6b00]/20 border border-[#ff6b00]/40 flex items-center justify-center">
               <span className="text-[#ff6b00] text-xs font-black">

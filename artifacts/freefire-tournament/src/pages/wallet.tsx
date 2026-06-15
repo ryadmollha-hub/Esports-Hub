@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import {
   Wallet, ArrowDownCircle, ArrowUpCircle, Clock, CheckCircle,
   XCircle, TrendingUp, TrendingDown, RefreshCw, AlertCircle,
-  X, History, Trophy, Zap
+  X, History, Trophy, Zap, Tag
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuthContext } from "@/lib/AuthContext";
@@ -70,6 +70,8 @@ export default function WalletPage() {
   const [withdrawForm, setWithdrawForm] = useState({
     amount: "", method: "bkash", accountNumber: ""
   });
+  const [promoCode, setPromoCode] = useState("");
+  const [applyingPromo, setApplyingPromo] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !user) setLocation("/sign-in");
@@ -142,6 +144,28 @@ export default function WalletPage() {
   };
 
   const filteredTxs = txs.filter((t) => activeFilter === "all" || t.type === activeFilter);
+
+  const submitPromoCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promoCode.trim()) return;
+    setApplyingPromo(true);
+    try {
+      const res = await authFetch("/promo-codes/apply", {
+        method: "POST",
+        body: JSON.stringify({ code: promoCode.trim().toUpperCase() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "Promo Applied!", description: `You received ৳${data.bonusAmount} bonus from code ${data.code}.` });
+        setPromoCode("");
+        refresh();
+      } else {
+        toast({ title: "Error", description: data.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error.", variant: "destructive" });
+    } finally { setApplyingPromo(false); }
+  };
 
   if (isLoading) return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
@@ -254,6 +278,31 @@ export default function WalletPage() {
           >
             <ArrowUpCircle className="w-5 h-5 group-hover:scale-110 transition-transform" /> Withdraw
           </button>
+        </div>
+
+        {/* Promo Code */}
+        <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/20 p-4 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Tag className="w-4 h-4 text-[#ff6b00]" />
+            <h2 className="font-black uppercase text-white text-sm tracking-wide">Promo Code</h2>
+          </div>
+          <form onSubmit={submitPromoCode} className="flex gap-2">
+            <input
+              type="text"
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+              placeholder="Enter promo code"
+              className="flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white placeholder-[#606070] focus:outline-none focus:border-[#ff6b00] text-sm transition-colors font-mono uppercase"
+            />
+            <button
+              type="submit"
+              disabled={applyingPromo || !promoCode.trim()}
+              className="px-4 py-2.5 bg-[#ff6b00] text-white font-black uppercase text-sm rounded-xl hover:bg-[#e66000] disabled:opacity-50 transition-all whitespace-nowrap"
+            >
+              {applyingPromo ? "..." : "Apply"}
+            </button>
+          </form>
+          <p className="text-[#606070] text-xs mt-2">Example codes: FFARENA100, WELCOME50</p>
         </div>
 
         {/* Transaction History */}

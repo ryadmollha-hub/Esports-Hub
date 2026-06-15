@@ -3,6 +3,7 @@ import { requireAdmin, requireAuth } from "../middlewares/requireAdmin";
 import { db } from "@workspace/db";
 import { walletTransactionsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
+import { createNotification } from "../lib/notificationHelper";
 
 const router: IRouter = Router();
 
@@ -199,6 +200,15 @@ router.patch("/admin/wallet-transactions/:id/approve", async (req, res) => {
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Transaction not found." });
+
+    const typeLabel = updated.type === "deposit" ? "Deposit" : "Withdrawal";
+    await createNotification(
+      updated.userId,
+      `${typeLabel} Approved`,
+      `Your ${typeLabel.toLowerCase()} of ৳${Number(updated.amount).toFixed(2)} has been approved.`,
+      "success"
+    );
+
     res.json(updated);
   } catch {
     res.status(500).json({ error: "Failed to approve transaction." });
@@ -218,6 +228,15 @@ router.patch("/admin/wallet-transactions/:id/reject", async (req, res) => {
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Transaction not found." });
+
+    const typeLabel = updated.type === "deposit" ? "Deposit" : "Withdrawal";
+    await createNotification(
+      updated.userId,
+      `${typeLabel} Rejected`,
+      `Your ${typeLabel.toLowerCase()} of ৳${Number(updated.amount).toFixed(2)} was rejected.${adminNote ? ` Reason: ${adminNote}` : ""}`,
+      "error"
+    );
+
     res.json(updated);
   } catch {
     res.status(500).json({ error: "Failed to reject transaction." });

@@ -3,22 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>Free Fire Tournament</title>
-    <meta name="description" content="Free Fire Tournament — built on Replit. Update this description to reflect the app." />
+    <title>FF Arena — Free Fire Tournament Platform</title>
+    <meta name="description" content="FF Arena — Compete in Free Fire tournaments, win prizes, and dominate the leaderboard." />
     <meta name="robots" content="index, follow" />
-    <meta property="og:title" content="Free Fire Tournament" />
-    <meta property="og:description" content="Free Fire Tournament — built on Replit. Update this description to reflect the app." />
+    <meta name="theme-color" content="#ff6b00" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FF Arena" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta property="og:title" content="FF Arena — Free Fire Tournament Platform" />
+    <meta property="og:description" content="Compete in Free Fire tournaments, win prizes, and dominate the leaderboard." />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Free Fire Tournament" />
-    <meta name="twitter:description" content="Free Fire Tournament — built on Replit. Update this description to reflect the app." />
+    <meta name="twitter:title" content="FF Arena" />
+    <meta name="twitter:description" content="Free Fire Tournament Platform — Compete, Win, Dominate." />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root { color-scheme: dark; }
+      html.light { color-scheme: light; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

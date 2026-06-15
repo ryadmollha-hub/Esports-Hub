@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useLocation } from "wouter";
-import { Shield, Users, Crown, Check, X, Plus } from "lucide-react";
+import { Shield, Users, Crown, Check, X, Plus, LogOut, Trash2, Edit2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
@@ -14,11 +14,14 @@ import {
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 const createSchema = z.object({
   name: z.string().min(2, "Team name must be at least 2 characters"),
   tag: z.string().max(6, "Tag max 6 characters").optional(),
   freefireUid: z.string().min(1, "Your Free Fire UID is required"),
   playerName: z.string().min(1, "Your in-game name is required"),
+  maxMembers: z.coerce.number().min(2).max(10).default(4),
 });
 
 type CreateForm = z.infer<typeof createSchema>;
@@ -28,6 +31,13 @@ export default function MyTeamPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [leavingTeam, setLeavingTeam] = useState(false);
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [deletingTeam, setDeletingTeam] = useState(false);
+  const [showJoinForm, setShowJoinForm] = useState(false);
+  const [joinFormData, setJoinFormData] = useState({ teamId: 0, freefireUid: "", playerName: "" });
+
+  const token = typeof window !== "undefined" ? localStorage.getItem("ff_auth_token") : null;
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) setLocation("/sign-in");
@@ -50,12 +60,12 @@ export default function MyTeamPage() {
 
   const form = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
-    defaultValues: { name: "", tag: "", freefireUid: "", playerName: "" },
+    defaultValues: { name: "", tag: "", freefireUid: "", playerName: "", maxMembers: 4 },
   });
 
   const onCreateTeam = (data: CreateForm) => {
     createTeam.mutate(
-      { data: { name: data.name, tag: data.tag, freefireUid: data.freefireUid, playerName: data.playerName } },
+      { data: { name: data.name, tag: data.tag, freefireUid: data.freefireUid, playerName: data.playerName, maxMembers: data.maxMembers } as any },
       {
         onSuccess: () => {
           toast({ title: "Team created!", description: "Your squad is ready." });
@@ -77,8 +87,69 @@ export default function MyTeamPage() {
           qc.invalidateQueries({ queryKey: getGetMyTeamQueryKey() });
           qc.invalidateQueries({ queryKey: getGetTeamJoinRequestsQueryKey(teamId) });
         },
+        onError: (err: any) => {
+          toast({ title: "Error", description: err?.response?.data?.error ?? "Failed to approve.", variant: "destructive" });
+        },
       }
     );
+  };
+
+  const handleReject = async (teamId: number, memberId: number) => {
+    if (!token) return;
+    setRejectingId(memberId);
+    try {
+      const res = await fetch(`${BASE}/api/teams/${teamId}/members/${memberId}/reject`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error ?? "Failed to reject");
+      }
+      toast({ title: "Request rejected." });
+      qc.invalidateQueries({ queryKey: getGetTeamJoinRequestsQueryKey(teamId) });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+    setRejectingId(null);
+  };
+
+  const handleLeaveTeam = async () => {
+    if (!token || !team) return;
+    if (!confirm("Are you sure you want to leave this team?")) return;
+    setLeavingTeam(true);
+    try {
+      const res = await fetch(`${BASE}/api/teams/${team.id}/leave`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Failed to leave team");
+      toast({ title: "You left the team." });
+      qc.invalidateQueries({ queryKey: getGetMyTeamQueryKey() });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+    setLeavingTeam(false);
+  };
+
+  const handleDeleteTeam = async () => {
+    if (!token || !team) return;
+    if (!confirm("Are you sure you want to DELETE this team? This cannot be undone.")) return;
+    setDeletingTeam(true);
+    try {
+      const res = await fetch(`${BASE}/api/teams/${team.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Failed to delete team");
+      toast({ title: "Team deleted." });
+      qc.invalidateQueries({ queryKey: getGetMyTeamQueryKey() });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+    setDeletingTeam(false);
   };
 
   if (isLoading) {
@@ -91,6 +162,9 @@ export default function MyTeamPage() {
       </div>
     );
   }
+
+  const isCaptain = team && team.captainId === team?.members?.find((m: any) => m.status === "active" && m.role === "captain")?.userId;
+  const activeMembers = team?.members?.filter((m: any) => m.status === "active") ?? [];
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -118,6 +192,16 @@ export default function MyTeamPage() {
                     className="w-full px-4 py-3 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors font-mono" />
                 </div>
                 <div>
+                  <label className="block text-xs font-bold uppercase tracking-wide text-[#a0a0b0] mb-1.5">Max Members</label>
+                  <select {...form.register("maxMembers")}
+                    className="w-full px-4 py-3 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors">
+                    <option value={2}>2 (Duo)</option>
+                    <option value={4}>4 (Squad)</option>
+                    <option value={6}>6</option>
+                    <option value={10}>10</option>
+                  </select>
+                </div>
+                <div>
                   <label className="block text-xs font-bold uppercase tracking-wide text-[#a0a0b0] mb-1.5">Your Free Fire UID</label>
                   <input {...form.register("freefireUid")} placeholder="FF UID" data-testid="input-captain-uid"
                     className="w-full px-4 py-3 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors font-mono" />
@@ -139,48 +223,82 @@ export default function MyTeamPage() {
         ) : (
           <div className="mt-6 space-y-6">
             {/* Team Header */}
-            <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/20 p-6 flex items-center gap-5">
-              <div className="w-16 h-16 rounded-2xl bg-[#ff6b00]/10 border border-[#ff6b00]/30 flex items-center justify-center">
-                <Shield className="w-8 h-8 text-[#ff6b00]" />
-              </div>
-              <div className="flex-1">
-                <h2 className="text-2xl font-black text-white" data-testid="text-my-team-name">{team.name}</h2>
-                {team.tag && <span className="text-[#a0a0b0] text-sm">[{team.tag}]</span>}
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-center">
-                <div>
-                  <div className="text-[#ff6b00] font-black text-xl">{team.totalKills ?? 0}</div>
-                  <div className="text-[#a0a0b0] text-xs">Total Kills</div>
+            <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/20 p-6">
+              <div className="flex items-center gap-5">
+                <div className="w-16 h-16 rounded-2xl bg-[#ff6b00]/10 border border-[#ff6b00]/30 flex items-center justify-center shrink-0">
+                  {team.logoUrl ? (
+                    <img src={team.logoUrl} alt={team.name} className="w-full h-full object-cover rounded-2xl" />
+                  ) : (
+                    <Shield className="w-8 h-8 text-[#ff6b00]" />
+                  )}
                 </div>
-                <div>
-                  <div className="text-[#ffd700] font-black text-xl">{team.totalWins ?? 0}</div>
-                  <div className="text-[#a0a0b0] text-xs">Wins</div>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-black text-white" data-testid="text-my-team-name">{team.name}</h2>
+                  {team.tag && <span className="text-[#a0a0b0] text-sm">[{team.tag}]</span>}
+                  <div className="text-[#a0a0b0] text-xs mt-1">
+                    {activeMembers.length}/{team.maxMembers ?? 4} members
+                  </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <div className="text-[#ff6b00] font-black text-xl">{team.totalKills ?? 0}</div>
+                    <div className="text-[#a0a0b0] text-xs">Total Kills</div>
+                  </div>
+                  <div>
+                    <div className="text-[#ffd700] font-black text-xl">{team.totalWins ?? 0}</div>
+                    <div className="text-[#a0a0b0] text-xs">Wins</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Captain actions */}
+              <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[#ff6b00]/10">
+                {team.captainId && (
+                  <button
+                    onClick={handleDeleteTeam}
+                    disabled={deletingTeam}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] rounded-lg text-xs font-bold uppercase hover:bg-[#ff2244]/20 transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {deletingTeam ? "Deleting..." : "Delete Team"}
+                  </button>
+                )}
+                {!team.captainId && (
+                  <button
+                    onClick={handleLeaveTeam}
+                    disabled={leavingTeam}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] rounded-lg text-xs font-bold uppercase hover:bg-[#ff2244]/20 transition-colors disabled:opacity-50"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    {leavingTeam ? "Leaving..." : "Leave Team"}
+                  </button>
+                )}
               </div>
             </div>
 
             {/* Members */}
             <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/20 p-6">
               <h3 className="font-black uppercase text-sm text-[#a0a0b0] mb-4 tracking-wider flex items-center gap-2">
-                <Users className="w-4 h-4" /> Members
+                <Users className="w-4 h-4" /> Members ({activeMembers.length}/{team.maxMembers ?? 4})
               </h3>
               <div className="space-y-3">
-                {team.members
-                  ?.filter((m: any) => m.status === "active")
-                  .map((member: any) => (
-                    <div key={member.id} className="flex items-center gap-3 py-2 border-b border-[#ff6b00]/5 last:border-0" data-testid={`row-member-${member.id}`}>
-                      <div className="w-8 h-8 rounded-lg bg-[#ff6b00]/10 flex items-center justify-center">
-                        {member.role === "captain" ? <Crown className="w-4 h-4 text-[#ffd700]" /> : <Users className="w-4 h-4 text-[#a0a0b0]" />}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-bold text-white text-sm">{member.playerName ?? "Unknown"}</div>
-                        <div className="text-[#a0a0b0] text-xs font-mono">{member.freefireUid}</div>
-                      </div>
-                      <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${member.role === "captain" ? "text-[#ffd700] bg-[#ffd700]/10" : "text-[#a0a0b0] bg-[#1a1a24]"}`}>
-                        {member.role}
-                      </span>
+                {activeMembers.map((member: any) => (
+                  <div key={member.id} className="flex items-center gap-3 py-2 border-b border-[#ff6b00]/5 last:border-0" data-testid={`row-member-${member.id}`}>
+                    <div className="w-8 h-8 rounded-lg bg-[#ff6b00]/10 flex items-center justify-center">
+                      {member.role === "captain" ? <Crown className="w-4 h-4 text-[#ffd700]" /> : <Users className="w-4 h-4 text-[#a0a0b0]" />}
                     </div>
-                  ))}
+                    <div className="flex-1">
+                      <div className="font-bold text-white text-sm">{member.playerName ?? "Unknown"}</div>
+                      <div className="text-[#a0a0b0] text-xs font-mono">{member.freefireUid}</div>
+                    </div>
+                    <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${member.role === "captain" ? "text-[#ffd700] bg-[#ffd700]/10" : "text-[#a0a0b0] bg-[#1a1a24]"}`}>
+                      {member.role}
+                    </span>
+                  </div>
+                ))}
+                {activeMembers.length === 0 && (
+                  <p className="text-[#a0a0b0] text-sm text-center py-4">No active members yet.</p>
+                )}
               </div>
             </div>
 
@@ -192,7 +310,7 @@ export default function MyTeamPage() {
                 </h3>
                 <div className="space-y-3">
                   {(joinRequests as any[]).map((req: any) => (
-                    <div key={req.id} className="flex items-center gap-3 py-2" data-testid={`row-join-request-${req.id}`}>
+                    <div key={req.id} className="flex items-center gap-3 py-2 border-b border-yellow-400/5 last:border-0" data-testid={`row-join-request-${req.id}`}>
                       <div className="flex-1">
                         <div className="font-bold text-white text-sm">{req.playerName ?? req.userId}</div>
                         {req.freefireUid && <div className="text-[#a0a0b0] text-xs font-mono">{req.freefireUid}</div>}
@@ -202,8 +320,18 @@ export default function MyTeamPage() {
                         disabled={approveTeamMember.isPending}
                         data-testid={`button-approve-member-${req.id}`}
                         className="p-2 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors"
+                        title="Approve"
                       >
                         <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleReject(team.id, req.id)}
+                        disabled={rejectingId === req.id}
+                        data-testid={`button-reject-member-${req.id}`}
+                        className="p-2 bg-[#ff2244]/10 border border-[#ff2244]/30 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors"
+                        title="Reject"
+                      >
+                        <X className="w-4 h-4" />
                       </button>
                     </div>
                   ))}

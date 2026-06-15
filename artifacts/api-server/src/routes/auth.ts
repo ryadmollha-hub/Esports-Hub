@@ -2,12 +2,18 @@ import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
-import { eq, or } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { signToken, signResetToken, verifyResetToken } from "../lib/jwt";
 import { safeGetUserId } from "../lib/clerkAuth";
 import { randomUUID } from "crypto";
 
 const router: IRouter = Router();
+
+function generateReferralCode(username: string | null | undefined): string {
+  const base = (username ?? "USER").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6).padEnd(3, "X");
+  const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${base}${suffix}`;
+}
 
 router.post("/auth/register", async (req, res) => {
   const { email, password, username } = req.body;
@@ -31,6 +37,16 @@ router.post("/auth/register", async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 12);
   const userId = randomUUID();
 
+  // Generate unique referral code
+  let referralCode = generateReferralCode(username);
+  let attempts = 0;
+  while (attempts < 10) {
+    const codeCheck = await db.select().from(usersTable).where(eq(usersTable.referralCode, referralCode)).limit(1);
+    if (codeCheck.length === 0) break;
+    referralCode = generateReferralCode(username);
+    attempts++;
+  }
+
   const [user] = await db
     .insert(usersTable)
     .values({
@@ -38,6 +54,7 @@ router.post("/auth/register", async (req, res) => {
       email: email.toLowerCase().trim(),
       username: username?.trim() ?? null,
       passwordHash,
+      referralCode,
     })
     .returning();
 

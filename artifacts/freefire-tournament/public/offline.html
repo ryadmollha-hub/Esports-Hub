@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline — FF Arena</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      min-height: 100vh;
+      background: #0a0a0f;
+      color: white;
+      font-family: Inter, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+    .container { max-width: 400px; }
+    .icon { font-size: 64px; margin-bottom: 24px; }
+    h1 { font-size: 32px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+    h1 span { color: #ff6b00; }
+    p { color: #a0a0b0; margin-bottom: 24px; line-height: 1.6; }
+    button {
+      padding: 12px 32px;
+      background: #ff6b00;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+    }
+    button:hover { background: #e66000; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🔥</div>
+    <h1>FF <span>Arena</span></h1>
+    <p>You're currently offline. Please check your internet connection and try again.</p>
+    <button onclick="window.location.reload()">Try Again</button>
+  </div>
+</body>
+</html>

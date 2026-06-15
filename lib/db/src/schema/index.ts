@@ -5,3 +5,6 @@ export * from "./registrations";
 export * from "./matches";
 export * from "./announcements";
 export * from "./wallet";
+export * from "./notifications";
+export * from "./referrals";
+export * from "./promoCodes";

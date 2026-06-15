@@ -4,14 +4,14 @@ import {
   Users, Trophy, Shield, Clock, DollarSign, CheckCircle, XCircle, Bell,
   Plus, Trash2, Edit, LogOut, BarChart3, Megaphone, Swords, CreditCard,
   ArrowDownCircle, ArrowUpCircle, Eye, EyeOff, RefreshCw, Home,
-  Crown, Shuffle, X as XIcon
+  Crown, Shuffle, X as XIcon, Tag
 } from "lucide-react";
 import { isAdminAuthenticated, clearAdminSession, adminFetch } from "@/lib/adminAuth";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals";
+type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes";
 
 const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
@@ -22,6 +22,7 @@ const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "announcements", label: "Announcements", icon: Megaphone },
   { id: "deposits", label: "Deposits", icon: ArrowDownCircle },
   { id: "withdrawals", label: "Withdrawals", icon: ArrowUpCircle },
+  { id: "promo-codes", label: "Promo Codes", icon: Tag },
 ];
 
 export default function AdminPage() {
@@ -1411,8 +1412,173 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* PROMO CODES */}
+          {activeTab === "promo-codes" && (
+            <PromoCodesTab apiFetch={apiFetch} toast={toast} />
+          )}
+
         </div>
       </main>
+    </div>
+  );
+}
+
+function PromoCodesTab({ apiFetch, toast }: { apiFetch: any; toast: any }) {
+  const [codes, setCodes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingCode, setEditingCode] = useState<any>(null);
+  const [form, setForm] = useState({ code: "", bonusAmount: "", usageLimit: "100", expiresAt: "", isActive: true });
+  const [submitting, setSubmitting] = useState(false);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch("/admin/promo-codes");
+      if (res.ok) setCodes(await res.json());
+    } catch {} finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const url = editingCode ? `/admin/promo-codes/${editingCode.id}` : "/admin/promo-codes";
+      const method = editingCode ? "PUT" : "POST";
+      const res = await apiFetch(url, {
+        method,
+        body: JSON.stringify({
+          code: form.code.toUpperCase(),
+          bonusAmount: parseFloat(form.bonusAmount),
+          usageLimit: parseInt(form.usageLimit),
+          expiresAt: form.expiresAt || null,
+          isActive: form.isActive,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: editingCode ? "Promo code updated!" : "Promo code created!" });
+        setShowForm(false);
+        setEditingCode(null);
+        setForm({ code: "", bonusAmount: "", usageLimit: "100", expiresAt: "", isActive: true });
+        load();
+      } else {
+        const d = await res.json();
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Delete this promo code?")) return;
+    const res = await apiFetch(`/admin/promo-codes/${id}`, { method: "DELETE" });
+    if (res.ok) { toast({ title: "Deleted." }); load(); }
+  };
+
+  const startEdit = (code: any) => {
+    setEditingCode(code);
+    setForm({
+      code: code.code,
+      bonusAmount: String(code.bonusAmount),
+      usageLimit: String(code.usageLimit),
+      expiresAt: code.expiresAt ? new Date(code.expiresAt).toISOString().slice(0, 16) : "",
+      isActive: code.isActive,
+    });
+    setShowForm(true);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-black uppercase">Promo <span className="text-[#ff6b00]">Codes</span></h1>
+        <div className="flex items-center gap-2">
+          <button onClick={load} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+            <RefreshCw className="w-4 h-4" /> Refresh
+          </button>
+          <button
+            onClick={() => { setEditingCode(null); setForm({ code: "", bonusAmount: "", usageLimit: "100", expiresAt: "", isActive: true }); setShowForm(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white rounded-xl text-sm font-bold uppercase hover:bg-[#e66000] transition-colors"
+          >
+            <Plus className="w-4 h-4" /> New Code
+          </button>
+        </div>
+      </div>
+
+      {showForm && (
+        <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-2xl p-6 mb-6">
+          <h3 className="font-black uppercase text-sm text-[#ff6b00] mb-4">{editingCode ? "Edit Promo Code" : "Create Promo Code"}</h3>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="label-sm">Code *</label>
+              <input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} required placeholder="FFARENA100" className="admin-input font-mono" disabled={!!editingCode} />
+            </div>
+            <div>
+              <label className="label-sm">Bonus Amount (৳) *</label>
+              <input type="number" value={form.bonusAmount} onChange={(e) => setForm({ ...form, bonusAmount: e.target.value })} required min="1" placeholder="100" className="admin-input" />
+            </div>
+            <div>
+              <label className="label-sm">Usage Limit</label>
+              <input type="number" value={form.usageLimit} onChange={(e) => setForm({ ...form, usageLimit: e.target.value })} min="1" className="admin-input" />
+            </div>
+            <div>
+              <label className="label-sm">Expires At</label>
+              <input type="datetime-local" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} className="admin-input" />
+            </div>
+            <div className="flex items-center gap-3">
+              <input type="checkbox" id="isActive" checked={form.isActive} onChange={(e) => setForm({ ...form, isActive: e.target.checked })} className="w-4 h-4 accent-[#ff6b00]" />
+              <label htmlFor="isActive" className="text-white text-sm font-bold">Active</label>
+            </div>
+            <div className="flex gap-2 sm:col-span-2">
+              <button type="submit" disabled={submitting} className="px-5 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all">
+                {submitting ? "Saving..." : (editingCode ? "Save Changes" : "Create Code")}
+              </button>
+              <button type="button" onClick={() => { setShowForm(false); setEditingCode(null); }} className="px-5 py-2 bg-[#1a1a24] text-[#a0a0b0] font-bold uppercase rounded-xl text-sm hover:text-white transition-colors">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-16 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
+      ) : codes.length === 0 ? (
+        <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
+          <Tag className="w-12 h-12 mx-auto mb-3 opacity-20" />
+          <p>No promo codes yet. Create one above.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {codes.map((code: any) => (
+            <div key={code.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono font-black text-white text-lg">{code.code}</span>
+                  <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded-full border ${code.isActive ? "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30" : "text-[#a0a0b0] bg-[#1a1a24] border-[#2a2a36]"}`}>
+                    {code.isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                <div className="text-[#ff6b00] font-bold mt-1">৳{Number(code.bonusAmount).toLocaleString()} bonus</div>
+                <div className="text-[#a0a0b0] text-xs mt-0.5">
+                  Used {code.usageCount}/{code.usageLimit} times
+                  {code.expiresAt && ` · Expires ${new Date(code.expiresAt).toLocaleDateString()}`}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => startEdit(code)} className="p-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 rounded-lg text-[#ff6b00] hover:bg-[#ff6b00]/20">
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button onClick={() => handleDelete(code.id)} className="p-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

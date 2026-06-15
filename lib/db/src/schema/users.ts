@@ -17,6 +17,8 @@ export const usersTable = pgTable("users", {
   totalKills: integer("total_kills").notNull().default(0),
   totalWins: integer("total_wins").notNull().default(0),
   tournamentsPlayed: integer("tournaments_played").notNull().default(0),
+  referralCode: text("referral_code").unique(),
+  referredBy: text("referred_by"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -1,0 +1,160 @@
+Analyze the existing FF Arena project and implement ONLY the following features. Do not remove or break any existing functionality.
+
+==================================
+
+1. TEAM JOIN SYSTEM FIX
+   ==================================
+
+Current Problem:
+Users cannot properly join teams.
+
+Fix and implement:
+
+- Create Team
+- Join Team
+- Leave Team
+- Team Captain System
+- Team Member List
+- Team Logo Support
+- Team Maximum Member Limit
+- Team Join Request System
+- Accept/Reject Join Requests
+- Team Details Page
+- Team Management Page
+
+Requirements:
+
+- Team join must work correctly.
+- No duplicate members.
+- Prevent joining when team is full.
+- Real-time updates without page refresh.
+- Mobile responsive UI.
+
+==================================
+2. NOTIFICATION SYSTEM
+
+Create a complete notification system.
+
+Send notifications when:
+
+- Match Approved
+- Tournament Open
+- Result Published
+- Deposit Approved
+- Deposit Rejected
+- Withdrawal Approved
+- Withdrawal Rejected
+- Team Join Request Accepted
+- Team Join Request Rejected
+
+Requirements:
+
+- Notification Bell Icon
+- Notification Counter Badge
+- Read/Unread Status
+- Mark All As Read
+- Notification History
+- Real-time updates
+
+==================================
+3. REFERRAL SYSTEM
+
+Create a referral system.
+
+Requirements:
+
+- Unique referral code for every user
+- Invite friends using referral code
+- Referral statistics page
+- Successful referral count
+- Referral reward history
+- Bonus balance system
+
+Example:
+User A invites User B
+User B registers
+User A receives referral reward
+
+Prevent:
+
+- Self referral
+- Duplicate referral abuse
+- Fake referral creation
+
+==================================
+4. PROMO CODE SYSTEM
+
+Create promo code management.
+
+Admin Features:
+
+- Create Promo Code
+- Edit Promo Code
+- Delete Promo Code
+- Expiry Date
+- Usage Limit
+- Bonus Amount
+
+User Features:
+
+- Apply Promo Code
+- View Success/Error Messages
+
+Example Codes:
+FFARENA100
+WELCOME50
+
+Requirements:
+
+- One-time use per user
+- Expiry validation
+- Usage tracking
+- Wallet bonus integration
+
+==================================
+5. DARK/LIGHT THEME SYSTEM
+
+Create theme switcher.
+
+Requirements:
+
+- Dark Mode
+- Light Mode
+- Theme Toggle Button
+- Save User Preference
+- Apply theme across entire website
+- Smooth transitions
+- Mobile compatible
+
+==================================
+6. PWA SUPPORT
+
+Convert website into a Progressive Web App.
+
+Requirements:
+
+- Install App Button
+- Add to Home Screen Support
+- App Icon
+- Splash Screen
+- Offline Page
+- Mobile Friendly
+- Fast Loading
+- PWA Manifest
+- Service Worker Setup
+
+Users should be able to install FF Arena like a real Android app from their browser.
+
+==================================
+FINAL REQUIREMENT
+
+- Fix all related bugs.
+- No runtime errors.
+- No broken buttons.
+- No placeholder content.
+- Keep all existing working features.
+- Return a detailed report of:
+  1. Features Added
+  2. Files Modified
+  3. Bugs Fixed
+  4. Remaining Issues

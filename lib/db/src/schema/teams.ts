@@ -8,6 +8,7 @@ export const teamsTable = pgTable("teams", {
   tag: text("tag"),
   logoUrl: text("logo_url"),
   captainId: text("captain_id").notNull(),
+  maxMembers: integer("max_members").notNull().default(4),
   totalWins: integer("total_wins").notNull().default(0),
   totalKills: integer("total_kills").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -18,7 +19,7 @@ export const teamMembersTable = pgTable("team_members", {
   teamId: integer("team_id").notNull(),
   userId: text("user_id").notNull(),
   role: text("role").notNull().default("member"), // captain | member
-  status: text("status").notNull().default("pending"), // pending | active
+  status: text("status").notNull().default("pending"), // pending | active | rejected
   freefireUid: text("freefire_uid"),
   playerName: text("player_name"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

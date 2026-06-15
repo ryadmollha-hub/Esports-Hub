@@ -2,10 +2,11 @@ import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   X, User, Wallet, Trophy, History, Settings, HeadphonesIcon,
-  LogOut, Shield, Flame, ChevronRight
+  LogOut, Shield, Flame, ChevronRight, Gift, Sun, Moon
 } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { clearAdminSession, isAdminAuthenticated } from "@/lib/adminAuth";
+import { useTheme } from "@/lib/ThemeContext";
 
 interface MenuDrawerProps {
   open: boolean;
@@ -17,6 +18,7 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
   const [, setLocation] = useLocation();
   const isAdminSession = isAdminAuthenticated();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (open) {
@@ -40,6 +42,7 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
       { href: "/wallet", icon: Wallet, label: "Wallet", desc: "Manage your balance" },
       { href: "/dashboard", icon: Trophy, label: "My Tournaments", desc: "Your tournament history" },
       { href: "/teams/my", icon: Shield, label: "My Team", desc: "Manage your squad" },
+      { href: "/referral", icon: Gift, label: "Referral", desc: "Invite friends, earn rewards" },
     ] : []),
     { href: "/leaderboard", icon: History, label: "Leaderboard", desc: "Global rankings" },
     { href: "/contact", icon: HeadphonesIcon, label: "Support", desc: "Get help from our team" },
@@ -69,12 +72,21 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
                 FF <span className="text-[#ff6b00]">Arena</span>
               </span>
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-[#1a1a24] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleTheme}
+                className="w-8 h-8 rounded-full bg-[#1a1a24] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors"
+                title={theme === "dark" ? "Light mode" : "Dark mode"}
+              >
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-full bg-[#1a1a24] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {user && (

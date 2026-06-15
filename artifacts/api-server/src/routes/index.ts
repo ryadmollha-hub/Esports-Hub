@@ -10,6 +10,9 @@ import usersRouter from "./users";
 import adminRouter from "./admin";
 import walletRouter from "./wallet";
 import authRouter from "./auth";
+import notificationsRouter from "./notifications";
+import referralsRouter from "./referrals";
+import promoCodesRouter from "./promoCodes";
 
 const router: IRouter = Router();
 
@@ -24,5 +27,8 @@ router.use(announcementsRouter);
 router.use(usersRouter);
 router.use(adminRouter);
 router.use(walletRouter);
+router.use(notificationsRouter);
+router.use(referralsRouter);
+router.use(promoCodesRouter);
 
 export default router;
