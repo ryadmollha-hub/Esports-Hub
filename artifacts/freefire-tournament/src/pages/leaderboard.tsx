@@ -16,12 +16,12 @@ export default function LeaderboardPage() {
   const { data: tournaments = [] } = useListTournaments({});
 
   const { data: globalLb = [], isLoading: loadingGlobal } = useGetGlobalLeaderboard({
-    query: { enabled: !tournamentId, queryKey: getGetGlobalLeaderboardQueryKey() },
+    query: { enabled: !tournamentId, queryKey: getGetGlobalLeaderboardQueryKey(), refetchInterval: 20000 },
   });
 
   const { data: tournamentLb = [], isLoading: loadingTournament } = useGetTournamentLeaderboard(
     tournamentId ?? 0,
-    { query: { enabled: !!tournamentId, queryKey: getGetTournamentLeaderboardQueryKey(tournamentId ?? 0) } }
+    { query: { enabled: !!tournamentId, queryKey: getGetTournamentLeaderboardQueryKey(tournamentId ?? 0), refetchInterval: 20000 } }
   );
 
   const entries = (tournamentId ? tournamentLb : globalLb) as any[];

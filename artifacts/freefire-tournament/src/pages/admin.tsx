@@ -60,6 +60,11 @@ export default function AdminPage() {
   const [matchForm, setMatchForm] = useState({ matchNumber: "", scheduledAt: "", mapName: "" });
   const [showMatchForm, setShowMatchForm] = useState(false);
 
+  // Match result entry state
+  const [expandedMatchResult, setExpandedMatchResult] = useState<Record<number, boolean>>({});
+  const [matchResultRows, setMatchResultRows] = useState<Record<number, Array<{ playerName: string; rank: string; kills: string; points: string }>>>({});
+  const [submittingMatchResult, setSubmittingMatchResult] = useState<Record<number, boolean>>({});
+
   // Room form
   const [roomForm, setRoomForm] = useState<Record<number, { roomId: string; roomPassword: string }>>({});
 
@@ -247,6 +252,60 @@ export default function AdminPage() {
     if (!confirm("Delete this announcement?")) return;
     const res = await apiFetch(`/announcements/${id}`, { method: "DELETE" });
     if (res.ok) { toast({ title: "Announcement deleted" }); loadAnnouncements(); }
+  };
+
+  // Match result actions
+  const addMatchResultRow = (matchId: number) => {
+    setMatchResultRows((prev) => ({
+      ...prev,
+      [matchId]: [...(prev[matchId] ?? []), { playerName: "", rank: "", kills: "", points: "" }],
+    }));
+  };
+
+  const removeMatchResultRow = (matchId: number, idx: number) => {
+    setMatchResultRows((prev) => ({
+      ...prev,
+      [matchId]: (prev[matchId] ?? []).filter((_, i) => i !== idx),
+    }));
+  };
+
+  const updateMatchResultRow = (matchId: number, idx: number, field: string, value: string) => {
+    setMatchResultRows((prev) => ({
+      ...prev,
+      [matchId]: (prev[matchId] ?? []).map((row, i) =>
+        i === idx ? { ...row, [field]: value } : row
+      ),
+    }));
+  };
+
+  const submitMatchResults = async (matchId: number) => {
+    const rows = matchResultRows[matchId] ?? [];
+    if (rows.length === 0) return toast({ title: "Add at least one result row", variant: "destructive" });
+    const results = rows.map((r, i) => ({
+      playerName: r.playerName,
+      rank: parseInt(r.rank) || i + 1,
+      kills: parseInt(r.kills) || 0,
+      points: parseInt(r.points) || 0,
+    }));
+    setSubmittingMatchResult((prev) => ({ ...prev, [matchId]: true }));
+    try {
+      const res = await apiFetch(`/matches/${matchId}/results`, {
+        method: "PATCH",
+        body: JSON.stringify({ results }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        toast({ title: "✅ Match results saved!", description: `${results.length} players ranked.` });
+        setExpandedMatchResult((prev) => ({ ...prev, [matchId]: false }));
+        loadMatches();
+      } else {
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setSubmittingMatchResult((prev) => ({ ...prev, [matchId]: false }));
+    }
   };
 
   // Match actions
@@ -961,18 +1020,154 @@ export default function AdminPage() {
                     </div>
                   )}
 
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {matches.length === 0 ? (
                       <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-8 text-center text-[#a0a0b0] text-sm">No matches for this tournament yet.</div>
-                    ) : matches.map((m: any) => (
-                      <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex items-center justify-between">
-                        <div>
-                          <div className="font-bold text-white">Match #{m.matchNumber} — {m.mapName ?? "TBD"}</div>
-                          <div className="text-[#a0a0b0] text-sm">{new Date(m.scheduledAt).toLocaleString()}</div>
+                    ) : matches.map((m: any) => {
+                      const isExpanded = expandedMatchResult[m.id];
+                      const rows = matchResultRows[m.id] ?? [];
+                      const hasResults = m.results && m.results.length > 0;
+                      return (
+                        <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 overflow-hidden">
+                          {/* Match header */}
+                          <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                            <div className="flex-1">
+                              <div className="font-bold text-white text-base">Match #{m.matchNumber} — {m.mapName ?? "TBD"}</div>
+                              <div className="text-[#a0a0b0] text-sm">{new Date(m.scheduledAt).toLocaleString()}</div>
+                              {hasResults && (
+                                <div className="text-[#00ff88] text-xs mt-1 font-bold">✓ {m.results.length} players ranked</div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={statusBadge(m.status)}>{m.status}</span>
+                              <button
+                                onClick={() => {
+                                  setExpandedMatchResult((prev) => ({ ...prev, [m.id]: !prev[m.id] }));
+                                  if (!matchResultRows[m.id]) {
+                                    if (hasResults) {
+                                      setMatchResultRows((prev) => ({
+                                        ...prev,
+                                        [m.id]: m.results.map((r: any) => ({
+                                          playerName: r.playerName,
+                                          rank: String(r.rank),
+                                          kills: String(r.kills),
+                                          points: String(r.points),
+                                        })),
+                                      }));
+                                    } else {
+                                      setMatchResultRows((prev) => ({ ...prev, [m.id]: [] }));
+                                    }
+                                  }
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-lg text-[#ff6b00] text-xs font-bold hover:bg-[#ff6b00]/20 transition-colors"
+                              >
+                                {isExpanded ? "▲ Close" : "▼ Enter Results"}
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Result entry panel */}
+                          {isExpanded && (
+                            <div className="border-t border-[#ff6b00]/10 bg-[#0d0d16] p-4">
+                              <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-black uppercase text-[#ff6b00] text-sm">Enter Rankings</h3>
+                                <button
+                                  onClick={() => addMatchResultRow(m.id)}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-xs uppercase rounded-lg hover:bg-[#e66000] transition-colors"
+                                >
+                                  <Plus className="w-3.5 h-3.5" /> Add Row
+                                </button>
+                              </div>
+
+                              {rows.length === 0 ? (
+                                <div className="text-center py-6 text-[#a0a0b0] text-sm">
+                                  Click "Add Row" to enter player results, or pre-fill from existing results above.
+                                </div>
+                              ) : (
+                                <div className="space-y-2 mb-4">
+                                  {/* Header */}
+                                  <div className="grid grid-cols-12 gap-2 text-[#606070] text-[10px] uppercase px-1">
+                                    <div className="col-span-4">Player Name *</div>
+                                    <div className="col-span-2">Rank *</div>
+                                    <div className="col-span-2">Kills</div>
+                                    <div className="col-span-2">Points</div>
+                                    <div className="col-span-2" />
+                                  </div>
+                                  {rows.map((row, idx) => (
+                                    <div key={idx} className="grid grid-cols-12 gap-2 items-center">
+                                      <div className="col-span-4">
+                                        <input
+                                          value={row.playerName}
+                                          onChange={(e) => updateMatchResultRow(m.id, idx, "playerName", e.target.value)}
+                                          placeholder="Player / Team"
+                                          className="w-full bg-[#12121a] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff6b00] transition-colors"
+                                        />
+                                      </div>
+                                      <div className="col-span-2">
+                                        <input
+                                          type="number"
+                                          value={row.rank}
+                                          onChange={(e) => updateMatchResultRow(m.id, idx, "rank", e.target.value)}
+                                          placeholder={String(idx + 1)}
+                                          min="1"
+                                          className="w-full bg-[#12121a] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff6b00] transition-colors"
+                                        />
+                                      </div>
+                                      <div className="col-span-2">
+                                        <input
+                                          type="number"
+                                          value={row.kills}
+                                          onChange={(e) => updateMatchResultRow(m.id, idx, "kills", e.target.value)}
+                                          placeholder="0"
+                                          min="0"
+                                          className="w-full bg-[#12121a] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff6b00] transition-colors"
+                                        />
+                                      </div>
+                                      <div className="col-span-2">
+                                        <input
+                                          type="number"
+                                          value={row.points}
+                                          onChange={(e) => updateMatchResultRow(m.id, idx, "points", e.target.value)}
+                                          placeholder="0"
+                                          min="0"
+                                          className="w-full bg-[#12121a] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff6b00] transition-colors"
+                                        />
+                                      </div>
+                                      <div className="col-span-2 flex justify-center">
+                                        <button
+                                          onClick={() => removeMatchResultRow(m.id, idx)}
+                                          className="w-8 h-8 rounded-lg bg-[#ff2244]/10 text-[#ff2244] hover:bg-[#ff2244]/20 flex items-center justify-center transition-colors"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {rows.length > 0 && (
+                                <div className="flex items-center gap-3 pt-3 border-t border-[#2a2a36]">
+                                  <button
+                                    onClick={() => submitMatchResults(m.id)}
+                                    disabled={submittingMatchResult[m.id]}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-[#00ff88] text-[#0a0a0f] font-black text-xs uppercase rounded-xl hover:bg-[#00cc70] disabled:opacity-50 transition-colors"
+                                  >
+                                    {submittingMatchResult[m.id] ? "Saving..." : "💾 Save Results & Mark Complete"}
+                                  </button>
+                                  <button
+                                    onClick={() => addMatchResultRow(m.id)}
+                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-xs uppercase rounded-xl hover:text-white transition-colors"
+                                  >
+                                    <Plus className="w-3.5 h-3.5" /> Add Row
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <span className={statusBadge(m.status)}>{m.status}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </>
               )}
