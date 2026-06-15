@@ -9,6 +9,16 @@ import Navbar from "@/components/Navbar";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
+async function safeJson(res: Response): Promise<any> {
+  try {
+    const text = await res.text();
+    if (!text || !text.trim()) return {};
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
+}
+
 type TxStatus = "pending" | "approved" | "rejected";
 type TxType = "deposit" | "withdraw" | "tournament_entry" | "tournament_prize";
 
@@ -83,9 +93,13 @@ export default function WalletPage() {
   }, [isLoading, user]);
 
   useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}api/payment-settings`)
-      .then((r) => r.json())
-      .then((d) => { if (d && d.bkash_number) setPaymentSettings(d); })
+    const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${BASE}/api/payment-settings`)
+      .then(async (r) => {
+        if (!r.ok) return;
+        const d = await safeJson(r);
+        if (d && d.bkash_number) setPaymentSettings(d);
+      })
       .catch(() => {});
   }, []);
 
@@ -119,7 +133,7 @@ export default function WalletPage() {
         method: "POST",
         body: JSON.stringify({ ...depositForm, amount: parseFloat(depositForm.amount) }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (res.ok) {
         toast({ title: "Deposit Requested!", description: "Admin will review within 24 hours." });
         setActiveModal(null);
@@ -141,7 +155,7 @@ export default function WalletPage() {
         method: "POST",
         body: JSON.stringify({ ...withdrawForm, amount: parseFloat(withdrawForm.amount) }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (res.ok) {
         toast({ title: "Withdrawal Requested!", description: "Admin will process within 24 hours." });
         setActiveModal(null);
@@ -166,7 +180,7 @@ export default function WalletPage() {
         method: "POST",
         body: JSON.stringify({ code: promoCode.trim().toUpperCase() }),
       });
-      const data = await res.json();
+      const data = await safeJson(res);
       if (res.ok) {
         toast({ title: "Promo Applied!", description: `You received ৳${data.bonusAmount} bonus from code ${data.code}.` });
         setPromoCode("");

@@ -11,6 +11,16 @@ import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+async function safeJson(res: Response): Promise<any> {
+  try {
+    const text = await res.text();
+    if (!text || !text.trim()) return {};
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
+}
+
 type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings";
 
 const tabs: { id: Tab; label: string; icon: any }[] = [
@@ -94,8 +104,10 @@ export default function AdminPage() {
   const loadTournaments = useCallback(async () => {
     try {
       const res = await apiFetch("/tournaments?limit=100");
-      const data = await res.json();
-      setTournaments(Array.isArray(data) ? data : data.tournaments ?? []);
+      if (res.ok) {
+        const data = await safeJson(res);
+        setTournaments(Array.isArray(data) ? data : data.tournaments ?? []);
+      }
     } catch {}
   }, [apiFetch]);
 
@@ -190,7 +202,7 @@ export default function AdminPage() {
         setTForm({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Pct: "50", prize2Pct: "30", prize3Pct: "20" });
         loadTournaments(); loadStats();
       } else {
-        const d = await res.json();
+        const d = await safeJson(res);
         toast({ title: "Error", description: d.error ?? "Failed", variant: "destructive" });
       }
     } finally { setLoading(false); }
@@ -299,7 +311,7 @@ export default function AdminPage() {
         method: "PATCH",
         body: JSON.stringify({ results }),
       });
-      const d = await res.json();
+      const d = await safeJson(res);
       if (res.ok) {
         toast({ title: "✅ Match results saved!", description: `${results.length} players ranked.` });
         setExpandedMatchResult((prev) => ({ ...prev, [matchId]: false }));
@@ -335,7 +347,7 @@ export default function AdminPage() {
         loadMatches();
         setMatchRoomForm((prev) => ({ ...prev, [matchId]: { roomId: "", roomPassword: "", releaseMinutes: "10" } }));
       } else {
-        const d = await res.json();
+        const d = await safeJson(res);
         toast({ title: "Error", description: d.error, variant: "destructive" });
       }
     } catch {
@@ -356,7 +368,7 @@ export default function AdminPage() {
         toast({ title: `Match status → ${status}` });
         loadMatches();
       } else {
-        const d = await res.json();
+        const d = await safeJson(res);
         toast({ title: "Error", description: d.error, variant: "destructive" });
       }
     } catch {
@@ -412,7 +424,7 @@ export default function AdminPage() {
         toast({ title: `👑 Winner set: ${playerName}` });
         loadTournaments();
       } else {
-        const d = await res.json();
+        const d = await safeJson(res);
         toast({ title: "Error", description: d.error, variant: "destructive" });
       }
     } catch {} finally {
@@ -425,7 +437,7 @@ export default function AdminPage() {
     setWinnerLoading((prev) => ({ ...prev, [tournamentId]: true }));
     try {
       const res = await apiFetch(`/tournaments/${tournamentId}/auto-winner`, { method: "POST" });
-      const d = await res.json();
+      const d = await safeJson(res);
       if (res.ok) {
         toast({ title: `🎲 Auto-winner: ${d.winnerName}` });
         loadTournaments();
@@ -470,7 +482,7 @@ export default function AdminPage() {
         method: "POST",
         body: JSON.stringify({ results }),
       });
-      const d = await res.json();
+      const d = await safeJson(res);
       if (res.ok) {
         toast({ title: "✅ Results published!", description: `${d.participantsUpdated} players updated. Prizes distributed.` });
         loadTournaments();
@@ -1625,7 +1637,7 @@ function RulesTab({ apiFetch, toast, tournaments }: { apiFetch: any; toast: any;
         setForm({ title: "", content: "", orderIndex: "0" });
         loadRules(selectedTournament);
       } else {
-        const d = await res.json();
+        const d = await safeJson(res);
         toast({ title: "Error", description: d.error, variant: "destructive" });
       }
     } catch {
@@ -1810,7 +1822,7 @@ function PromoCodesTab({ apiFetch, toast }: { apiFetch: any; toast: any }) {
         setForm({ code: "", bonusAmount: "", usageLimit: "100", expiresAt: "", isActive: true });
         load();
       } else {
-        const d = await res.json();
+        const d = await safeJson(res);
         toast({ title: "Error", description: d.error, variant: "destructive" });
       }
     } catch {
@@ -1961,7 +1973,7 @@ function PaymentSettingsTab({ apiFetch, toast }: { apiFetch: any; toast: any }) 
       if (res.ok) {
         toast({ title: "Payment numbers updated!", description: "Users will see the new numbers immediately." });
       } else {
-        const d = await res.json();
+        const d = await safeJson(res);
         toast({ title: "Error", description: d.error ?? "Failed to save", variant: "destructive" });
       }
     } catch {
