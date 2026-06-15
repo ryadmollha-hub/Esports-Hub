@@ -10,6 +10,8 @@ export const registrationsTable = pgTable("registrations", {
   status: text("status").notNull().default("pending"), // pending | approved | rejected
   freefireUid: text("freefire_uid").notNull(),
   playerName: text("player_name").notNull(),
+  // For duo/squad: JSON array of {uid, name} for additional team members
+  teamMembers: text("team_members"), // JSON: [{uid: string, name: string}]
   paymentScreenshot: text("payment_screenshot"),
   // Result fields
   kills: integer("kills").notNull().default(0),

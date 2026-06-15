@@ -9,6 +9,9 @@ export const matchesTable = pgTable("matches", {
   scheduledAt: timestamp("scheduled_at").notNull(),
   status: text("status").notNull().default("scheduled"), // scheduled | live | completed
   mapName: text("map_name"),
+  roomId: text("room_id"),
+  roomPassword: text("room_password"),
+  roomReleaseAt: timestamp("room_release_at"), // when room details become visible (5-10 min before match)
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

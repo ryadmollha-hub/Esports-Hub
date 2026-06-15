@@ -155,8 +155,11 @@ router.post("/tournaments/:id/join", async (req, res) => {
       .where(eq(tournamentsTable.id, id));
 
     if (!tournament) return res.status(404).json({ error: "Tournament not found." });
+    if (tournament.status === "live" || tournament.status === "ongoing") {
+      return res.status(400).json({ error: "Registration is closed. Match is already live.", registrationClosed: true });
+    }
     if (tournament.status === "ended" || tournament.status === "completed" || tournament.status === "cancelled") {
-      return res.status(400).json({ error: "This tournament is no longer accepting players." });
+      return res.status(400).json({ error: "This tournament is no longer accepting players.", registrationClosed: true });
     }
     if (tournament.filledSlots >= tournament.maxSlots) {
       return res.status(400).json({ error: "Tournament is full. No slots available." });
@@ -183,14 +186,24 @@ router.post("/tournaments/:id/join", async (req, res) => {
 
     if (!userProfile) return res.status(401).json({ error: "User not found." });
 
-    const freefireUid = userProfile.freefireUid ?? req.body?.freefireUid;
-    const playerName = userProfile.displayName ?? userProfile.username ?? req.body?.playerName ?? "Player";
+    const freefireUid = req.body?.freefireUid ?? userProfile.freefireUid;
+    const playerName = req.body?.playerName ?? userProfile.displayName ?? userProfile.username ?? "Player";
 
     if (!freefireUid) {
       return res.status(400).json({
         error: "Please set your Free Fire UID in your profile before joining.",
         requiresProfile: true,
       });
+    }
+
+    // For duo/squad: additional team members
+    const teamMembers = req.body?.teamMembers ?? null; // Array of {uid, name}
+    // Validate team member count based on mode
+    if (tournament.mode === "duo" && teamMembers && teamMembers.length !== 1) {
+      return res.status(400).json({ error: "Duo tournament requires exactly 2 players (1 additional member)." });
+    }
+    if (tournament.mode === "squad" && teamMembers && teamMembers.length !== 3) {
+      return res.status(400).json({ error: "Squad tournament requires exactly 4 players (3 additional members)." });
     }
 
     // ── Entry fee check & deduction ──────────────────────────────────────────
@@ -223,6 +236,7 @@ router.post("/tournaments/:id/join", async (req, res) => {
         userId,
         freefireUid,
         playerName,
+        teamMembers: teamMembers ? JSON.stringify(teamMembers) : null,
         status: "approved",
       })
       .returning();

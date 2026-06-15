@@ -3,7 +3,8 @@ import { useRoute, Link, useLocation } from "wouter";
 import {
   Trophy, Users, Calendar, Shield, ChevronLeft, Flame,
   UserPlus, UserMinus, Crown, Swords, CheckCircle, RefreshCw,
-  Star, X, Wallet, Zap, Medal, Target
+  Star, X, Wallet, Zap, Medal, Target, BookOpen, Lock,
+  Radio, Clock, Key, Eye, EyeOff
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -19,12 +20,18 @@ const modeColors: Record<string, string> = {
   squad: "bg-[#ff6b00]/20 text-[#ff6b00] border-[#ff6b00]/30",
 };
 
+const modePlayerCount: Record<string, number> = {
+  solo: 1,
+  duo: 2,
+  squad: 4,
+};
+
 const statusConfig: Record<string, { color: string; label: string; dot: string }> = {
   upcoming:  { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", label: "Upcoming",   dot: "bg-yellow-400" },
   live:      { color: "bg-green-500/20 text-green-400 border-green-500/30",    label: "🔴 LIVE",    dot: "bg-green-400 animate-pulse" },
   ongoing:   { color: "bg-green-500/20 text-green-400 border-green-500/30",    label: "🔴 LIVE",    dot: "bg-green-400 animate-pulse" },
   ended:     { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",       label: "Ended",     dot: "bg-gray-400" },
-  completed: { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",       label: "Ended",     dot: "bg-gray-400" },
+  completed: { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",       label: "Completed", dot: "bg-gray-400" },
   cancelled: { color: "bg-red-500/20 text-red-400 border-red-500/30",          label: "Cancelled", dot: "bg-red-400" },
 };
 
@@ -39,10 +46,34 @@ interface Participant {
   userId: string;
   freefireUid: string;
   playerName: string;
+  teamMembers?: string | null;
   kills: number;
   earnedAmount: string;
   resultRank: number | null;
   createdAt: string;
+}
+
+interface TeamMember {
+  uid: string;
+  name: string;
+}
+
+interface Rule {
+  id: number;
+  title: string;
+  content: string;
+  orderIndex: number;
+}
+
+interface MatchInfo {
+  id: number;
+  matchNumber: number;
+  scheduledAt: string;
+  status: string;
+  mapName?: string;
+  roomId?: string | null;
+  roomPassword?: string | null;
+  roomVisible?: boolean;
 }
 
 export default function TournamentDetailPage() {
@@ -55,13 +86,23 @@ export default function TournamentDetailPage() {
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [results, setResults] = useState<Participant[] | null>(null);
+  const [rules, setRules] = useState<Rule[]>([]);
+  const [matches, setMatches] = useState<MatchInfo[]>([]);
   const [loadingPart, setLoadingPart] = useState(true);
   const [joining, setJoining] = useState(false);
   const [leaving, setLeaving] = useState(false);
-  const [showUidModal, setShowUidModal] = useState(false);
+  const [showRegistrationModal, setShowRegistrationModal] = useState(false);
   const [showFeeModal, setShowFeeModal] = useState(false);
-  const [tempUid, setTempUid] = useState("");
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [showRoomPass, setShowRoomPass] = useState(false);
+
+  // Registration form state
+  const [regForm, setRegForm] = useState({
+    uid: "",
+    name: "",
+    members: [] as TeamMember[],
+  });
 
   const { data: tournament, isLoading } = useGetTournament(id, {
     query: { enabled: !!id, queryKey: getGetTournamentQueryKey(id), refetchInterval: 30000 },
@@ -91,6 +132,24 @@ export default function TournamentDetailPage() {
     } catch {}
   }, [id]);
 
+  const loadRules = useCallback(async () => {
+    if (!id) return;
+    try {
+      const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${BASE}/api/tournaments/${id}/rules`);
+      if (res.ok) setRules(await res.json());
+    } catch {}
+  }, [id]);
+
+  const loadMatches = useCallback(async () => {
+    if (!id) return;
+    try {
+      const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const res = await fetch(`${BASE}/api/tournaments/${id}/matches`);
+      if (res.ok) setMatches(await res.json());
+    } catch {}
+  }, [id]);
+
   const loadBalance = useCallback(async () => {
     if (!user) return;
     try {
@@ -104,27 +163,74 @@ export default function TournamentDetailPage() {
 
   useEffect(() => {
     loadParticipants();
+    loadRules();
+    loadMatches();
     if (t?.resultsPublished) loadResults();
-  }, [loadParticipants, t?.resultsPublished]);
+  }, [loadParticipants, loadRules, loadMatches, t?.resultsPublished]);
 
   useEffect(() => {
     if (user) loadBalance();
   }, [user, loadBalance]);
+
+  // Initialize team members when tournament mode becomes known
+  useEffect(() => {
+    if (t?.mode) {
+      const count = modePlayerCount[t.mode] ?? 1;
+      const membersNeeded = count - 1;
+      setRegForm(prev => ({
+        ...prev,
+        members: Array.from({ length: membersNeeded }, (_, i) => prev.members[i] ?? { uid: "", name: "" }),
+      }));
+    }
+  }, [t?.mode]);
 
   const isJoined = !!user && participants.some((p) => p.userId === user.userId);
   const isFull = t ? t.filledSlots >= t.maxSlots : false;
   const entryFee = t ? Number(t.entryFee) : 0;
   const canLeave = !!user && isJoined &&
     t?.status !== "live" && t?.status !== "ongoing" && t?.status !== "ended" && t?.status !== "completed";
+  const isEnded = t?.status === "ended" || t?.status === "completed";
+  const isLive = t?.status === "live" || t?.status === "ongoing";
+  const isRegistrationClosed = isLive || isEnded || t?.status === "cancelled";
 
-  const doJoin = async (uid?: string) => {
+  // Live matches
+  const liveMatches = matches.filter(m => m.status === "live");
+  const upcomingMatches = matches.filter(m => m.status === "scheduled");
+  const completedMatches = matches.filter(m => m.status === "completed");
+
+  const doJoin = async () => {
     if (!user) { setLocation("/sign-in"); return; }
     setJoining(true);
     setShowFeeModal(false);
+    setShowRegistrationModal(false);
     try {
+      const mode = t?.mode ?? "solo";
+      const playerCount = modePlayerCount[mode] ?? 1;
+      const teamMembers = playerCount > 1 ? regForm.members : undefined;
+
+      // Validate
+      if (!regForm.uid.trim()) {
+        toast({ title: "Enter your Free Fire UID", variant: "destructive" });
+        setJoining(false);
+        return;
+      }
+      if (teamMembers) {
+        for (let i = 0; i < teamMembers.length; i++) {
+          if (!teamMembers[i].uid.trim() || !teamMembers[i].name.trim()) {
+            toast({ title: `Enter UID and name for Player ${i + 2}`, variant: "destructive" });
+            setJoining(false);
+            return;
+          }
+        }
+      }
+
       const res = await authFetch(`/tournaments/${id}/join`, {
         method: "POST",
-        body: JSON.stringify(uid ? { freefireUid: uid } : {}),
+        body: JSON.stringify({
+          freefireUid: regForm.uid.trim(),
+          playerName: regForm.name.trim() || undefined,
+          teamMembers: teamMembers?.map(m => ({ uid: m.uid.trim(), name: m.name.trim() })),
+        }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -135,16 +241,10 @@ export default function TournamentDetailPage() {
         queryClient.invalidateQueries({ queryKey: getGetTournamentQueryKey(id) });
         loadParticipants();
         loadBalance();
-        setShowUidModal(false);
-        setTempUid("");
       } else if (data.requiresProfile) {
-        setShowUidModal(true);
+        setShowRegistrationModal(true);
       } else if (data.insufficientBalance) {
-        toast({
-          title: "Insufficient Balance",
-          description: data.error,
-          variant: "destructive",
-        });
+        toast({ title: "Insufficient Balance", description: data.error, variant: "destructive" });
       } else {
         toast({ title: "Error", description: data.error, variant: "destructive" });
       }
@@ -155,7 +255,13 @@ export default function TournamentDetailPage() {
 
   const handleJoinClick = () => {
     if (!user) { setLocation("/sign-in"); return; }
+    // Always show registration modal for UID entry
+    setShowRegistrationModal(true);
+  };
+
+  const handleRegistrationSubmit = () => {
     if (entryFee > 0) {
+      setShowRegistrationModal(false);
       setShowFeeModal(true);
     } else {
       doJoin();
@@ -213,9 +319,8 @@ export default function TournamentDetailPage() {
   const slotsLeft = t.maxSlots - t.filledSlots;
   const statusCfg = statusConfig[t.status] ?? statusConfig.upcoming;
   const hasWinner = !!t.winnerId && !!t.winnerName;
-  const isEnded = t.status === "ended" || t.status === "completed";
+  const playerCount = modePlayerCount[t.mode] ?? 1;
 
-  // Sort results for display: top 3 podium order = [1st, 2nd, 3rd]
   const podiumResults = results?.filter((r) => r.resultRank && r.resultRank <= 3)
     .sort((a, b) => (a.resultRank ?? 99) - (b.resultRank ?? 99)) ?? [];
   const otherResults = results?.filter((r) => !r.resultRank || r.resultRank > 3)
@@ -279,6 +384,35 @@ export default function TournamentDetailPage() {
           {/* ── Left Column ── */}
           <div className="md:col-span-2 space-y-5">
 
+            {/* Status Alert Banners */}
+            {t.resultsPublished && (
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 flex items-center gap-3">
+                <Trophy className="w-5 h-5 text-purple-400 shrink-0" />
+                <div>
+                  <div className="text-purple-400 font-black uppercase text-sm">Results Published</div>
+                  <div className="text-[#a0a0b0] text-xs">Match has ended. View the final leaderboard below.</div>
+                </div>
+              </div>
+            )}
+            {isLive && !t.resultsPublished && (
+              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 flex items-center gap-3 animate-pulse">
+                <Radio className="w-5 h-5 text-green-400 shrink-0" />
+                <div>
+                  <div className="text-green-400 font-black uppercase text-sm">🔴 Match is Live!</div>
+                  <div className="text-[#a0a0b0] text-xs">Registration is closed. Check room details if you're a participant.</div>
+                </div>
+              </div>
+            )}
+            {isEnded && !t.resultsPublished && (
+              <div className="bg-gray-500/10 border border-gray-500/30 rounded-xl p-4 flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-gray-400 shrink-0" />
+                <div>
+                  <div className="text-gray-400 font-black uppercase text-sm">Match Completed</div>
+                  <div className="text-[#a0a0b0] text-xs">Results will be published soon.</div>
+                </div>
+              </div>
+            )}
+
             {t.description && (
               <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
                 <h3 className="text-white font-bold uppercase text-sm mb-2 tracking-wider">About</h3>
@@ -294,26 +428,126 @@ export default function TournamentDetailPage() {
               </div>
             )}
 
-            {/* ── RESULTS SECTION ── shown when results are published */}
+            {/* ── LIVE MATCHES SECTION ── */}
+            {liveMatches.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-green-400 font-black uppercase text-sm tracking-wider flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  Live Matches
+                </h3>
+                {liveMatches.map(match => (
+                  <div key={match.id} className="bg-green-500/10 border border-green-500/30 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black px-2.5 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 uppercase flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Live
+                        </span>
+                        <span className="text-white font-bold">Match #{match.matchNumber}</span>
+                        {match.mapName && <span className="text-[#a0a0b0] text-xs">{match.mapName}</span>}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[#a0a0b0] text-xs">
+                        <Clock className="w-3.5 h-3.5" />
+                        {new Date(match.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    </div>
+                    {match.roomVisible && isJoined ? (
+                      <div className="grid grid-cols-2 gap-3 mt-3">
+                        <div className="bg-[#0a0a0f]/60 rounded-lg p-3">
+                          <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
+                            <Key className="w-3 h-3" /> Room ID
+                          </div>
+                          <div className="text-white font-mono font-black text-lg">{match.roomId}</div>
+                        </div>
+                        <div className="bg-[#0a0a0f]/60 rounded-lg p-3">
+                          <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
+                            <Lock className="w-3 h-3" /> Password
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="text-white font-mono font-black text-lg">
+                              {showRoomPass ? match.roomPassword : "••••••"}
+                            </div>
+                            <button onClick={() => setShowRoomPass(!showRoomPass)} className="text-[#a0a0b0] hover:text-white">
+                              {showRoomPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : match.roomVisible && !isJoined ? (
+                      <div className="text-center py-2 text-[#a0a0b0] text-sm">
+                        Join the tournament to view room details.
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-2 text-[#a0a0b0] text-sm">
+                        <Lock className="w-4 h-4" />
+                        Room details available to joined players.
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upcoming Matches */}
+            {upcomingMatches.length > 0 && (
+              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
+                <h3 className="text-white font-bold uppercase text-sm mb-3 tracking-wider flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#ff6b00]" /> Scheduled Matches
+                </h3>
+                <div className="space-y-2">
+                  {upcomingMatches.map(match => (
+                    <div key={match.id} className="flex items-center justify-between py-2 border-b border-[#1a1a24] last:border-0">
+                      <div className="flex items-center gap-3">
+                        <span className="text-[#a0a0b0] text-xs uppercase bg-[#1a1a24] px-2 py-0.5 rounded font-bold">#{match.matchNumber}</span>
+                        <div>
+                          <div className="text-white text-sm font-bold">Match #{match.matchNumber}</div>
+                          {match.mapName && <div className="text-[#a0a0b0] text-xs">{match.mapName}</div>}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-white text-sm font-bold">{new Date(match.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                        <div className="text-[#a0a0b0] text-xs">{new Date(match.scheduledAt).toLocaleDateString()}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tournament Room Info (legacy - for tournaments without matches) */}
+            {(isLive) && t.roomId && isJoined && matches.length === 0 && (
+              <div className="bg-[#ff6b00]/10 rounded-xl border border-[#ff6b00]/40 p-5">
+                <h3 className="text-[#ff6b00] font-bold uppercase text-sm mb-3 tracking-wider flex items-center gap-2">
+                  <Shield className="w-4 h-4" /> Room Details (Joined Players Only)
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-[#a0a0b0] text-xs uppercase mb-1">Room ID</div>
+                    <div className="text-white font-mono font-bold text-xl">{t.roomId}</div>
+                  </div>
+                  {t.roomPassword && (
+                    <div>
+                      <div className="text-[#a0a0b0] text-xs uppercase mb-1">Password</div>
+                      <div className="text-white font-mono font-bold text-xl">{t.roomPassword}</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ── RESULTS SECTION ── */}
             {t.resultsPublished && results !== null && (
               <div className="space-y-4">
-                {/* Podium */}
                 {podiumResults.length > 0 && (
                   <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
                     <div className="flex items-center gap-2 mb-5">
                       <Trophy className="w-5 h-5 text-[#ffd700]" />
                       <h3 className="text-white font-black uppercase text-sm tracking-wider">Tournament Results</h3>
                     </div>
-
-                    {/* Top 3 Podium */}
                     <div className="space-y-3 mb-4">
                       {podiumResults.map((player) => {
                         const cfg = podiumConfig.find((c) => c.rank === player.resultRank)!;
                         return (
-                          <div
-                            key={player.id}
-                            className={`relative bg-gradient-to-r ${cfg.bg} border ${cfg.border} rounded-xl p-4 overflow-hidden`}
-                          >
+                          <div key={player.id} className={`relative bg-gradient-to-r ${cfg.bg} border ${cfg.border} rounded-xl p-4 overflow-hidden`}>
                             <div className="flex items-center gap-4">
                               <div className={`text-4xl shrink-0 leading-none`}>{cfg.emoji}</div>
                               <div className="flex-1 min-w-0">
@@ -337,7 +571,6 @@ export default function TournamentDetailPage() {
                   </div>
                 )}
 
-                {/* Full Leaderboard */}
                 {(podiumResults.length > 0 || otherResults.length > 0) && (
                   <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
                     <h3 className="text-white font-bold uppercase text-sm mb-4 tracking-wider flex items-center gap-2">
@@ -359,26 +592,14 @@ export default function TournamentDetailPage() {
                             const emoji = player.resultRank === 1 ? "🥇" : player.resultRank === 2 ? "🥈" : player.resultRank === 3 ? "🥉" : null;
                             const rowNum = i + 1;
                             return (
-                              <tr key={player.id} className={`border-b border-[#1a1a24] last:border-0 ${
-                                player.userId === user?.userId ? "bg-[#ff6b00]/5" : ""
-                              }`}>
-                                <td className="py-2.5 pr-3">
-                                  <span className="font-black text-[#a0a0b0]">
-                                    {emoji ?? `#${rowNum}`}
-                                  </span>
-                                </td>
+                              <tr key={player.id} className={`border-b border-[#1a1a24] last:border-0 ${player.userId === user?.userId ? "bg-[#ff6b00]/5" : ""}`}>
+                                <td className="py-2.5 pr-3"><span className="font-black text-[#a0a0b0]">{emoji ?? `#${rowNum}`}</span></td>
                                 <td className="py-2.5 pr-3">
                                   <div className="font-bold text-white">{player.playerName}</div>
-                                  {player.userId === user?.userId && (
-                                    <span className="text-[10px] text-[#00ff88] font-bold">You</span>
-                                  )}
+                                  {player.userId === user?.userId && <span className="text-[10px] text-[#00ff88] font-bold">You</span>}
                                 </td>
-                                <td className="py-2.5 pr-3 hidden sm:table-cell">
-                                  <span className="text-[#a0a0b0] font-mono text-xs">{player.freefireUid}</span>
-                                </td>
-                                <td className="py-2.5 pr-3 text-right">
-                                  <span className="text-white font-bold">{player.kills}</span>
-                                </td>
+                                <td className="py-2.5 pr-3 hidden sm:table-cell"><span className="text-[#a0a0b0] font-mono text-xs">{player.freefireUid}</span></td>
+                                <td className="py-2.5 pr-3 text-right"><span className="text-white font-bold">{player.kills}</span></td>
                                 <td className="py-2.5 text-right">
                                   <span className={`font-black ${Number(player.earnedAmount) > 0 ? "text-[#00ff88]" : "text-[#a0a0b0]"}`}>
                                     {Number(player.earnedAmount) > 0 ? `৳${Number(player.earnedAmount).toLocaleString()}` : "—"}
@@ -414,27 +635,6 @@ export default function TournamentDetailPage() {
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-
-            {/* Room Info */}
-            {(t.status === "live" || t.status === "ongoing") && t.roomId && isJoined && (
-              <div className="bg-[#ff6b00]/10 rounded-xl border border-[#ff6b00]/40 p-5">
-                <h3 className="text-[#ff6b00] font-bold uppercase text-sm mb-3 tracking-wider flex items-center gap-2">
-                  <Shield className="w-4 h-4" /> Room Details (Joined Players Only)
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-[#a0a0b0] text-xs uppercase mb-1">Room ID</div>
-                    <div className="text-white font-mono font-bold text-xl">{t.roomId}</div>
-                  </div>
-                  {t.roomPassword && (
-                    <div>
-                      <div className="text-[#a0a0b0] text-xs uppercase mb-1">Password</div>
-                      <div className="text-white font-mono font-bold text-xl">{t.roomPassword}</div>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -484,27 +684,39 @@ export default function TournamentDetailPage() {
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                    {participants.map((p, i) => (
-                      <div key={p.id} className={`flex items-center gap-3 p-3 rounded-xl ${
-                        p.userId === t.winnerId ? "bg-[#ffd700]/10 border border-[#ffd700]/30" : "bg-[#1a1a24]"
-                      }`}>
-                        <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                          p.userId === t.winnerId ? "bg-[#ffd700]/20 text-[#ffd700]" : "bg-[#ff6b00]/15 text-[#ff6b00]"
+                    {participants.map((p, i) => {
+                      const members: TeamMember[] = p.teamMembers ? JSON.parse(p.teamMembers) : [];
+                      return (
+                        <div key={p.id} className={`flex items-start gap-3 p-3 rounded-xl ${
+                          p.userId === t.winnerId ? "bg-[#ffd700]/10 border border-[#ffd700]/30" : "bg-[#1a1a24]"
                         }`}>
-                          {p.userId === t.winnerId ? <Crown className="w-3.5 h-3.5" /> : i + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-white font-bold text-sm truncate">{p.playerName}</span>
-                            {p.userId === user?.userId && (
-                              <span className="text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 px-1.5 py-0.5 rounded-full">You</span>
+                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 mt-0.5 ${
+                            p.userId === t.winnerId ? "bg-[#ffd700]/20 text-[#ffd700]" : "bg-[#ff6b00]/15 text-[#ff6b00]"
+                          }`}>
+                            {p.userId === t.winnerId ? <Crown className="w-3.5 h-3.5" /> : i + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-white font-bold text-sm">{p.playerName}</span>
+                              {p.userId === user?.userId && (
+                                <span className="text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 px-1.5 py-0.5 rounded-full">You</span>
+                              )}
+                            </div>
+                            <div className="text-[#a0a0b0] text-xs font-mono">UID: {p.freefireUid}</div>
+                            {members.length > 0 && (
+                              <div className="mt-1 space-y-0.5">
+                                {members.map((m, mi) => (
+                                  <div key={mi} className="text-[#a0a0b0] text-xs">
+                                    P{mi + 2}: {m.name} <span className="font-mono">(UID: {m.uid})</span>
+                                  </div>
+                                ))}
+                              </div>
                             )}
                           </div>
-                          <div className="text-[#a0a0b0] text-xs font-mono">UID: {p.freefireUid}</div>
+                          <CheckCircle className="w-4 h-4 text-[#00ff88] shrink-0 mt-0.5" />
                         </div>
-                        <CheckCircle className="w-4 h-4 text-[#00ff88] shrink-0" />
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -535,12 +747,16 @@ export default function TournamentDetailPage() {
                 <span className={`text-xs font-bold px-2 py-0.5 rounded border uppercase ${modeColors[t.mode]}`}>{t.mode}</span>
               </div>
               <div className="flex items-center justify-between">
+                <span className="text-[#a0a0b0] text-sm">Team Size</span>
+                <span className="text-white font-bold">{playerCount} Player{playerCount > 1 ? "s" : ""}</span>
+              </div>
+              <div className="flex items-center justify-between">
                 <span className="text-[#a0a0b0] text-sm flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Start</span>
                 <span className="text-white text-sm">{new Date(t.startDate).toLocaleDateString()}</span>
               </div>
 
-              {/* Wallet balance (if logged in) */}
-              {user && walletBalance !== null && entryFee > 0 && !isJoined && !isEnded && (
+              {/* Wallet balance */}
+              {user && walletBalance !== null && entryFee > 0 && !isJoined && !isRegistrationClosed && (
                 <div className={`flex items-center justify-between py-2 px-3 rounded-lg border ${
                   walletBalance >= entryFee
                     ? "bg-[#00ff88]/5 border-[#00ff88]/20"
@@ -553,6 +769,16 @@ export default function TournamentDetailPage() {
                     ৳{walletBalance.toFixed(2)}
                   </span>
                 </div>
+              )}
+
+              {/* Game Rules Button */}
+              {rules.length > 0 && (
+                <button
+                  onClick={() => setShowRulesModal(true)}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase text-sm rounded-xl hover:text-white hover:border-[#ff6b00]/30 transition-all"
+                >
+                  <BookOpen className="w-4 h-4" /> Game Rules
+                </button>
               )}
 
               <div className="border-t border-[#2a2a36] pt-3">
@@ -580,13 +806,25 @@ export default function TournamentDetailPage() {
 
                 {user && !isJoined && (
                   <>
-                    {isFull ? (
-                      <div className="w-full text-center py-3.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-black uppercase rounded-xl text-sm">
-                        Tournament Full
+                    {t.resultsPublished ? (
+                      <div className="w-full text-center py-3.5 bg-purple-500/10 border border-purple-500/30 text-purple-400 font-black uppercase rounded-xl text-sm">
+                        Results Published
                       </div>
-                    ) : isEnded || t.status === "cancelled" ? (
+                    ) : isLive ? (
                       <div className="w-full text-center py-3.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase rounded-xl text-sm">
                         Registration Closed
+                      </div>
+                    ) : isEnded ? (
+                      <div className="w-full text-center py-3.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase rounded-xl text-sm">
+                        Match Completed
+                      </div>
+                    ) : t.status === "cancelled" ? (
+                      <div className="w-full text-center py-3.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-bold uppercase rounded-xl text-sm">
+                        Tournament Cancelled
+                      </div>
+                    ) : isFull ? (
+                      <div className="w-full text-center py-3.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-black uppercase rounded-xl text-sm">
+                        Tournament Full
                       </div>
                     ) : (
                       <button onClick={handleJoinClick} disabled={joining}
@@ -621,6 +859,101 @@ export default function TournamentDetailPage() {
         </div>
       </div>
 
+      {/* ── Registration Modal (Dynamic Solo/Duo/Squad) ── */}
+      {showRegistrationModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black uppercase text-white flex items-center gap-2">
+                <UserPlus className="w-5 h-5 text-[#ff6b00]" />
+                Register — {t.mode?.charAt(0).toUpperCase() + t.mode?.slice(1)}
+              </h3>
+              <button onClick={() => setShowRegistrationModal(false)} className="text-[#a0a0b0] hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Player 1 (the user) */}
+              <div className="bg-[#1a1a24] rounded-xl p-4 border border-[#ff6b00]/10">
+                <div className="text-[#ff6b00] text-xs font-black uppercase mb-3 flex items-center gap-1.5">
+                  <Star className="w-3 h-3" /> Player 1 (You)
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[#a0a0b0] text-xs uppercase mb-1 block">Free Fire UID *</label>
+                    <input
+                      type="text"
+                      placeholder="Enter your UID"
+                      value={regForm.uid}
+                      onChange={(e) => setRegForm({ ...regForm, uid: e.target.value })}
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00] font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[#a0a0b0] text-xs uppercase mb-1 block">In-Game Name *</label>
+                    <input
+                      type="text"
+                      placeholder="Your in-game name"
+                      value={regForm.name}
+                      onChange={(e) => setRegForm({ ...regForm, name: e.target.value })}
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00]"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Additional players for duo/squad */}
+              {regForm.members.map((member, idx) => (
+                <div key={idx} className="bg-[#1a1a24] rounded-xl p-4 border border-[#2a2a36]">
+                  <div className="text-[#a0a0b0] text-xs font-black uppercase mb-3">
+                    Player {idx + 2}
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[#a0a0b0] text-xs uppercase mb-1 block">Free Fire UID *</label>
+                      <input
+                        type="text"
+                        placeholder="Enter UID"
+                        value={member.uid}
+                        onChange={(e) => {
+                          const updated = [...regForm.members];
+                          updated[idx] = { ...updated[idx], uid: e.target.value };
+                          setRegForm({ ...regForm, members: updated });
+                        }}
+                        className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00] font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[#a0a0b0] text-xs uppercase mb-1 block">In-Game Name *</label>
+                      <input
+                        type="text"
+                        placeholder="In-game name"
+                        value={member.name}
+                        onChange={(e) => {
+                          const updated = [...regForm.members];
+                          updated[idx] = { ...updated[idx], name: e.target.value };
+                          setRegForm({ ...regForm, members: updated });
+                        }}
+                        className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <button
+                onClick={handleRegistrationSubmit}
+                disabled={joining}
+                className="w-full py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 text-sm"
+              >
+                {joining ? "Joining..." : entryFee > 0 ? `Continue (৳${entryFee} fee)` : "Join Tournament"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Entry Fee Confirmation Modal ── */}
       {showFeeModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
@@ -637,6 +970,10 @@ export default function TournamentDetailPage() {
               <div className="flex justify-between text-sm">
                 <span className="text-[#a0a0b0]">Tournament</span>
                 <span className="text-white font-bold truncate ml-2 max-w-[55%] text-right">{t.name}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[#a0a0b0]">Mode</span>
+                <span className="text-white font-bold uppercase">{t.mode}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-[#a0a0b0]">Entry Fee</span>
@@ -672,36 +1009,38 @@ export default function TournamentDetailPage() {
         </div>
       )}
 
-      {/* ── UID Modal ── */}
-      {showUidModal && (
+      {/* ── Game Rules Modal ── */}
+      {showRulesModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black uppercase text-white">Enter Free Fire UID</h3>
-              <button onClick={() => setShowUidModal(false)} className="text-[#a0a0b0] hover:text-white">
+          <div className="w-full max-w-lg bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-6 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between mb-5 shrink-0">
+              <h3 className="font-black uppercase text-white flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-[#ff6b00]" /> Game Rules
+              </h3>
+              <button onClick={() => setShowRulesModal(false)} className="text-[#a0a0b0] hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-[#a0a0b0] text-sm mb-4">
-              You haven't set a Free Fire UID in your profile. Enter it here to join, or{" "}
-              <Link href="/profile" className="text-[#ff6b00] hover:underline">update your profile</Link>.
-            </p>
-            <div className="flex gap-2">
-              <input
-                type="text" value={tempUid} onChange={(e) => setTempUid(e.target.value)}
-                placeholder="123456789"
-                className="flex-1 bg-[#1a1a24] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white placeholder-[#606070] focus:outline-none focus:border-[#ff6b00] font-mono"
-              />
-              <button onClick={() => tempUid.trim() && doJoin(tempUid.trim())} disabled={!tempUid.trim() || joining}
-                className="px-4 py-2.5 bg-[#ff6b00] text-white font-bold rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50">
-                {joining ? "..." : "Join"}
-              </button>
+            <div className="overflow-y-auto flex-1 space-y-4 pr-1">
+              {rules.length === 0 ? (
+                <p className="text-[#a0a0b0] text-center py-8">No rules posted yet.</p>
+              ) : rules.map((rule, i) => (
+                <div key={rule.id} className="border-b border-[#1a1a24] pb-4 last:border-0">
+                  <div className="flex items-start gap-3">
+                    <span className="shrink-0 w-6 h-6 rounded-full bg-[#ff6b00]/20 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black flex items-center justify-center mt-0.5">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <div className="text-white font-bold text-sm mb-1">{rule.title}</div>
+                      <div className="text-[#a0a0b0] text-sm leading-relaxed whitespace-pre-line">{rule.content}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
-
-      <Footer />
     </div>
   );
 }

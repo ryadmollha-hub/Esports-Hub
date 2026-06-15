@@ -1,0 +1,75 @@
+Fix and improve my Free Fire Tournament Website.
+
+Tournament Registration:
+1. Solo tournament:
+   - User must provide 1 UID and 1 in-game name.
+
+2. Duo tournament:
+   - User must provide 2 player UIDs and 2 in-game names.
+
+3. Squad tournament:
+   - User must provide 4 player UIDs and 4 in-game names.
+
+4. Registration form should automatically change based on tournament type (Solo, Duo, Squad).
+
+Rules System:
+1. Add a "Game Rules" button on every tournament page.
+2. When users click the button, a popup or page should open showing all tournament rules.
+3. Admin can create, edit, and update rules from the admin panel.
+
+Match Management:
+1. Admin can create matches.
+2. Match status options:
+   - Upcoming
+   - Live
+   - Completed
+
+3. When admin enters Room ID and Room Password:
+   - Users should be able to see them.
+   - Room details should appear only 5–10 minutes before match start time.
+   - Before that time, room details must remain hidden.
+
+4. When room details are released:
+   - Match status automatically changes to "Live".
+
+Live Match Features:
+1. Users should clearly see:
+   - Room ID
+   - Room Password
+   - Match Time
+   - Live Status
+
+2. Live matches must appear in a dedicated "Live Matches" section.
+
+Result System:
+1. Admin can submit match results.
+2. After results are submitted:
+   - Match status automatically changes to "Completed".
+   - Room details are hidden.
+   - Users can view results.
+
+3. Once a match is completed:
+   - No new player can join that match.
+   - Join button must be disabled.
+   - Registration must be closed automatically.
+
+Tournament Protection:
+1. Users cannot join:
+   - Completed matches
+   - Finished tournaments
+   - Closed registrations
+
+2. Show clear messages:
+   - "Registration Closed"
+   - "Match Completed"
+   - "Results Published"
+
+Admin Dashboard:
+1. View all registrations.
+2. View all matches.
+3. Create/Edit/Delete matches.
+4. Manage room IDs and passwords.
+5. Publish results.
+6. Manage tournament rules.
+
+Make all features fully functional with proper database integration and user interface. Do not break existing features.

@@ -4,19 +4,20 @@ import {
   Users, Trophy, Shield, Clock, DollarSign, CheckCircle, XCircle, Bell,
   Plus, Trash2, Edit, LogOut, BarChart3, Megaphone, Swords, CreditCard,
   ArrowDownCircle, ArrowUpCircle, Eye, EyeOff, RefreshCw, Home,
-  Crown, Shuffle, X as XIcon, Tag
+  Crown, Shuffle, X as XIcon, Tag, BookOpen, Key, Radio, Lock
 } from "lucide-react";
 import { isAdminAuthenticated, clearAdminSession, adminFetch } from "@/lib/adminAuth";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes";
+type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules";
 
 const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
   { id: "tournaments", label: "Tournaments", icon: Trophy },
   { id: "matches", label: "Matches", icon: Swords },
+  { id: "rules", label: "Game Rules", icon: BookOpen },
   { id: "registrations", label: "Registrations", icon: CheckCircle },
   { id: "users", label: "Users", icon: Users },
   { id: "announcements", label: "Announcements", icon: Megaphone },
@@ -58,8 +59,11 @@ export default function AdminPage() {
   const [showAnnForm, setShowAnnForm] = useState(false);
 
   // Match form
-  const [matchForm, setMatchForm] = useState({ matchNumber: "", scheduledAt: "", mapName: "" });
+  const [matchForm, setMatchForm] = useState({ matchNumber: "", scheduledAt: "", mapName: "", roomId: "", roomPassword: "", roomReleaseMinutes: "10" });
   const [showMatchForm, setShowMatchForm] = useState(false);
+  const [matchRoomForm, setMatchRoomForm] = useState<Record<number, { roomId: string; roomPassword: string; releaseMinutes: string }>>({});
+  const [settingMatchRoom, setSettingMatchRoom] = useState<Record<number, boolean>>({});
+  const [updatingMatchStatus, setUpdatingMatchStatus] = useState<Record<number, boolean>>({});
 
   // Match result entry state
   const [expandedMatchResult, setExpandedMatchResult] = useState<Record<number, boolean>>({});
@@ -309,6 +313,58 @@ export default function AdminPage() {
     }
   };
 
+  // Match room management
+  const setMatchRoom = async (matchId: number) => {
+    const form = matchRoomForm[matchId];
+    if (!form?.roomId || !form?.roomPassword) {
+      return toast({ title: "Enter Room ID and Password", variant: "destructive" });
+    }
+    setSettingMatchRoom((prev) => ({ ...prev, [matchId]: true }));
+    try {
+      const res = await apiFetch(`/matches/${matchId}/room`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          roomId: form.roomId,
+          roomPassword: form.roomPassword,
+          roomReleaseMinutesBefore: parseInt(form.releaseMinutes || "10"),
+        }),
+      });
+      if (res.ok) {
+        toast({ title: "✅ Room set! Status → Live", description: `Room details will be visible ${form.releaseMinutes || "10"} min before match time.` });
+        loadMatches();
+        setMatchRoomForm((prev) => ({ ...prev, [matchId]: { roomId: "", roomPassword: "", releaseMinutes: "10" } }));
+      } else {
+        const d = await res.json();
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setSettingMatchRoom((prev) => ({ ...prev, [matchId]: false }));
+    }
+  };
+
+  const updateMatchStatus = async (matchId: number, status: string) => {
+    setUpdatingMatchStatus((prev) => ({ ...prev, [matchId]: true }));
+    try {
+      const res = await apiFetch(`/matches/${matchId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        toast({ title: `Match status → ${status}` });
+        loadMatches();
+      } else {
+        const d = await res.json();
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setUpdatingMatchStatus((prev) => ({ ...prev, [matchId]: false }));
+    }
+  };
+
   // Match actions
   const createMatch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -319,11 +375,13 @@ export default function AdminPage() {
         matchNumber: parseInt(matchForm.matchNumber),
         scheduledAt: matchForm.scheduledAt,
         mapName: matchForm.mapName || undefined,
+        roomId: matchForm.roomId || undefined,
+        roomPassword: matchForm.roomPassword || undefined,
       }),
     });
     if (res.ok) {
       toast({ title: "Match created" });
-      setMatchForm({ matchNumber: "", scheduledAt: "", mapName: "" });
+      setMatchForm({ matchNumber: "", scheduledAt: "", mapName: "", roomId: "", roomPassword: "", roomReleaseMinutes: "10" });
       setShowMatchForm(false); loadMatches();
     }
   };
@@ -1009,6 +1067,14 @@ export default function AdminPage() {
                           <label className="label-sm">Map Name</label>
                           <input value={matchForm.mapName} onChange={(e) => setMatchForm({ ...matchForm, mapName: e.target.value })} placeholder="Bermuda, Purgatory..." className="admin-input" />
                         </div>
+                        <div>
+                          <label className="label-sm">Room ID (optional)</label>
+                          <input value={matchForm.roomId} onChange={(e) => setMatchForm({ ...matchForm, roomId: e.target.value })} placeholder="Room ID" className="admin-input" />
+                        </div>
+                        <div>
+                          <label className="label-sm">Room Password (optional)</label>
+                          <input value={matchForm.roomPassword} onChange={(e) => setMatchForm({ ...matchForm, roomPassword: e.target.value })} placeholder="Password" className="admin-input" />
+                        </div>
                         <div className="md:col-span-3 flex gap-3">
                           <button type="submit" className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">
                             Create Match
@@ -1035,12 +1101,35 @@ export default function AdminPage() {
                             <div className="flex-1">
                               <div className="font-bold text-white text-base">Match #{m.matchNumber} — {m.mapName ?? "TBD"}</div>
                               <div className="text-[#a0a0b0] text-sm">{new Date(m.scheduledAt).toLocaleString()}</div>
+                              {m.roomId && (
+                                <div className="text-[#00ff88] text-xs mt-1 font-bold flex items-center gap-1">
+                                  <Key className="w-3 h-3" /> Room: {m.roomId} · Pass: {m.roomPassword}
+                                </div>
+                              )}
                               {hasResults && (
                                 <div className="text-[#00ff88] text-xs mt-1 font-bold">✓ {m.results.length} players ranked</div>
                               )}
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className={statusBadge(m.status)}>{m.status}</span>
+                              {m.status === "scheduled" && (
+                                <button
+                                  onClick={() => updateMatchStatus(m.id, "live")}
+                                  disabled={updatingMatchStatus[m.id]}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-xs font-bold hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                                >
+                                  <Radio className="w-3 h-3" /> Go Live
+                                </button>
+                              )}
+                              {m.status === "live" && (
+                                <button
+                                  onClick={() => updateMatchStatus(m.id, "completed")}
+                                  disabled={updatingMatchStatus[m.id]}
+                                  className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-500/10 border border-gray-500/20 rounded-lg text-gray-400 text-xs font-bold hover:bg-gray-500/20 transition-colors disabled:opacity-50"
+                                >
+                                  <CheckCircle className="w-3 h-3" /> Complete
+                                </button>
+                              )}
                               <button
                                 onClick={() => {
                                   setExpandedMatchResult((prev) => ({ ...prev, [m.id]: !prev[m.id] }));
@@ -1066,6 +1155,65 @@ export default function AdminPage() {
                               </button>
                             </div>
                           </div>
+
+                          {/* Room Management Section */}
+                          {m.status !== "completed" && (
+                            <div className="border-t border-[#ff6b00]/5 bg-[#0d0d16]/60 px-4 py-3">
+                              <p className="text-xs text-[#a0a0b0] uppercase font-bold mb-2 flex items-center gap-1.5">
+                                <Key className="w-3 h-3" /> Room Details
+                              </p>
+                              {m.roomId ? (
+                                <div className="flex items-center gap-4 text-xs mb-2">
+                                  <span className="text-[#a0a0b0]">ID: <span className="text-white font-mono font-bold">{m.roomId}</span></span>
+                                  <span className="text-[#a0a0b0]">Pass: <span className="text-white font-mono font-bold">{m.roomPassword}</span></span>
+                                  <span className="text-[#00ff88] font-bold">✓ Visible to joined players</span>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-[#a0a0b0] mb-2">No room details set.</p>
+                              )}
+                              <div className="flex gap-2 flex-wrap items-end">
+                                <div>
+                                  <label className="text-[#606070] text-[10px] uppercase block mb-1">Room ID</label>
+                                  <input
+                                    placeholder="Room ID"
+                                    value={matchRoomForm[m.id]?.roomId ?? ""}
+                                    onChange={(e) => setMatchRoomForm({ ...matchRoomForm, [m.id]: { ...matchRoomForm[m.id], roomId: e.target.value } })}
+                                    className="admin-input-sm w-28"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[#606070] text-[10px] uppercase block mb-1">Password</label>
+                                  <input
+                                    placeholder="Password"
+                                    value={matchRoomForm[m.id]?.roomPassword ?? ""}
+                                    onChange={(e) => setMatchRoomForm({ ...matchRoomForm, [m.id]: { ...matchRoomForm[m.id], roomPassword: e.target.value } })}
+                                    className="admin-input-sm w-28"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[#606070] text-[10px] uppercase block mb-1">Release (min before)</label>
+                                  <select
+                                    value={matchRoomForm[m.id]?.releaseMinutes ?? "10"}
+                                    onChange={(e) => setMatchRoomForm({ ...matchRoomForm, [m.id]: { ...matchRoomForm[m.id], releaseMinutes: e.target.value } })}
+                                    className="admin-input-sm w-24"
+                                  >
+                                    <option value="5">5 min</option>
+                                    <option value="10">10 min</option>
+                                    <option value="15">15 min</option>
+                                    <option value="30">30 min</option>
+                                    <option value="0">Immediately</option>
+                                  </select>
+                                </div>
+                                <button
+                                  onClick={() => setMatchRoom(m.id)}
+                                  disabled={settingMatchRoom[m.id]}
+                                  className="px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-xs uppercase rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50"
+                                >
+                                  {settingMatchRoom[m.id] ? "Setting..." : "Set Room & Go Live"}
+                                </button>
+                              </div>
+                            </div>
+                          )}
 
                           {/* Result entry panel */}
                           {isExpanded && (
@@ -1412,6 +1560,11 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* GAME RULES */}
+          {activeTab === "rules" && (
+            <RulesTab apiFetch={apiFetch} toast={toast} tournaments={tournaments} />
+          )}
+
           {/* PROMO CODES */}
           {activeTab === "promo-codes" && (
             <PromoCodesTab apiFetch={apiFetch} toast={toast} />
@@ -1419,6 +1572,193 @@ export default function AdminPage() {
 
         </div>
       </main>
+    </div>
+  );
+}
+
+function RulesTab({ apiFetch, toast, tournaments }: { apiFetch: any; toast: any; tournaments: any[] }) {
+  const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
+  const [rules, setRules] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingRule, setEditingRule] = useState<any>(null);
+  const [form, setForm] = useState({ title: "", content: "", orderIndex: "0" });
+  const [submitting, setSubmitting] = useState(false);
+
+  const loadRules = async (tid: number) => {
+    setLoading(true);
+    try {
+      const res = await apiFetch(`/tournaments/${tid}/rules`);
+      if (res.ok) setRules(await res.json());
+    } catch {} finally { setLoading(false); }
+  };
+
+  useEffect(() => {
+    if (selectedTournament) loadRules(selectedTournament);
+  }, [selectedTournament]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTournament) return;
+    setSubmitting(true);
+    try {
+      const url = editingRule ? `/rules/${editingRule.id}` : `/tournaments/${selectedTournament}/rules`;
+      const method = editingRule ? "PATCH" : "POST";
+      const res = await apiFetch(url, {
+        method,
+        body: JSON.stringify({
+          title: form.title,
+          content: form.content,
+          orderIndex: parseInt(form.orderIndex) || 0,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: editingRule ? "Rule updated!" : "Rule added!" });
+        setShowForm(false);
+        setEditingRule(null);
+        setForm({ title: "", content: "", orderIndex: "0" });
+        loadRules(selectedTournament);
+      } else {
+        const d = await res.json();
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally { setSubmitting(false); }
+  };
+
+  const deleteRule = async (id: number) => {
+    if (!confirm("Delete this rule?")) return;
+    if (!selectedTournament) return;
+    const res = await apiFetch(`/rules/${id}`, { method: "DELETE" });
+    if (res.ok) { toast({ title: "Rule deleted" }); loadRules(selectedTournament); }
+  };
+
+  const startEdit = (rule: any) => {
+    setEditingRule(rule);
+    setForm({ title: rule.title, content: rule.content, orderIndex: String(rule.orderIndex) });
+    setShowForm(true);
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-black uppercase">Game <span className="text-[#ff6b00]">Rules</span></h1>
+        {selectedTournament && (
+          <button
+            onClick={() => { setEditingRule(null); setForm({ title: "", content: "", orderIndex: String(rules.length) }); setShowForm(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white rounded-xl text-sm font-bold uppercase hover:bg-[#e66000] transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Add Rule
+          </button>
+        )}
+      </div>
+
+      <div className="mb-6">
+        <label className="label-sm mb-2 block">Select Tournament</label>
+        <select
+          value={selectedTournament ?? ""}
+          onChange={(e) => {
+            const tid = e.target.value ? parseInt(e.target.value) : null;
+            setSelectedTournament(tid);
+            setShowForm(false);
+            setEditingRule(null);
+          }}
+          className="admin-input max-w-sm"
+        >
+          <option value="">-- Select a tournament --</option>
+          {tournaments.map((t) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {selectedTournament && (
+        <>
+          {showForm && (
+            <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-4">
+              <h2 className="font-black uppercase text-[#ff6b00] mb-4">{editingRule ? "Edit Rule" : "Add New Rule"}</h2>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="md:col-span-3">
+                    <label className="label-sm">Rule Title *</label>
+                    <input
+                      value={form.title}
+                      onChange={(e) => setForm({ ...form, title: e.target.value })}
+                      required
+                      placeholder="e.g. No Hacking / Cheating"
+                      className="admin-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="label-sm">Order #</label>
+                    <input
+                      type="number"
+                      value={form.orderIndex}
+                      onChange={(e) => setForm({ ...form, orderIndex: e.target.value })}
+                      min="0"
+                      className="admin-input"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="label-sm">Rule Content *</label>
+                  <textarea
+                    value={form.content}
+                    onChange={(e) => setForm({ ...form, content: e.target.value })}
+                    required
+                    rows={3}
+                    placeholder="Describe the rule in detail..."
+                    className="admin-input resize-none"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button type="submit" disabled={submitting} className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] disabled:opacity-50 transition-colors">
+                    {submitting ? "Saving..." : editingRule ? "Update Rule" : "Add Rule"}
+                  </button>
+                  <button type="button" onClick={() => { setShowForm(false); setEditingRule(null); }} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="space-y-3">
+              {[1,2,3].map((i) => <div key={i} className="h-16 bg-[#12121a] rounded-xl animate-pulse" />)}
+            </div>
+          ) : rules.length === 0 ? (
+            <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
+              <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-20" />
+              <p>No rules added for this tournament yet.</p>
+              <p className="text-xs mt-1">Click "Add Rule" to create the first rule.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {rules.map((rule: any, i: number) => (
+                <div key={rule.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex items-start gap-4">
+                  <div className="w-7 h-7 rounded-full bg-[#ff6b00]/15 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black flex items-center justify-center shrink-0 mt-0.5">
+                    {i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-white text-sm mb-1">{rule.title}</div>
+                    <div className="text-[#a0a0b0] text-sm leading-relaxed whitespace-pre-line">{rule.content}</div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => startEdit(rule)} className="p-2 bg-blue-400/10 border border-blue-400/20 rounded-lg text-blue-400 hover:bg-blue-400/20 transition-colors">
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => deleteRule(rule.id)} className="p-2 bg-[#ff2244]/10 border border-[#ff2244]/20 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
