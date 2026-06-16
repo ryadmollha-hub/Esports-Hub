@@ -156,74 +156,74 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white pb-24">
       <Navbar />
-      <div className="max-w-5xl mx-auto px-4 pt-24 pb-6">
+      <div className="max-w-5xl mx-auto px-4 pt-16 pb-6">
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 mb-8">
-          <div className="w-16 h-16 rounded-full bg-[#ff6b00]/20 border-2 border-[#ff6b00] flex items-center justify-center">
-            <User className="w-8 h-8 text-[#ff6b00]" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5">
+          <div className="w-12 h-12 rounded-full bg-[#ff6b00]/20 border-2 border-[#ff6b00] flex items-center justify-center shrink-0">
+            <User className="w-6 h-6 text-[#ff6b00]" />
           </div>
           <div>
-            <h1 className="text-2xl font-black">
+            <h1 className="text-xl font-black">
               Welcome, <span className="text-[#ff6b00]">{prof?.displayName ?? prof?.username ?? authUser?.username ?? "Player"}</span>
             </h1>
-            <p className="text-[#a0a0b0] text-sm">{authUser?.email}</p>
-            {prof?.freefireNickname && <p className="text-[#a0a0b0] text-sm">FF: {prof.freefireNickname} <span className="font-mono">({prof.freefireUid})</span></p>}
+            <p className="text-[#a0a0b0] text-xs">{authUser?.email}</p>
+            {prof?.freefireNickname && <p className="text-[#a0a0b0] text-xs">FF: {prof.freefireNickname} <span className="font-mono">({prof.freefireUid})</span></p>}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-5">
           {[
             { label: "Registered", value: regs.length, icon: Trophy, color: "text-[#ff6b00]" },
             { label: "Approved", value: approved, icon: CheckCircle, color: "text-[#00ff88]" },
             { label: "Pending", value: pending, icon: Clock, color: "text-yellow-400" },
             { label: "Team", value: team ? "Active" : "None", icon: Shield, color: team ? "text-[#ff6b00]" : "text-[#a0a0b0]" },
           ].map((stat) => (
-            <div key={stat.label} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4">
-              <stat.icon className={`w-5 h-5 ${stat.color} mb-2`} />
-              <div className={`text-2xl font-black ${stat.color}`}>{stat.value}</div>
-              <div className="text-[#a0a0b0] text-xs mt-1">{stat.label}</div>
+            <div key={stat.label} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-3">
+              <stat.icon className={`w-4 h-4 ${stat.color} mb-1.5`} />
+              <div className={`text-xl font-black ${stat.color}`}>{stat.value}</div>
+              <div className="text-[#a0a0b0] text-xs mt-0.5">{stat.label}</div>
             </div>
           ))}
         </div>
 
-        <div className="flex gap-1 overflow-x-auto pb-1 mb-6">
+        <div className="flex gap-1 overflow-x-auto pb-1 mb-4">
           {dashTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold uppercase whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase whitespace-nowrap transition-colors ${
                 activeTab === tab.id
                   ? "bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/30"
                   : "text-[#a0a0b0] hover:text-white bg-[#12121a] border border-transparent"
               }`}
             >
-              <tab.icon className="w-4 h-4" /> {tab.label}
+              <tab.icon className="w-3.5 h-3.5" /> {tab.label}
             </button>
           ))}
         </div>
 
         {activeTab === "profile" && (
-          <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-black uppercase">My <span className="text-[#ff6b00]">Profile</span></h2>
+          <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-black uppercase">My <span className="text-[#ff6b00]">Profile</span></h2>
               {!editing ? (
-                <button onClick={() => setEditing(true)} className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] text-sm font-bold rounded-lg hover:bg-[#ff6b00]/20 transition-colors">
-                  <Edit className="w-4 h-4" /> Edit Profile
+                <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-bold rounded-lg hover:bg-[#ff6b00]/20 transition-colors">
+                  <Edit className="w-3.5 h-3.5" /> Edit Profile
                 </button>
               ) : (
-                <div className="flex gap-2">
-                  <button onClick={saveProfile} disabled={updateProfile.isPending} className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white text-sm font-bold rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50">
-                    <Save className="w-4 h-4" /> Save
+                <div className="flex gap-1.5">
+                  <button onClick={saveProfile} disabled={updateProfile.isPending} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00] text-white text-xs font-bold rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50">
+                    <Save className="w-3.5 h-3.5" /> Save
                   </button>
-                  <button onClick={() => { setEditing(false); if (prof) setPForm({ username: prof.username ?? "", displayName: prof.displayName ?? "", freefireUid: prof.freefireUid ?? "", freefireNickname: prof.freefireNickname ?? "" }); }} className="flex items-center gap-2 px-4 py-2 bg-[#1a1a24] text-[#a0a0b0] text-sm font-bold rounded-lg hover:text-white transition-colors">
-                    <X className="w-4 h-4" /> Cancel
+                  <button onClick={() => { setEditing(false); if (prof) setPForm({ username: prof.username ?? "", displayName: prof.displayName ?? "", freefireUid: prof.freefireUid ?? "", freefireNickname: prof.freefireNickname ?? "" }); }} className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1a1a24] text-[#a0a0b0] text-xs font-bold rounded-lg hover:text-white transition-colors">
+                    <X className="w-3.5 h-3.5" /> Cancel
                   </button>
                 </div>
               )}
             </div>
 
             {editing ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {[
                   { key: "username", label: "Username", placeholder: "your_username" },
                   { key: "displayName", label: "Display Name", placeholder: "Your Name" },
@@ -231,18 +231,18 @@ export default function DashboardPage() {
                   { key: "freefireNickname", label: "Free Fire Nickname", placeholder: "ProPlayer99" },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key}>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">{label}</label>
+                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1">{label}</label>
                     <input
                       value={pForm[key as keyof typeof pForm]}
                       onChange={(e) => setPForm({ ...pForm, [key]: e.target.value })}
                       placeholder={placeholder}
-                      className="w-full bg-[#1a1a24] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
+                      className="w-full bg-[#1a1a24] border border-[#2a2a36] rounded-xl px-3 py-2 text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
                     />
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                 {[
                   { label: "Username", value: prof?.username ?? "Not set" },
                   { label: "Display Name", value: prof?.displayName ?? "Not set" },
@@ -253,9 +253,9 @@ export default function DashboardPage() {
                   { label: "Total Kills", value: prof?.totalKills ?? 0 },
                   { label: "Total Wins", value: prof?.totalWins ?? 0 },
                 ].map(({ label, value }) => (
-                  <div key={label} className="border border-[#2a2a36] rounded-xl p-3">
-                    <div className="text-[#a0a0b0] text-xs uppercase tracking-wider mb-1">{label}</div>
-                    <div className="text-white font-medium">{value}</div>
+                  <div key={label} className="border border-[#2a2a36] rounded-lg p-2.5">
+                    <div className="text-[#a0a0b0] text-[10px] uppercase tracking-wider mb-0.5">{label}</div>
+                    <div className="text-white font-medium text-sm">{value}</div>
                   </div>
                 ))}
               </div>

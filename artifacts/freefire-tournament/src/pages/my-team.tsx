@@ -156,7 +156,7 @@ export default function MyTeamPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0f]">
         <Navbar />
-        <div className="max-w-4xl mx-auto px-4 pt-24">
+        <div className="max-w-4xl mx-auto px-4 pt-16">
           <div className="h-40 bg-[#12121a] rounded-xl animate-pulse" />
         </div>
       </div>
@@ -169,7 +169,7 @@ export default function MyTeamPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-24 pb-28">
+      <div className="max-w-4xl mx-auto px-4 pt-16 pb-20">
         <h1 className="text-4xl font-black uppercase mb-2" data-testid="heading-my-team">
           My <span className="text-[#ff6b00]">Team</span>
         </h1>

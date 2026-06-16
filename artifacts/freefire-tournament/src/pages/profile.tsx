@@ -109,7 +109,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#0a0a0f] text-white pb-24">
       <Navbar />
 
-      <div className="max-w-lg mx-auto px-4 pt-20 pb-6">
+      <div className="max-w-lg mx-auto px-4 pt-16 pb-6">
 
         {section === "overview" && (
           <>

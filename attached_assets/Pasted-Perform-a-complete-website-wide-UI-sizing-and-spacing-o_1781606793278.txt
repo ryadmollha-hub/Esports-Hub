@@ -1,0 +1,93 @@
+Perform a complete website-wide UI sizing and spacing optimization.
+
+Current Problem:
+The entire website looks oversized and bulky.
+Buttons, cards, forms, tables, modals, dashboards, and sections take too much space.
+The website feels zoomed-in and users need excessive scrolling.
+
+Requirements:
+
+1. GLOBAL BUTTON FIX
+
+* Reduce button height by 25-35%.
+* Reduce button padding.
+* Make buttons compact and professional.
+* Keep text readable.
+
+2. GLOBAL CARD FIX
+
+* Reduce card height.
+* Reduce internal padding.
+* Reduce margin between cards.
+* Display more information in less space.
+
+3. FORM FIX
+
+* Reduce input field height.
+* Reduce spacing between form fields.
+* Compact login, signup, payment, tournament, and admin forms.
+
+4. MODAL & POPUP FIX
+
+* Reduce modal width and height.
+* Remove unnecessary empty space.
+* Make dialogs compact.
+
+5. TABLE FIX
+
+* Reduce row height.
+* Reduce cell padding.
+* Show more rows on screen.
+
+6. DASHBOARD FIX
+
+* Make dashboard widgets smaller.
+* Reduce oversized statistics cards.
+* Improve information density.
+
+7. NAVIGATION FIX
+
+* Reduce navbar height.
+* Reduce sidebar width.
+* Make menu items more compact.
+
+8. PAGE SPACING FIX
+
+* Remove excessive top and bottom margins.
+* Reduce section gaps.
+* Optimize spacing site-wide.
+
+9. MOBILE OPTIMIZATION
+
+* Fit more content on screen.
+* Reduce oversized mobile components.
+* Improve mobile usability.
+
+10. TYPOGRAPHY
+
+* Reduce oversized headings.
+* Improve text hierarchy.
+* Maintain readability.
+
+11. CONSISTENCY
+
+* Apply the same sizing rules across ALL pages:
+
+  * Homepage
+  * Tournament pages
+  * Match pages
+  * Payment pages
+  * Login
+  * Signup
+  * Profile
+  * Wallet
+  * Leaderboard
+  * Admin Dashboard
+  * Settings
+  * Support System
+
+12. FINAL RESULT
+    The website should look compact, professional, modern, and information-dense like a real esports platform.
+    Users should see significantly more content without scrolling.
+    Do not remove features.
+    Only optimize sizing, spacing, layout, and responsiveness across the entire website.

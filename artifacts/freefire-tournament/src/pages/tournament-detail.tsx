@@ -294,7 +294,7 @@ export default function TournamentDetailPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0f]">
         <Navbar />
-        <div className="max-w-5xl mx-auto px-4 pt-24">
+        <div className="max-w-5xl mx-auto px-4 pt-16">
           <div className="h-64 bg-[#12121a] rounded-xl animate-pulse mb-6" />
           <div className="h-8 bg-[#12121a] rounded animate-pulse w-1/2 mb-4" />
           <div className="h-4 bg-[#12121a] rounded animate-pulse w-3/4" />
@@ -329,7 +329,7 @@ export default function TournamentDetailPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-5xl mx-auto px-4 pt-24 pb-28">
+      <div className="max-w-5xl mx-auto px-4 pt-16 pb-20">
         <Link href="/tournaments" className="inline-flex items-center gap-2 text-[#a0a0b0] hover:text-white mb-6 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Back to Tournaments
         </Link>

@@ -91,7 +91,7 @@ export default function ReferralPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0f]">
         <Navbar />
-        <div className="max-w-4xl mx-auto px-4 pt-24 space-y-4">
+        <div className="max-w-4xl mx-auto px-4 pt-16 space-y-4">
           {[1, 2, 3].map((i) => <div key={i} className="h-32 bg-[#12121a] rounded-xl animate-pulse" />)}
         </div>
       </div>
@@ -101,7 +101,7 @@ export default function ReferralPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-24 pb-28">
+      <div className="max-w-4xl mx-auto px-4 pt-16 pb-20">
         <h1 className="text-4xl font-black uppercase mb-2">
           Referral <span className="text-[#ff6b00]">Program</span>
         </h1>

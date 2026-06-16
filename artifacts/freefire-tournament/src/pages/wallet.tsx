@@ -211,30 +211,27 @@ export default function WalletPage() {
     <div className="min-h-screen bg-[#0a0a0f] text-white pb-24">
       <Navbar />
 
-      <div className="max-w-lg mx-auto px-4 pt-20 pb-6">
+      <div className="max-w-lg mx-auto px-4 pt-16 pb-6">
 
         {/* Balance Card */}
-        <div className="relative bg-gradient-to-br from-[#1a1014] via-[#1a1218] to-[#12121a] rounded-3xl border border-[#ff6b00]/30 p-6 mb-4 overflow-hidden shadow-[0_0_40px_rgba(255,107,0,0.08)]">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-[#ff6b00]/8 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#ffd700]/5 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
+        <div className="relative bg-gradient-to-br from-[#1a1014] via-[#1a1218] to-[#12121a] rounded-2xl border border-[#ff6b00]/30 p-4 mb-3 overflow-hidden shadow-[0_0_30px_rgba(255,107,0,0.08)]">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-[#ff6b00]/8 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
           <div className="relative z-10">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-[#ff6b00]/15 border border-[#ff6b00]/30 flex items-center justify-center">
-                  <Wallet className="w-4.5 h-4.5 text-[#ff6b00]" />
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-[#ff6b00]/15 border border-[#ff6b00]/30 flex items-center justify-center">
+                  <Wallet className="w-4 h-4 text-[#ff6b00]" />
                 </div>
-                <div>
-                  <div className="text-[#a0a0b0] text-xs uppercase tracking-widest font-bold">Total Balance</div>
-                </div>
+                <div className="text-[#a0a0b0] text-xs uppercase tracking-widest font-bold">Total Balance</div>
               </div>
-              <button onClick={refresh} className="w-8 h-8 rounded-lg bg-[#1a1a24] border border-[#2a2a36] flex items-center justify-center text-[#a0a0b0] hover:text-white hover:border-[#ff6b00]/30 transition-all">
-                <RefreshCw className="w-3.5 h-3.5" />
+              <button onClick={refresh} className="w-7 h-7 rounded-lg bg-[#1a1a24] border border-[#2a2a36] flex items-center justify-center text-[#a0a0b0] hover:text-white hover:border-[#ff6b00]/30 transition-all">
+                <RefreshCw className="w-3 h-3" />
               </button>
             </div>
             {loadingBalance ? (
-              <div className="h-12 w-40 bg-[#1a1a24] rounded-xl animate-pulse mb-1" />
+              <div className="h-9 w-36 bg-[#1a1a24] rounded-xl animate-pulse mb-0.5" />
             ) : (
-              <div className="text-5xl font-black text-white mb-1 tracking-tight">
+              <div className="text-4xl font-black text-white mb-0.5 tracking-tight">
                 ৳{Number(balance?.balance ?? 0).toLocaleString("en-BD", { minimumFractionDigits: 2 })}
               </div>
             )}
@@ -242,24 +239,24 @@ export default function WalletPage() {
 
             {/* Mini stats */}
             {!loadingBalance && (
-              <div className="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-[#ff6b00]/10">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-3.5 h-3.5 text-[#00ff88]" />
+              <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-[#ff6b00]/10">
+                <div className="flex items-center gap-1.5">
+                  <TrendingUp className="w-3 h-3 text-[#00ff88]" />
                   <div>
                     <div className="text-[#00ff88] font-black text-sm">৳{Number(balance?.totalDeposit ?? 0).toLocaleString()}</div>
                     <div className="text-[#606070] text-[10px] uppercase">Deposited</div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <TrendingDown className="w-3.5 h-3.5 text-[#ff6b00]" />
+                <div className="flex items-center gap-1.5">
+                  <TrendingDown className="w-3 h-3 text-[#ff6b00]" />
                   <div>
                     <div className="text-[#ff6b00] font-black text-sm">৳{Number(balance?.totalWithdraw ?? 0).toLocaleString()}</div>
                     <div className="text-[#606070] text-[10px] uppercase">Withdrawn</div>
                   </div>
                 </div>
                 {(balance?.totalPrizes ?? 0) > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-3.5 h-3.5 text-[#ffd700]" />
+                  <div className="flex items-center gap-1.5">
+                    <Trophy className="w-3 h-3 text-[#ffd700]" />
                     <div>
                       <div className="text-[#ffd700] font-black text-sm">৳{Number(balance?.totalPrizes ?? 0).toLocaleString()}</div>
                       <div className="text-[#606070] text-[10px] uppercase">Prizes</div>
@@ -267,8 +264,8 @@ export default function WalletPage() {
                   </div>
                 )}
                 {(balance?.totalEntryFees ?? 0) > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-3.5 h-3.5 text-[#ff2244]" />
+                  <div className="flex items-center gap-1.5">
+                    <Zap className="w-3 h-3 text-[#ff2244]" />
                     <div>
                       <div className="text-[#ff2244] font-black text-sm">৳{Number(balance?.totalEntryFees ?? 0).toLocaleString()}</div>
                       <div className="text-[#606070] text-[10px] uppercase">Entry Fees</div>
@@ -291,23 +288,23 @@ export default function WalletPage() {
         )}
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-2 gap-2.5 mb-4">
           <button
             onClick={() => setActiveModal("deposit")}
-            className="group flex items-center justify-center gap-2 py-4 bg-[#00ff88]/8 border border-[#00ff88]/25 rounded-2xl text-[#00ff88] font-black uppercase text-sm hover:bg-[#00ff88]/15 hover:border-[#00ff88]/40 hover:shadow-[0_0_20px_rgba(0,255,136,0.1)] transition-all"
+            className="group flex items-center justify-center gap-2 py-3 bg-[#00ff88]/8 border border-[#00ff88]/25 rounded-xl text-[#00ff88] font-black uppercase text-sm hover:bg-[#00ff88]/15 hover:border-[#00ff88]/40 transition-all"
           >
-            <ArrowDownCircle className="w-5 h-5 group-hover:scale-110 transition-transform" /> Deposit
+            <ArrowDownCircle className="w-4 h-4 group-hover:scale-110 transition-transform" /> Deposit
           </button>
           <button
             onClick={() => setActiveModal("withdraw")}
-            className="group flex items-center justify-center gap-2 py-4 bg-[#ff6b00]/8 border border-[#ff6b00]/25 rounded-2xl text-[#ff6b00] font-black uppercase text-sm hover:bg-[#ff6b00]/15 hover:border-[#ff6b00]/40 hover:shadow-[0_0_20px_rgba(255,107,0,0.1)] transition-all"
+            className="group flex items-center justify-center gap-2 py-3 bg-[#ff6b00]/8 border border-[#ff6b00]/25 rounded-xl text-[#ff6b00] font-black uppercase text-sm hover:bg-[#ff6b00]/15 hover:border-[#ff6b00]/40 transition-all"
           >
-            <ArrowUpCircle className="w-5 h-5 group-hover:scale-110 transition-transform" /> Withdraw
+            <ArrowUpCircle className="w-4 h-4 group-hover:scale-110 transition-transform" /> Withdraw
           </button>
         </div>
 
         {/* Promo Code */}
-        <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/20 p-4 mb-6">
+        <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-3 mb-4">
           <div className="flex items-center gap-2 mb-3">
             <Tag className="w-4 h-4 text-[#ff6b00]" />
             <h2 className="font-black uppercase text-white text-sm tracking-wide">Promo Code</h2>
@@ -379,10 +376,10 @@ export default function WalletPage() {
                 const methodStr = tx.method ? tx.method.toUpperCase() : null;
                 const noteStr = tx.notes ?? null;
                 return (
-                  <div key={tx.id} className="bg-[#12121a] rounded-2xl border border-[#2a2a36] hover:border-[#ff6b00]/15 transition-colors p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-11 h-11 rounded-xl ${tc.bg} flex items-center justify-center shrink-0 border ${tc.color.replace("text-", "border-")}/20`}>
-                        <TxIcon className={`w-5 h-5 ${tc.color}`} />
+                  <div key={tx.id} className="bg-[#12121a] rounded-xl border border-[#2a2a36] hover:border-[#ff6b00]/15 transition-colors p-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className={`w-9 h-9 rounded-lg ${tc.bg} flex items-center justify-center shrink-0 border ${tc.color.replace("text-", "border-")}/20`}>
+                        <TxIcon className={`w-4 h-4 ${tc.color}`} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">

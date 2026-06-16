@@ -30,13 +30,13 @@ export default function LeaderboardPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-24 pb-16">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="max-w-4xl mx-auto px-4 pt-16 pb-20">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
           <div>
-            <h1 className="text-4xl font-black uppercase" data-testid="heading-leaderboard">
+            <h1 className="text-3xl font-black uppercase" data-testid="heading-leaderboard">
               <span className="text-[#ff6b00]">Leaderboard</span>
             </h1>
-            <p className="text-[#a0a0b0] mt-1">Top ranked Free Fire players</p>
+            <p className="text-[#a0a0b0] text-sm mt-0.5">Top ranked Free Fire players</p>
           </div>
           <select
             value={tournamentId ?? ""}
@@ -53,11 +53,11 @@ export default function LeaderboardPage() {
 
         {/* Top 3 Podium */}
         {entries.length >= 3 && (
-          <div className="flex items-end justify-center gap-4 mb-10">
+          <div className="flex items-end justify-center gap-3 mb-6">
             {[1, 0, 2].map((i) => {
               const e = entries[i];
               if (!e) return null;
-              const heights = ["h-28", "h-36", "h-24"];
+              const heights = ["h-20", "h-28", "h-16"];
               const colors = ["bg-gray-300/10 border-gray-300/30", "bg-[#ffd700]/10 border-[#ffd700]/30", "bg-amber-600/10 border-amber-600/30"];
               const rankNum = [2, 1, 3];
               return (
@@ -73,7 +73,7 @@ export default function LeaderboardPage() {
         )}
 
         <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 overflow-hidden">
-          <div className="grid grid-cols-12 text-[#a0a0b0] text-xs uppercase py-3 px-4 border-b border-[#ff6b00]/10">
+          <div className="grid grid-cols-12 text-[#a0a0b0] text-xs uppercase py-2 px-3 border-b border-[#ff6b00]/10">
             <div className="col-span-1">#</div>
             <div className="col-span-5">Player</div>
             <div className="col-span-2 text-right">Kills</div>
@@ -92,7 +92,7 @@ export default function LeaderboardPage() {
             entries.map((entry: any) => (
               <div
                 key={entry.rank}
-                className={`grid grid-cols-12 items-center py-3.5 px-4 border-b border-[#ff6b00]/5 hover:bg-[#ff6b00]/5 transition-colors ${entry.rank <= 3 ? "bg-[#ff6b00]/5" : ""}`}
+                className={`grid grid-cols-12 items-center py-2 px-3 border-b border-[#ff6b00]/5 hover:bg-[#ff6b00]/5 transition-colors ${entry.rank <= 3 ? "bg-[#ff6b00]/5" : ""}`}
                 data-testid={`row-leaderboard-${entry.rank}`}
               >
                 <div className="col-span-1">
