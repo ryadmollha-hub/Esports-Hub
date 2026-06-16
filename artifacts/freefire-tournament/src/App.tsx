@@ -43,8 +43,6 @@ function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   const maintenance = useMaintenanceMode();
   const [location] = useLocation();
 
-  if (maintenance === null) return null;
-
   const isAdminArea = location.startsWith("/admin");
   const isAdminLoggedIn = isAdminAuthenticated();
 
