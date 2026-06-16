@@ -33,7 +33,7 @@ function CreateMatchModal({ onClose, onSuccess }: { onClose: () => void; onSucce
     }
     setSubmitting(true);
     try {
-      const res = await authFetch("/api/user-matches", {
+      const res = await authFetch("/user-matches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -313,7 +313,7 @@ export default function TournamentsPage() {
   const handleJoin = async (matchId: number) => {
     if (!user) return;
     try {
-      const res = await authFetch(`/api/user-matches/${matchId}/join`, { method: "POST" });
+      const res = await authFetch(`/user-matches/${matchId}/join`, { method: "POST" });
       const data = await res.json();
       if (res.ok) {
         toast({ title: "Joined!", description: data.message });
@@ -332,21 +332,11 @@ export default function TournamentsPage() {
       <div className="max-w-7xl mx-auto px-4 pt-16 pb-24">
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-3 mb-5">
-          <div>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase mb-1" data-testid="heading-tournaments">
-              All <span className="text-[#ff6b00]">Tournaments</span>
-            </h1>
-            <p className="text-[#a0a0b0] text-sm">Find and join the hottest Free Fire competitions</p>
-          </div>
-          {user && (
-            <button
-              onClick={() => setShowCreate(true)}
-              className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-all shadow-[0_0_16px_rgba(255,107,0,0.3)] shrink-0 whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" /> Create Match
-            </button>
-          )}
+        <div className="mb-5">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase mb-1" data-testid="heading-tournaments">
+            All <span className="text-[#ff6b00]">Tournaments</span>
+          </h1>
+          <p className="text-[#a0a0b0] text-sm">Find and join the hottest Free Fire competitions</p>
         </div>
 
         {/* Filters */}
@@ -465,11 +455,11 @@ export default function TournamentsPage() {
         />
       )}
 
-      {/* Mobile FAB — Create Match (only for logged-in users) */}
+      {/* FAB — Create Match (all screen sizes, logged-in users only) */}
       {user && !showCreate && (
         <button
           onClick={() => setShowCreate(true)}
-          className="sm:hidden fixed bottom-20 right-4 z-40 w-14 h-14 bg-[#ff6b00] text-white rounded-full shadow-[0_4px_20px_rgba(255,107,0,0.5)] flex items-center justify-center hover:bg-[#e66000] transition-all active:scale-95"
+          className="fixed bottom-20 right-4 z-40 w-14 h-14 bg-[#ff6b00] text-white rounded-full shadow-[0_4px_24px_rgba(255,107,0,0.55)] flex items-center justify-center hover:bg-[#e66000] transition-all active:scale-95"
           aria-label="Create Match"
         >
           <Plus className="w-6 h-6" />

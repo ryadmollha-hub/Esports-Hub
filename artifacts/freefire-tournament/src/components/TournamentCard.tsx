@@ -25,12 +25,12 @@ const modeColors: Record<string, string> = {
 };
 
 const statusConfig: Record<string, { color: string; dot?: string; label: string }> = {
-  upcoming:  { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", label: "Upcoming" },
-  live:      { color: "bg-green-500/20 text-green-400 border-green-500/30",    dot: "bg-green-400 animate-pulse", label: "LIVE" },
-  ongoing:   { color: "bg-green-500/20 text-green-400 border-green-500/30",    dot: "bg-green-400 animate-pulse", label: "LIVE" },
-  ended:     { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",       label: "Ended" },
-  completed: { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",       label: "Ended" },
-  cancelled: { color: "bg-red-500/20 text-red-400 border-red-500/30",          label: "Cancelled" },
+  upcoming:  { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", label: "Soon" },
+  live:      { color: "bg-green-500/20 text-green-400 border-green-500/30", dot: "bg-green-400 animate-pulse", label: "LIVE" },
+  ongoing:   { color: "bg-green-500/20 text-green-400 border-green-500/30", dot: "bg-green-400 animate-pulse", label: "LIVE" },
+  ended:     { color: "bg-gray-500/20 text-gray-400 border-gray-500/30", label: "Ended" },
+  completed: { color: "bg-gray-500/20 text-gray-400 border-gray-500/30", label: "Ended" },
+  cancelled: { color: "bg-red-500/20 text-red-400 border-red-500/30", label: "Off" },
 };
 
 export default function TournamentCard({ t }: { t: Tournament }) {
@@ -46,110 +46,100 @@ export default function TournamentCard({ t }: { t: Tournament }) {
     <Link
       href={`/tournaments/${t.id}`}
       data-testid={`card-tournament-${t.id}`}
-      className="group block rounded-xl border border-[#ff6b00]/15 bg-[#0e0e17] hover:border-[#ff6b00]/40 hover:shadow-[0_4px_20px_rgba(255,107,0,0.08)] transition-all duration-300 overflow-hidden"
+      className="group flex items-center gap-3 rounded-xl border border-[#ff6b00]/15 bg-[#0e0e17] hover:border-[#ff6b00]/40 hover:shadow-[0_2px_14px_rgba(255,107,0,0.08)] transition-all duration-200 overflow-hidden p-3"
     >
-      {/* Banner */}
-      <div className="relative h-32 bg-gradient-to-br from-[#1a1a24] to-[#0a0a0f] overflow-hidden">
+      {/* Thumbnail */}
+      <div className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-[#1a1a24] to-[#0a0a0f]">
         {t.bannerUrl ? (
           <img
             src={t.bannerUrl}
             alt={t.name}
-            className="w-full h-full object-cover opacity-50 group-hover:opacity-65 group-hover:scale-105 transition-all duration-500"
+            className="w-full h-full object-cover opacity-60 group-hover:opacity-75 group-hover:scale-105 transition-all duration-300"
             data-testid={`img-tournament-banner-${t.id}`}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <Trophy className="w-10 h-10 text-[#ff6b00]/10 group-hover:text-[#ff6b00]/20 transition-colors" />
+            <Trophy className="w-6 h-6 text-[#ff6b00]/20 group-hover:text-[#ff6b00]/35 transition-colors" />
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e17] via-[#0e0e17]/20 to-transparent" />
+        {isLive && <div className="absolute inset-0 bg-[#00ff88]/5" />}
+      </div>
 
-        {isLive && (
-          <div className="absolute inset-0 bg-[#00ff88]/3" />
-        )}
-
-        {/* Badges */}
-        <div className="absolute top-2 left-2 flex gap-1">
+      {/* Main content */}
+      <div className="flex-1 min-w-0">
+        {/* Name + badges row */}
+        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wide ${modeColors[t.mode] ?? modeColors.squad}`} data-testid={`badge-mode-${t.id}`}>
             {t.mode}
           </span>
-          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase flex items-center gap-1 ${sc.color}`} data-testid={`badge-status-${t.id}`}>
+          <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase flex items-center gap-0.5 ${sc.color}`} data-testid={`badge-status-${t.id}`}>
             {sc.dot && <span className={`w-1 h-1 rounded-full shrink-0 ${sc.dot}`} />}
             {sc.label}
           </span>
         </div>
 
-        {/* Prize pool badge */}
-        <div className="absolute top-2 right-2">
-          <div className="flex items-center gap-1 bg-[#0a0a0f]/80 backdrop-blur-sm border border-[#ffd700]/30 rounded px-1.5 py-0.5">
-            <Trophy className="w-2.5 h-2.5 text-[#ffd700]" />
+        <h3 className="text-white font-black text-sm leading-tight group-hover:text-[#ff6b00] transition-colors line-clamp-1 mb-1.5" data-testid={`text-tournament-name-${t.id}`}>
+          {t.name}
+        </h3>
+
+        {/* Prize + Entry + Kill reward */}
+        <div className="flex items-center gap-2 flex-wrap mb-1.5">
+          <div className="flex items-center gap-1">
+            <Trophy className="w-3 h-3 text-[#ffd700]" />
             <span className="text-[#ffd700] text-[10px] font-black" data-testid={`text-prize-${t.id}`}>
               ৳{Number(t.prizePool).toLocaleString()}
             </span>
           </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-3">
-        <h3 className="text-white font-black text-sm mb-2 leading-tight group-hover:text-[#ff6b00] transition-colors line-clamp-1" data-testid={`text-tournament-name-${t.id}`}>
-          {t.name}
-        </h3>
-
-        {/* Fee + Kill reward row */}
-        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-          <div className="flex items-center gap-1 bg-[#1a1a24] rounded px-2 py-1">
+          <div className="flex items-center gap-1 bg-[#1a1a24] rounded px-1.5 py-0.5">
             <span className="text-[#a0a0b0] text-[9px] uppercase font-bold">Entry</span>
             <span className={`text-[10px] font-black ${entryFee === 0 ? "text-[#00ff88]" : "text-white"}`}>
               {entryFee === 0 ? "FREE" : `৳${entryFee.toLocaleString()}`}
             </span>
           </div>
           {perKill > 0 && (
-            <div className="flex items-center gap-1 bg-[#00ff88]/8 border border-[#00ff88]/15 rounded px-1.5 py-1">
+            <div className="flex items-center gap-0.5 bg-[#00ff88]/8 border border-[#00ff88]/15 rounded px-1.5 py-0.5">
               <Zap className="w-2.5 h-2.5 text-[#00ff88]" />
               <span className="text-[#00ff88] text-[9px] font-black">+৳{perKill}/kill</span>
             </div>
           )}
         </div>
 
-        {/* Slot progress */}
-        <div className="mb-2">
-          <div className="flex justify-between text-xs mb-1">
-            <span className="flex items-center gap-1 text-[#606070]">
+        {/* Slots + time row */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 flex-1">
+            <div className="flex items-center gap-1 text-[#606070]">
               <Users className="w-2.5 h-2.5" />
               <span className="text-[10px]">{t.filledSlots}<span className="text-[#3a3a48]">/{t.maxSlots}</span></span>
-            </span>
-            <span data-testid={`text-slots-left-${t.id}`} className={`font-bold text-[9px] uppercase ${isFull ? "text-[#ff2244]" : slotsLeft <= 5 ? "text-yellow-400" : "text-[#606070]"}`}>
+            </div>
+            <div className="flex-1 h-0.5 bg-[#1a1a24] rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  isFull ? "bg-[#ff2244]" :
+                  slotPct >= 80 ? "bg-gradient-to-r from-[#ff6b00] to-[#ff2244]" :
+                  "bg-gradient-to-r from-[#00ff88] to-[#ff6b00]"
+                }`}
+                style={{ width: `${slotPct}%` }}
+                data-testid={`bar-slots-${t.id}`}
+              />
+            </div>
+            <span data-testid={`text-slots-left-${t.id}`} className={`font-bold text-[9px] uppercase shrink-0 ${isFull ? "text-[#ff2244]" : slotsLeft <= 5 ? "text-yellow-400" : "text-[#606070]"}`}>
               {isFull ? "FULL" : `${slotsLeft} left`}
             </span>
           </div>
-          <div className="h-0.5 bg-[#1a1a24] rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${
-                isFull ? "bg-[#ff2244]" :
-                slotPct >= 80 ? "bg-gradient-to-r from-[#ff6b00] to-[#ff2244]" :
-                "bg-gradient-to-r from-[#00ff88] to-[#ff6b00]"
-              }`}
-              style={{ width: `${slotPct}%` }}
-              data-testid={`bar-slots-${t.id}`}
-            />
-          </div>
         </div>
+      </div>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-2 border-t border-[#ff6b00]/8">
-          {t.status === "upcoming" && t.countdownTo ? (
-            <CountdownTimer targetDate={t.countdownTo} className="text-[10px] gap-1" />
-          ) : (
-            <div className="flex items-center gap-1 text-[#606070] text-[10px]">
-              <Clock className="w-2.5 h-2.5" />
-              {new Date(t.startDate).toLocaleDateString("en-BD", { day: "numeric", month: "short" })}
-            </div>
-          )}
-          <div className="flex items-center gap-0.5 text-[#ff6b00]/70 group-hover:text-[#ff6b00] transition-colors text-[10px] font-bold uppercase">
-            View <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+      {/* Right: time + chevron */}
+      <div className="flex flex-col items-end gap-1.5 shrink-0">
+        {t.status === "upcoming" && t.countdownTo ? (
+          <CountdownTimer targetDate={t.countdownTo} className="text-[9px] gap-0.5" />
+        ) : (
+          <div className="flex items-center gap-0.5 text-[#606070] text-[10px]">
+            <Clock className="w-2.5 h-2.5" />
+            {new Date(t.startDate).toLocaleDateString("en-BD", { day: "numeric", month: "short" })}
           </div>
-        </div>
+        )}
+        <ChevronRight className="w-3.5 h-3.5 text-[#ff6b00]/50 group-hover:text-[#ff6b00] group-hover:translate-x-0.5 transition-all" />
       </div>
     </Link>
   );
