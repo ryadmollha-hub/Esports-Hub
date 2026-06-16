@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import {
-  Trophy, Users, Calendar, Shield, Clock, CheckCircle, XCircle,
-  Edit, Save, X, ArrowDownCircle, ArrowUpCircle, CreditCard, User
+  Trophy, Shield, Clock, CheckCircle, XCircle,
+  Edit, Save, X, ArrowDownCircle, ArrowUpCircle, User
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -51,12 +51,6 @@ export default function DashboardPage() {
   const [editing, setEditing] = useState(false);
   const [pForm, setPForm] = useState({ username: "", displayName: "", freefireUid: "", freefireNickname: "" });
 
-  const [showDepositForm, setShowDepositForm] = useState(false);
-  const [depositForm, setDepositForm] = useState({ amount: "", method: "bkash", accountNumber: "", transactionId: "", screenshot: "" });
-
-  const [showWithdrawForm, setShowWithdrawForm] = useState(false);
-  const [withdrawForm, setWithdrawForm] = useState({ amount: "", method: "bkash", accountNumber: "" });
-
   useEffect(() => {
     if (prof) {
       setPForm({
@@ -88,44 +82,6 @@ export default function DashboardPage() {
         onError: () => toast({ title: "Failed to update profile", variant: "destructive" }),
       }
     );
-  };
-
-  const submitDeposit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await authFetch("/wallet/deposit", {
-        method: "POST",
-        body: JSON.stringify({ ...depositForm, amount: parseFloat(depositForm.amount) }),
-      });
-      if (res.ok) {
-        toast({ title: "Deposit request submitted", description: "Admin will review within 24 hours." });
-        setShowDepositForm(false);
-        setDepositForm({ amount: "", method: "bkash", accountNumber: "", transactionId: "", screenshot: "" });
-        loadWallet();
-      } else {
-        const d = await res.json();
-        toast({ title: "Error", description: d.error, variant: "destructive" });
-      }
-    } catch { toast({ title: "Connection error", variant: "destructive" }); }
-  };
-
-  const submitWithdraw = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const res = await authFetch("/wallet/withdraw", {
-        method: "POST",
-        body: JSON.stringify({ ...withdrawForm, amount: parseFloat(withdrawForm.amount) }),
-      });
-      if (res.ok) {
-        toast({ title: "Withdrawal request submitted", description: "Admin will process within 24 hours." });
-        setShowWithdrawForm(false);
-        setWithdrawForm({ amount: "", method: "bkash", accountNumber: "" });
-        loadWallet();
-      } else {
-        const d = await res.json();
-        toast({ title: "Error", description: d.error, variant: "destructive" });
-      }
-    } catch { toast({ title: "Connection error", variant: "destructive" }); }
   };
 
   const approved = regs.filter((r) => r.status === "approved").length;
@@ -353,27 +309,10 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-black uppercase">Deposit <span className="text-[#ff6b00]">History</span></h2>
-              <button onClick={() => setShowDepositForm(!showDepositForm)} className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">
-                <ArrowDownCircle className="w-4 h-4" /> Request Deposit
-              </button>
+              <Link href="/wallet" className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">
+                <ArrowDownCircle className="w-4 h-4" /> Go to Wallet
+              </Link>
             </div>
-            {showDepositForm && (
-              <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-4">
-                <h3 className="font-black uppercase text-[#ff6b00] mb-4">New Deposit Request</h3>
-                <p className="text-[#a0a0b0] text-sm mb-4">Send money via BKash or Nagad, then submit this form. Admin will approve within 24 hours.</p>
-                <form onSubmit={submitDeposit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Amount (৳) *</label><input type="number" value={depositForm.amount} onChange={(e) => setDepositForm({ ...depositForm, amount: e.target.value })} required min="1" placeholder="100" className="dash-input" /></div>
-                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Payment Method *</label><select value={depositForm.method} onChange={(e) => setDepositForm({ ...depositForm, method: e.target.value })} className="dash-input"><option value="bkash">BKash</option><option value="nagad">Nagad</option></select></div>
-                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Your Account Number *</label><input value={depositForm.accountNumber} onChange={(e) => setDepositForm({ ...depositForm, accountNumber: e.target.value })} required placeholder="01XXXXXXXXX" className="dash-input" /></div>
-                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Transaction ID</label><input value={depositForm.transactionId} onChange={(e) => setDepositForm({ ...depositForm, transactionId: e.target.value })} placeholder="TX ID from payment app" className="dash-input" /></div>
-                  <div className="md:col-span-2"><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Screenshot URL (optional)</label><input value={depositForm.screenshot} onChange={(e) => setDepositForm({ ...depositForm, screenshot: e.target.value })} placeholder="https://..." className="dash-input" /></div>
-                  <div className="md:col-span-2 flex gap-3">
-                    <button type="submit" className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">Submit Request</button>
-                    <button type="button" onClick={() => setShowDepositForm(false)} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">Cancel</button>
-                  </div>
-                </form>
-              </div>
-            )}
             {loadingWallet ? (
               <div className="space-y-3">{[1,2].map((i) => <div key={i} className="h-16 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
             ) : deposits.length === 0 ? (
@@ -400,25 +339,10 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-black uppercase">Withdrawal <span className="text-[#ff6b00]">History</span></h2>
-              <button onClick={() => setShowWithdrawForm(!showWithdrawForm)} className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">
-                <ArrowUpCircle className="w-4 h-4" /> Request Withdrawal
-              </button>
+              <Link href="/wallet" className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">
+                <ArrowUpCircle className="w-4 h-4" /> Go to Wallet
+              </Link>
             </div>
-            {showWithdrawForm && (
-              <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-4">
-                <h3 className="font-black uppercase text-[#ff6b00] mb-4">New Withdrawal Request</h3>
-                <p className="text-[#a0a0b0] text-sm mb-4">Admin will send money to your account within 24 hours after approval.</p>
-                <form onSubmit={submitWithdraw} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Amount (৳) *</label><input type="number" value={withdrawForm.amount} onChange={(e) => setWithdrawForm({ ...withdrawForm, amount: e.target.value })} required min="1" placeholder="100" className="dash-input" /></div>
-                  <div><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Payment Method *</label><select value={withdrawForm.method} onChange={(e) => setWithdrawForm({ ...withdrawForm, method: e.target.value })} className="dash-input"><option value="bkash">BKash</option><option value="nagad">Nagad</option></select></div>
-                  <div className="md:col-span-2"><label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5">Your Account Number *</label><input value={withdrawForm.accountNumber} onChange={(e) => setWithdrawForm({ ...withdrawForm, accountNumber: e.target.value })} required placeholder="01XXXXXXXXX" className="dash-input" /></div>
-                  <div className="md:col-span-2 flex gap-3">
-                    <button type="submit" className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">Submit Request</button>
-                    <button type="button" onClick={() => setShowWithdrawForm(false)} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">Cancel</button>
-                  </div>
-                </form>
-              </div>
-            )}
             {loadingWallet ? (
               <div className="space-y-3">{[1,2].map((i) => <div key={i} className="h-16 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
             ) : withdrawals.length === 0 ? (

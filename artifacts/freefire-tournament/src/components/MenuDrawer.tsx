@@ -45,7 +45,7 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
       { href: "/referral", icon: Gift, label: "Referral", desc: "Invite friends, earn rewards" },
     ] : []),
     { href: "/leaderboard", icon: History, label: "Leaderboard", desc: "Global rankings" },
-    { href: "/contact", icon: HeadphonesIcon, label: "Support", desc: "Get help from our team" },
+    { href: "/support", icon: HeadphonesIcon, label: "Support", desc: "Get help from our team" },
   ];
 
   if (!open) return null;

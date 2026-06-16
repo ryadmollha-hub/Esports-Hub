@@ -58,7 +58,7 @@ export default function MyTicketsPage() {
     if (!user) return;
     setLoading(true);
     try {
-      const res = await authFetch("/api/support/tickets");
+      const res = await authFetch("/support/tickets");
       if (res.ok) setTickets(await res.json());
     } catch {}
     finally { setLoading(false); }
@@ -67,24 +67,29 @@ export default function MyTicketsPage() {
   const openTicket = async (id: number) => {
     setLoadingTicket(true);
     try {
-      const res = await authFetch(`/api/support/tickets/${id}`);
+      const res = await authFetch(`/support/tickets/${id}`);
       if (res.ok) setSelectedTicket(await res.json());
     } catch {}
     finally { setLoadingTicket(false); }
+  };
+
+  const goBack = () => {
+    setSelectedTicket(null);
+    loadTickets();
   };
 
   const sendReply = async () => {
     if (!replyText.trim() || !selectedTicket) return;
     setSendingReply(true);
     try {
-      const res = await authFetch(`/api/support/tickets/${selectedTicket.id}/replies`, {
+      const res = await authFetch(`/support/tickets/${selectedTicket.id}/replies`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: replyText }),
       });
       if (res.ok) {
         setReplyText("");
         await openTicket(selectedTicket.id);
+        loadTickets();
         toast({ title: "Reply sent" });
       } else {
         const d = await res.json();
@@ -119,7 +124,7 @@ export default function MyTicketsPage() {
 
         {selectedTicket ? (
           <div>
-            <button onClick={() => setSelectedTicket(null)} className="flex items-center gap-2 text-[#a0a0b0] hover:text-white text-sm mb-6 transition-colors">
+            <button onClick={goBack} className="flex items-center gap-2 text-[#a0a0b0] hover:text-white text-sm mb-6 transition-colors">
               <ArrowLeft className="w-4 h-4" /> Back to My Tickets
             </button>
 

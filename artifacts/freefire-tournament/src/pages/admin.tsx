@@ -2341,7 +2341,7 @@ function SupportTicketsView({ apiFetch, toast }: { apiFetch: any; toast: any }) 
       if (res.ok) {
         toast({ title: "Status updated" });
         if (selectedTicket?.id === id) {
-          setSelectedTicket((t: any) => t ? { ...t, status } : t);
+          await openTicket(id);
         }
         loadTickets();
       }
