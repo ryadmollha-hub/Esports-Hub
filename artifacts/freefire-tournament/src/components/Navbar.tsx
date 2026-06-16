@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Flame, Shield, LayoutDashboard } from "lucide-react";
+import { Flame, Shield, LayoutDashboard, HeadphonesIcon } from "lucide-react";
 import { useRole } from "@/lib/useRole";
 import { useAuthContext } from "@/lib/AuthContext";
 import NotificationBell from "./NotificationBell";
@@ -10,6 +10,7 @@ const guestNavLinks = [
   { href: "/tournaments", label: "Tournaments" },
   { href: "/prizes", label: "Prizes" },
   { href: "/contact", label: "Contact" },
+  { href: "/support", label: "Support" },
 ];
 
 const userNavLinks = [
@@ -19,6 +20,7 @@ const userNavLinks = [
   { href: "/results", label: "Results" },
   { href: "/prizes", label: "Prizes" },
   { href: "/teams", label: "Teams" },
+  { href: "/support", label: "Support" },
 ];
 
 export default function Navbar() {
