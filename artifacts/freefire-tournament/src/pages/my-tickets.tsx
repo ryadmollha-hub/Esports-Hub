@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Ticket, ChevronLeft, ChevronRight, MessageCircle, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Send, ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useAuth } from "@/lib/AuthContext";
+import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -44,7 +44,7 @@ function timeAgo(dateStr: string) {
 }
 
 export default function MyTicketsPage() {
-  const { user, authFetch } = useAuth();
+  const { user, authFetch } = useAuthContext();
   const { toast } = useToast();
 
   const [tickets, setTickets] = useState<any[]>([]);

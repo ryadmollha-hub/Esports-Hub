@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, Link } from "wouter";
 import {
   Trophy, Shield, Clock, CheckCircle, XCircle,
@@ -18,7 +18,7 @@ const statusColors: Record<string, string> = {
   pending: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
 };
 
-const statusIcon: Record<string, JSX.Element> = {
+const statusIcon: Record<string, React.ReactElement> = {
   approved: <CheckCircle className="w-3.5 h-3.5" />,
   rejected: <XCircle className="w-3.5 h-3.5" />,
   pending: <Clock className="w-3.5 h-3.5" />,

@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { MessageCircle, Send, Ticket, ChevronRight, AlertCircle, CheckCircle, Upload, X } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useAuth } from "@/lib/AuthContext";
+import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -29,7 +29,7 @@ function useSupportSettings() {
 }
 
 export default function SupportPage() {
-  const { user, authFetch } = useAuth();
+  const { user, authFetch } = useAuthContext();
   const { toast } = useToast();
   const settings = useSupportSettings();
   const fileRef = useRef<HTMLInputElement>(null);

@@ -4,7 +4,7 @@ import {
   Users, Trophy, Shield, Clock, DollarSign, CheckCircle, XCircle, Bell,
   Plus, Trash2, Edit, LogOut, BarChart3, Megaphone, Swords, CreditCard,
   ArrowDownCircle, ArrowUpCircle, Eye, EyeOff, RefreshCw, Home,
-  Crown, Shuffle, X as XIcon, Tag, BookOpen, Key, Radio, Lock, Settings, Copy, MessageCircle, Send, Headphones
+  Crown, Shuffle, X as XIcon, Tag, BookOpen, Key, Radio, Lock, Settings, Copy, MessageCircle, Send, Headphones, ChevronRight
 } from "lucide-react";
 import { isAdminAuthenticated, clearAdminSession, adminFetch } from "@/lib/adminAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -749,7 +749,7 @@ export default function AdminPage() {
               <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-black uppercase">Manage <span className="text-[#ff6b00]">Tournaments</span></h1>
                 <button
-                  onClick={() => { setShowTForm(true); setEditingTournament(null); setTForm({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", status: "upcoming", bannerUrl: "" }); }}
+                  onClick={() => { setShowTForm(true); setEditingTournament(null); setTForm({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Pct: "50", prize2Pct: "30", prize3Pct: "20" }); }}
                   className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors"
                 >
                   <Plus className="w-4 h-4" /> Create Tournament
