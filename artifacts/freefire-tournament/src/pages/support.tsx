@@ -66,7 +66,7 @@ export default function SupportPage() {
     }
     setSubmitting(true);
     try {
-      const res = await authFetch("/api/support/tickets", {
+      const res = await authFetch("/support/tickets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, screenshotUrl: screenshot ?? undefined }),

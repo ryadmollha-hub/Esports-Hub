@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
+import { logger } from "../lib/logger";
 import {
   tournamentsTable,
   prizeTiersTable,
@@ -420,7 +421,7 @@ router.post("/tournaments/:id/publish-results", async (req, res) => {
 
     res.json({ success: true, participantsUpdated: results.length });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, "Failed to publish results");
     res.status(500).json({ error: "Failed to publish results." });
   }
 });

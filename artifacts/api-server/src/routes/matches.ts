@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { matchesTable, matchResultsTable, tournamentsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -292,7 +293,7 @@ router.patch("/matches/:id/results", async (req, res) => {
 
     res.json({ success: true, match: { ...match, results: savedResults } });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, "Failed to save results");
     res.status(500).json({ error: "Failed to save results." });
   }
 });

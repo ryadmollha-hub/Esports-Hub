@@ -1,0 +1,60 @@
+Prepare the entire project for production hosting. Ensure the application runs without any errors in both frontend and backend.
+
+Do a full system audit and fix everything required for deployment.
+
+1. FULL ERROR FIX (CRITICAL)
+Fix all frontend runtime errors
+Fix all backend server errors
+Fix all API failures and broken endpoints
+Fix missing imports and broken components
+Fix routing issues (all pages must load correctly)
+Fix blank screen / rendering issues
+Fix infinite loops and broken useEffect logic
+Fix port conflicts and server startup issues
+Fix environment variable issues
+2. BUILD & DEPLOYMENT CHECK
+Ensure frontend builds successfully without errors
+Ensure backend starts without crash
+Ensure API connects properly between frontend and backend
+Ensure no console errors in production mode
+Ensure no missing dependencies
+3. DATABASE & DATA FLOW
+Ensure database connection is stable
+Ensure all Create Match submissions are saved correctly
+Ensure Admin panel receives all pending matches
+Ensure Wallet and transaction system works properly
+4. CREATE MATCH SYSTEM (VERIFY)
+Match creation form works without errors
+Submission sends data to admin system correctly
+No auto-calculation or broken fields
+Match becomes “Pending” after submission
+No data loss during submission
+5. ADMIN SYSTEM CHECK
+Admin can view all submitted matches
+Admin can approve/reject matches
+Approved matches appear in public tournaments
+No broken admin routes or missing data
+6. FRONTEND STABILITY
+Home page loads correctly
+Tournaments page loads correctly
+Wallet page works correctly
+Profile page works correctly
+Navigation works on all pages
+7. MOBILE RESPONSIVENESS
+Fully responsive for mobile devices
+No overflow issues
+No broken layout on small screens
+8. SAFETY RULES
+Do NOT remove any existing features
+Do NOT redesign UI
+Only fix errors and improve stability
+Keep all current functionality intact
+FINAL GOAL
+
+Make the project 100% production ready:
+
+No errors in console
+No blank screen
+Fully working frontend + backend
+Stable database connection
+Ready for hosting deployment (Replit / Vercel / Render)

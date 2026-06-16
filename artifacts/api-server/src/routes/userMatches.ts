@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
+import { logger } from "../lib/logger";
 import {
   userMatchesTable,
   userMatchJoinsTable,
@@ -73,7 +74,7 @@ router.post("/user-matches", async (req, res) => {
 
     res.status(201).json(match);
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, "Failed to create match");
     res.status(500).json({ error: "Failed to create match." });
   }
 });
@@ -161,7 +162,7 @@ router.post("/user-matches/:id/join", async (req, res) => {
 
     res.json({ success: true, message: "You have joined the match!" });
   } catch (err) {
-    console.error(err);
+    logger.error({ err }, "Failed to join match");
     res.status(500).json({ error: "Failed to join match." });
   }
 });
