@@ -33,11 +33,12 @@ export default function RegisterPage() {
     if (isLoaded && !isSignedIn) setLocation("/sign-in");
   }, [isLoaded, isSignedIn]);
 
-  const { data: tournaments = [], isLoading: loadingTournaments } = useListTournaments({ status: "upcoming" });
+  const { data: tournamentsRaw, isLoading: loadingTournaments } = useListTournaments({ status: "upcoming" });
+  const tournaments: any[] = (tournamentsRaw as any)?.tournaments ?? (Array.isArray(tournamentsRaw) ? tournamentsRaw : []);
   const register = useRegisterForTournament();
 
   const form = useForm<FormData>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(schema as any),
     defaultValues: {
       tournamentId: preselectedId || 0,
       freefireUid: "",

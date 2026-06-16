@@ -7,9 +7,10 @@ import { useListTournaments, useGetTournamentMatches, getGetTournamentMatchesQue
 const rankColors = ["text-[#ffd700] font-black", "text-gray-300 font-black", "text-amber-600 font-black"];
 
 export default function ResultsPage() {
-  const { data: tournaments = [] } = useListTournaments({ status: "completed" });
+  const { data: tournamentsRaw } = useListTournaments({ status: "completed" });
+  const tournaments: any[] = (tournamentsRaw as any)?.tournaments ?? [];
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const tournamentId = selectedId ?? ((tournaments as any[])[0]?.id ?? null);
+  const tournamentId = selectedId ?? (tournaments[0]?.id ?? null);
 
   const { data: matches = [], isLoading } = useGetTournamentMatches(
     tournamentId ?? 0,
@@ -27,14 +28,14 @@ export default function ResultsPage() {
         </h1>
         <p className="text-[#a0a0b0] mb-8">Final standings for completed matches</p>
 
-        {(tournaments as any[]).length > 0 && (
+        {tournaments.length > 0 && (
           <select
             value={tournamentId ?? ""}
             onChange={(e) => setSelectedId(e.target.value ? parseInt(e.target.value) : null)}
             data-testid="select-tournament-results"
             className="mb-8 px-4 py-3 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors"
           >
-            {(tournaments as any[]).map((t: any) => (
+            {tournaments.map((t: any) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>

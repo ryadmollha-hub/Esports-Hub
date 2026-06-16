@@ -55,8 +55,8 @@ router.post("/teams", async (req, res) => {
     userId,
     role: "captain",
     status: "active",
-    freefireUid: data.freefireUid ?? null,
-    playerName: data.playerName ?? null,
+    freefireUid: (data as any).freefireUid ?? null,
+    playerName: (data as any).playerName ?? null,
   });
   res.status(201).json(team);
 });

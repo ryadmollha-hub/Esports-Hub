@@ -15,13 +15,14 @@ export default function TournamentsPage() {
 
   const params = {
     ...(search && { search }),
-    ...(mode && { mode }),
-    ...(status && { status }),
+    ...(mode && { mode: mode as "solo" | "duo" | "squad" }),
+    ...(status && { status: status as "upcoming" | "ongoing" | "completed" }),
   };
 
-  const { data: tournaments = [], isLoading } = useListTournaments(params, {
+  const { data: tournamentsData, isLoading } = useListTournaments(params, {
     query: { queryKey: getListTournamentsQueryKey(params) },
   });
+  const tournaments: any[] = (tournamentsData as any)?.tournaments ?? (Array.isArray(tournamentsData) ? tournamentsData : []);
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">

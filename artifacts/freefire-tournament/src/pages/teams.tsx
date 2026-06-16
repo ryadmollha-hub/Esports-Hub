@@ -24,7 +24,7 @@ export default function TeamsPage() {
   const handleJoin = (teamId: number) => {
     if (!isSignedIn) { toast({ title: "Sign in required", description: "Please sign in to join a team.", variant: "destructive" }); return; }
     joinTeam.mutate(
-      { id: teamId, data: {} },
+      { id: teamId },
       {
         onSuccess: () => {
           toast({ title: "Join request sent!", description: "Wait for the captain to approve your request." });

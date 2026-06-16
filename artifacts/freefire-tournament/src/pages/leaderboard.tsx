@@ -13,7 +13,8 @@ const rankBadge = (rank: number) => {
 
 export default function LeaderboardPage() {
   const [tournamentId, setTournamentId] = useState<number | null>(null);
-  const { data: tournaments = [] } = useListTournaments({});
+  const { data: tournamentsRaw } = useListTournaments({});
+  const tournaments: any[] = (tournamentsRaw as any)?.tournaments ?? [];
 
   const { data: globalLb = [], isLoading: loadingGlobal } = useGetGlobalLeaderboard({
     query: { enabled: !tournamentId, queryKey: getGetGlobalLeaderboardQueryKey(), refetchInterval: 20000 },

@@ -70,12 +70,12 @@ export default function MyTeamPage() {
   const approveTeamMember = useApproveTeamMember();
 
   const form = useForm<CreateForm>({
-    resolver: zodResolver(createSchema),
+    resolver: zodResolver(createSchema as any),
     defaultValues: { name: "", tag: "", freefireUid: "", playerName: "", maxMembers: 4 },
   });
 
   const editForm = useForm<EditForm>({
-    resolver: zodResolver(editSchema),
+    resolver: zodResolver(editSchema as any),
     defaultValues: { name: team?.name ?? "", tag: team?.tag ?? "", logoUrl: team?.logoUrl ?? "", maxMembers: team?.maxMembers ?? 4 },
   });
 
@@ -131,7 +131,7 @@ export default function MyTeamPage() {
 
   const handleApprove = (teamId: number, memberId: number) => {
     approveTeamMember.mutate(
-      { teamId, memberId },
+      { id: teamId, userId: String(memberId) },
       {
         onSuccess: () => {
           toast({ title: "Member approved!" });

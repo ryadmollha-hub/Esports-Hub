@@ -11,9 +11,10 @@ const prizeColors = [
 ];
 
 export default function PrizesPage() {
-  const { data: tournaments = [] } = useListTournaments({ status: "upcoming" });
+  const { data: tournamentsRaw } = useListTournaments({ status: "upcoming" });
+  const tournaments: any[] = (tournamentsRaw as any)?.tournaments ?? [];
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const tournamentId = selectedId ?? ((tournaments as any[])[0]?.id ?? null);
+  const tournamentId = selectedId ?? (tournaments[0]?.id ?? null);
 
   const { data: tournament, isLoading } = useGetTournament(tournamentId ?? 0, {
     query: { enabled: !!tournamentId, queryKey: getGetTournamentQueryKey(tournamentId ?? 0) },
@@ -30,14 +31,14 @@ export default function PrizesPage() {
         </h1>
         <p className="text-[#a0a0b0] mb-8">Win big — claim your share of the prize pool</p>
 
-        {(tournaments as any[]).length > 0 && (
+        {tournaments.length > 0 && (
           <select
             value={tournamentId ?? ""}
             onChange={(e) => setSelectedId(e.target.value ? parseInt(e.target.value) : null)}
             data-testid="select-tournament-prizes"
             className="mb-10 px-4 py-3 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors"
           >
-            {(tournaments as any[]).map((t: any) => (
+            {tournaments.map((t: any) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>

@@ -34,7 +34,7 @@ router.get("/tournaments", async (req, res) => {
       .orderBy(desc(tournamentsTable.createdAt))
       .limit(parseInt(limit))
       .offset((parseInt(page) - 1) * parseInt(limit));
-    res.json(rows);
+    res.json({ tournaments: rows, total: rows.length });
   } catch {
     res.status(500).json({ error: "Failed to load tournaments." });
   }
@@ -503,7 +503,7 @@ router.post("/tournaments", async (req, res) => {
       name: data.name,
       description: data.description ?? null,
       mode: data.mode ?? "squad",
-      status: data.status ?? "upcoming",
+      status: (data as any).status ?? "upcoming",
       startDate: new Date(data.startDate),
       endDate: data.endDate ? new Date(data.endDate) : null,
       maxSlots: data.maxSlots ?? 100,

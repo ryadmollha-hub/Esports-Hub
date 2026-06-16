@@ -8,6 +8,7 @@ import {
   registrationsTable,
   usersTable,
 } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 async function seed() {
   console.log("Clearing all demo/seed data from database...");
@@ -24,7 +25,7 @@ async function seed() {
   for (const user of demoUsers) {
     const userId = user.clerkId;
     if (userId.startsWith("demo_") || userId.startsWith("seed_")) {
-      await db.delete(usersTable).where((t: any) => t.clerkId === userId);
+      await db.delete(usersTable).where(eq(usersTable.clerkId, userId));
     }
   }
 
