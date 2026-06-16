@@ -27,7 +27,6 @@ function CreateMatchModal({ onClose, onSuccess }: { onClose: () => void; onSucce
 
   const prizeValue = useCustomPrize ? form.customPrize : form.prizePool;
   const slots = SLOTS_FOR_TYPE[form.matchType] ?? 2;
-  const entryFee = prizeValue ? (parseFloat(prizeValue) / slots).toFixed(2) : "—";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,11 +157,6 @@ function CreateMatchModal({ onClose, onSuccess }: { onClose: () => void; onSucce
                     />
                   )}
                 </div>
-                {prizeValue && parseFloat(prizeValue) > 0 && (
-                  <p className="text-[#a0a0b0] text-xs mt-1.5">
-                    Entry fee per player: <span className="text-[#00ff88] font-bold">৳{entryFee}</span>
-                  </p>
-                )}
               </div>
 
               {/* Date & Time */}
@@ -241,7 +235,11 @@ function CommunityMatchCard({ match, onJoin }: { match: any; onJoin: (id: number
         </div>
         <div className="bg-[#0a0a0f] rounded-xl px-3 py-2">
           <div className="text-[#606070] mb-0.5">Entry Fee</div>
-          <div className="font-black text-[#00ff88]">৳{Number(match.entryFee).toLocaleString()}</div>
+          {Number(match.entryFee) > 0 ? (
+            <div className="font-black text-[#00ff88]">৳{Number(match.entryFee).toLocaleString()}</div>
+          ) : (
+            <div className="font-black text-[#a0a0b0]">TBD</div>
+          )}
         </div>
       </div>
 
@@ -271,7 +269,7 @@ function CommunityMatchCard({ match, onJoin }: { match: any; onJoin: (id: number
             onClick={() => onJoin(match.id)}
             className="px-3 py-1.5 bg-[#ff6b00] text-white font-black uppercase rounded-lg text-xs hover:bg-[#e66000] transition-colors shadow-[0_0_12px_rgba(255,107,0,0.25)]"
           >
-            Join · ৳{Number(match.entryFee).toLocaleString()}
+            {Number(match.entryFee) > 0 ? `Join · ৳${Number(match.entryFee).toLocaleString()}` : "Join Match"}
           </button>
         )}
       </div>

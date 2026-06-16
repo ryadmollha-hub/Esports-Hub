@@ -50,7 +50,6 @@ router.post("/user-matches", async (req, res) => {
     if (isNaN(prize) || prize <= 0) {
       return res.status(400).json({ error: "prizePool must be a positive number." });
     }
-    const entryFee = parseFloat((prize / maxSlots).toFixed(2));
 
     const schedDate = new Date(scheduledAt);
     if (isNaN(schedDate.getTime()) || schedDate <= new Date()) {
@@ -65,7 +64,7 @@ router.post("/user-matches", async (req, res) => {
       creatorName: user?.displayName ?? user?.username ?? "Unknown",
       matchType,
       prizePool: prize.toFixed(2),
-      entryFee: entryFee.toFixed(2),
+      entryFee: "0.00",
       maxSlots,
       scheduledAt: schedDate,
       description: description ?? null,
