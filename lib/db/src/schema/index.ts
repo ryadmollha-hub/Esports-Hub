@@ -12,3 +12,4 @@ export * from "./rules";
 export * from "./settings";
 export * from "./auditLogs";
 export * from "./supportTickets";
+export * from "./userMatches";

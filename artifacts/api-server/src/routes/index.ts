@@ -17,6 +17,7 @@ import promoCodesRouter from "./promoCodes";
 import rulesRouter from "./rules";
 import settingsRouter from "./settings";
 import supportRouter from "./support";
+import userMatchesRouter from "./userMatches";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(promoCodesRouter);
 router.use(rulesRouter);
 router.use(settingsRouter);
 router.use(supportRouter);
+router.use(userMatchesRouter);
 
 export default router;

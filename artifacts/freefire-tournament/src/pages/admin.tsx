@@ -21,7 +21,7 @@ async function safeJson(res: Response): Promise<any> {
   }
 }
 
-type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings" | "maintenance" | "support";
+type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings" | "maintenance" | "support" | "user-matches";
 
 const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
@@ -37,6 +37,7 @@ const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "payment-settings", label: "Payment Settings", icon: Settings },
   { id: "maintenance", label: "Maintenance", icon: Lock },
   { id: "support", label: "Support", icon: MessageCircle },
+  { id: "user-matches", label: "User Matches", icon: Swords },
 ];
 
 export default function AdminPage() {
@@ -50,6 +51,10 @@ export default function AdminPage() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [walletTxs, setWalletTxs] = useState<any[]>([]);
   const [matches, setMatches] = useState<any[]>([]);
+  const [userMatches, setUserMatches] = useState<any[]>([]);
+  const [userMatchesLoading, setUserMatchesLoading] = useState(false);
+  const [rejectingMatch, setRejectingMatch] = useState<number | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
   const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [showRoomPass, setShowRoomPass] = useState<Record<number, boolean>>({});
@@ -154,6 +159,16 @@ export default function AdminPage() {
     } catch {}
   }, [apiFetch, selectedTournament]);
 
+  const loadUserMatches = useCallback(async () => {
+    setUserMatchesLoading(true);
+    try {
+      const res = await apiFetch("/admin/user-matches");
+      if (res.ok) setUserMatches(await res.json());
+    } catch {} finally {
+      setUserMatchesLoading(false);
+    }
+  }, [apiFetch]);
+
   const loadMaintenance = useCallback(async () => {
     try {
       const res = await apiFetch("/settings/maintenance");
@@ -198,6 +213,7 @@ export default function AdminPage() {
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "deposits" || activeTab === "withdrawals") loadWallet();
     if (activeTab === "matches") { loadTournaments(); if (selectedTournament) loadMatches(); }
+    if (activeTab === "user-matches") loadUserMatches();
     if (activeTab === "maintenance") loadMaintenance();
   }, [activeTab]);
 
@@ -1743,6 +1759,115 @@ export default function AdminPage() {
           {/* MAINTENANCE */}
           {activeTab === "support" && (
             <SupportAdminTab apiFetch={apiFetch} toast={toast} />
+          )}
+
+          {/* USER MATCHES */}
+          {activeTab === "user-matches" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className="text-2xl font-black uppercase">User <span className="text-[#ff6b00]">Matches</span></h1>
+                  <p className="text-[#a0a0b0] text-sm mt-1">Review and approve user-submitted matches</p>
+                </div>
+                <button onClick={loadUserMatches} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              </div>
+
+              {/* Status filter tabs */}
+              <div className="flex gap-2 mb-5 flex-wrap">
+                {["all", "pending_approval", "approved", "rejected"].map((s) => {
+                  const count = s === "all" ? userMatches.length : userMatches.filter((m) => m.status === s).length;
+                  const labels: Record<string, string> = { all: "All", pending_approval: "Pending", approved: "Approved", rejected: "Rejected" };
+                  const colors: Record<string, string> = { all: "border-[#ff6b00]/30 text-[#ff6b00]", pending_approval: "border-yellow-400/30 text-yellow-400", approved: "border-[#00ff88]/30 text-[#00ff88]", rejected: "border-[#ff2244]/30 text-[#ff2244]" };
+                  return (
+                    <span key={s} className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase ${colors[s]} bg-transparent`}>
+                      {labels[s]} ({count})
+                    </span>
+                  );
+                })}
+              </div>
+
+              {userMatchesLoading ? (
+                <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-28 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
+              ) : userMatches.length === 0 ? (
+                <div className="text-center py-16 text-[#a0a0b0]">
+                  <Swords className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                  <p className="font-bold">No user matches submitted yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {userMatches.map((m: any) => (
+                    <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="font-black text-white text-base">{m.matchType} Match</span>
+                            <span className={statusBadge(m.status === "pending_approval" ? "pending" : m.status)}>{m.status === "pending_approval" ? "Pending" : m.status}</span>
+                          </div>
+                          <div className="text-[#a0a0b0] text-xs space-y-0.5">
+                            <div>By: <span className="text-white font-bold">{m.creatorName ?? "Unknown"}</span></div>
+                            <div>Prize Pool: <span className="text-[#ffd700] font-bold">৳{Number(m.prizePool).toLocaleString()}</span> · Entry Fee: <span className="text-[#00ff88] font-bold">৳{Number(m.entryFee).toLocaleString()}</span> · Slots: <span className="text-white font-bold">{m.filledSlots}/{m.maxSlots}</span></div>
+                            <div>Scheduled: <span className="text-white">{new Date(m.scheduledAt).toLocaleString()}</span></div>
+                            {m.description && <div className="text-[#a0a0b0] mt-1 italic">"{m.description}"</div>}
+                            {m.adminNote && <div className="text-[#ff2244] mt-1">Note: {m.adminNote}</div>}
+                          </div>
+                        </div>
+                        {m.status === "pending_approval" && (
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={async () => {
+                                const res = await apiFetch(`/admin/user-matches/${m.id}/approve`, { method: "PATCH" });
+                                if (res.ok) { toast({ title: "Match approved!" }); loadUserMatches(); }
+                                else { const d = await safeJson(res); toast({ title: "Error", description: d.error, variant: "destructive" }); }
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] text-xs font-bold rounded-lg hover:bg-[#00ff88]/20 transition-colors"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" /> Approve
+                            </button>
+                            <button
+                              onClick={() => { setRejectingMatch(m.id); setRejectNote(""); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors"
+                            >
+                              <XCircle className="w-3.5 h-3.5" /> Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Reject note form */}
+                      {rejectingMatch === m.id && (
+                        <div className="mt-3 pt-3 border-t border-[#ff2244]/10">
+                          <input
+                            type="text"
+                            value={rejectNote}
+                            onChange={(e) => setRejectNote(e.target.value)}
+                            placeholder="Optional rejection reason..."
+                            className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff2244] mb-2"
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                const res = await apiFetch(`/admin/user-matches/${m.id}/reject`, {
+                                  method: "PATCH",
+                                  body: JSON.stringify({ adminNote: rejectNote }),
+                                });
+                                if (res.ok) { toast({ title: "Match rejected" }); setRejectingMatch(null); loadUserMatches(); }
+                                else { const d = await safeJson(res); toast({ title: "Error", description: d.error, variant: "destructive" }); }
+                              }}
+                              className="px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors"
+                            >
+                              Confirm Reject
+                            </button>
+                            <button onClick={() => setRejectingMatch(null)} className="px-3 py-1.5 text-[#a0a0b0] text-xs font-bold rounded-lg hover:text-white transition-colors">Cancel</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === "maintenance" && (
