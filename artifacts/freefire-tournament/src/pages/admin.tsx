@@ -4,7 +4,7 @@ import {
   Users, Trophy, Shield, Clock, DollarSign, CheckCircle, XCircle, Bell,
   Plus, Trash2, Edit, LogOut, BarChart3, Megaphone, Swords, CreditCard,
   ArrowDownCircle, ArrowUpCircle, Eye, EyeOff, RefreshCw, Home,
-  Crown, Shuffle, X as XIcon, Tag, BookOpen, Key, Radio, Lock, Settings, Copy
+  Crown, Shuffle, X as XIcon, Tag, BookOpen, Key, Radio, Lock, Settings, Copy, MessageCircle, Send, Headphones
 } from "lucide-react";
 import { isAdminAuthenticated, clearAdminSession, adminFetch } from "@/lib/adminAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +21,7 @@ async function safeJson(res: Response): Promise<any> {
   }
 }
 
-type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings" | "maintenance";
+type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings" | "maintenance" | "support";
 
 const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
@@ -36,6 +36,7 @@ const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "promo-codes", label: "Promo Codes", icon: Tag },
   { id: "payment-settings", label: "Payment Settings", icon: Settings },
   { id: "maintenance", label: "Maintenance", icon: Lock },
+  { id: "support", label: "Support", icon: MessageCircle },
 ];
 
 export default function AdminPage() {
@@ -1653,6 +1654,10 @@ export default function AdminPage() {
           )}
 
           {/* MAINTENANCE */}
+          {activeTab === "support" && (
+            <SupportAdminTab apiFetch={apiFetch} toast={toast} />
+          )}
+
           {activeTab === "maintenance" && (
             <div className="max-w-xl">
               <div className="mb-6">
@@ -2204,6 +2209,488 @@ function PaymentSettingsTab({ apiFetch, toast }: { apiFetch: any; toast: any }) 
               className="px-6 py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
             >
               {saving ? "Saving..." : "Save Payment Numbers"}
+            </button>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const TICKET_CATEGORY_LABELS: Record<string, string> = {
+  payment_issue: "Payment Issue",
+  tournament_issue: "Tournament Issue",
+  match_issue: "Match Issue",
+  account_issue: "Account Issue",
+  technical_issue: "Technical Issue",
+  other: "Other",
+};
+
+const TICKET_STATUS_CFG: Record<string, { label: string; cls: string }> = {
+  open: { label: "Open", cls: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30" },
+  in_progress: { label: "In Progress", cls: "text-[#ff6b00] bg-[#ff6b00]/10 border-[#ff6b00]/30" },
+  resolved: { label: "Resolved", cls: "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30" },
+  closed: { label: "Closed", cls: "text-[#a0a0b0] bg-[#a0a0b0]/10 border-[#a0a0b0]/30" },
+};
+
+function TicketStatusBadge({ status }: { status: string }) {
+  const cfg = TICKET_STATUS_CFG[status] ?? TICKET_STATUS_CFG.open;
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-bold uppercase ${cfg.cls}`}>{cfg.label}</span>;
+}
+
+function ticketTimeAgo(dateStr: string) {
+  const ms = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function SupportAdminTab({ apiFetch, toast }: { apiFetch: any; toast: any }) {
+  const [activeView, setActiveView] = useState<"tickets" | "settings">("tickets");
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <Headphones className="w-5 h-5 text-[#ff6b00]" />
+          <h1 className="text-2xl font-black uppercase">Support <span className="text-[#ff6b00]">Dashboard</span></h1>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveView("tickets")}
+            className={`px-4 py-2 rounded-xl text-sm font-bold uppercase transition-colors ${activeView === "tickets" ? "bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/30" : "text-[#a0a0b0] hover:text-white"}`}
+          >
+            Tickets
+          </button>
+          <button
+            onClick={() => setActiveView("settings")}
+            className={`px-4 py-2 rounded-xl text-sm font-bold uppercase transition-colors ${activeView === "settings" ? "bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/30" : "text-[#a0a0b0] hover:text-white"}`}
+          >
+            Settings
+          </button>
+        </div>
+      </div>
+
+      {activeView === "tickets" ? (
+        <SupportTicketsView apiFetch={apiFetch} toast={toast} />
+      ) : (
+        <SupportSettingsView apiFetch={apiFetch} toast={toast} />
+      )}
+    </div>
+  );
+}
+
+function SupportTicketsView({ apiFetch, toast }: { apiFetch: any; toast: any }) {
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTicket, setSelectedTicket] = useState<any>(null);
+  const [loadingTicket, setLoadingTicket] = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [sendingReply, setSendingReply] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const loadTickets = async () => {
+    setLoading(true);
+    try {
+      const res = await apiFetch("/admin/support/tickets");
+      if (res.ok) setTickets(await res.json());
+    } catch {}
+    finally { setLoading(false); }
+  };
+
+  const openTicket = async (id: number) => {
+    setLoadingTicket(true);
+    try {
+      const res = await apiFetch(`/admin/support/tickets/${id}`);
+      if (res.ok) setSelectedTicket(await res.json());
+    } catch {}
+    finally { setLoadingTicket(false); }
+  };
+
+  const sendReply = async () => {
+    if (!replyText.trim() || !selectedTicket) return;
+    setSendingReply(true);
+    try {
+      const res = await apiFetch(`/admin/support/tickets/${selectedTicket.id}/replies`, {
+        method: "POST",
+        body: JSON.stringify({ message: replyText }),
+      });
+      if (res.ok) {
+        setReplyText("");
+        await openTicket(selectedTicket.id);
+        loadTickets();
+        toast({ title: "Reply sent", description: "User has been notified." });
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error ?? "Failed", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally { setSendingReply(false); }
+  };
+
+  const changeStatus = async (id: number, status: string) => {
+    try {
+      const res = await apiFetch(`/admin/support/tickets/${id}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        toast({ title: "Status updated" });
+        if (selectedTicket?.id === id) {
+          setSelectedTicket((t: any) => t ? { ...t, status } : t);
+        }
+        loadTickets();
+      }
+    } catch {}
+  };
+
+  const deleteTicket = async (id: number) => {
+    if (!confirm("Delete this ticket permanently? This cannot be undone.")) return;
+    try {
+      const res = await apiFetch(`/admin/support/tickets/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast({ title: "Ticket deleted" });
+        setSelectedTicket(null);
+        loadTickets();
+      }
+    } catch {}
+  };
+
+  useEffect(() => { loadTickets(); }, []);
+
+  const filtered = statusFilter === "all" ? tickets : tickets.filter((t) => t.status === statusFilter);
+
+  if (selectedTicket) {
+    return (
+      <div>
+        <button onClick={() => setSelectedTicket(null)} className="flex items-center gap-2 text-[#a0a0b0] hover:text-white text-sm mb-5 transition-colors">
+          ← Back to All Tickets
+        </button>
+
+        <div className="grid lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2 space-y-4">
+            <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-5">
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div>
+                  <h2 className="font-black text-white text-lg">{selectedTicket.subject}</h2>
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    <TicketStatusBadge status={selectedTicket.status} />
+                    <span className="text-[#4a4a5a] text-xs">{TICKET_CATEGORY_LABELS[selectedTicket.category] ?? selectedTicket.category}</span>
+                    <span className="text-[#4a4a5a] text-xs">#{selectedTicket.id}</span>
+                  </div>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => deleteTicket(selectedTicket.id)} className="p-1.5 bg-[#ff2244]/10 border border-[#ff2244]/20 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-[#229ED9]/20 flex items-center justify-center shrink-0 text-xs font-black text-[#229ED9]">U</div>
+                  <div className="flex-1 bg-[#0a0a0f] rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-white text-xs font-bold">
+                        {selectedTicket.user?.displayName ?? selectedTicket.user?.username ?? "User"}
+                        {selectedTicket.user?.email && <span className="text-[#4a4a5a] font-normal ml-2">{selectedTicket.user.email}</span>}
+                      </span>
+                      <span className="text-[#4a4a5a] text-xs">{ticketTimeAgo(selectedTicket.createdAt)}</span>
+                    </div>
+                    <p className="text-[#a0a0b0] text-sm leading-relaxed whitespace-pre-wrap">{selectedTicket.message}</p>
+                    {selectedTicket.screenshotUrl && (
+                      <img src={selectedTicket.screenshotUrl} alt="screenshot" className="mt-3 rounded-lg max-w-xs max-h-48 object-contain" />
+                    )}
+                  </div>
+                </div>
+
+                {(selectedTicket.replies ?? []).map((reply: any) => (
+                  <div key={reply.id} className={`flex gap-3 ${reply.isAdmin ? "flex-row-reverse" : ""}`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black ${reply.isAdmin ? "bg-[#ff6b00]/20 text-[#ff6b00]" : "bg-[#229ED9]/20 text-[#229ED9]"}`}>
+                      {reply.isAdmin ? "A" : "U"}
+                    </div>
+                    <div className={`flex-1 rounded-xl p-3 ${reply.isAdmin ? "bg-[#ff6b00]/8 border border-[#ff6b00]/15" : "bg-[#0a0a0f]"}`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`text-xs font-bold ${reply.isAdmin ? "text-[#ff6b00]" : "text-white"}`}>
+                          {reply.isAdmin ? "Support Team (Admin)" : (selectedTicket.user?.displayName ?? selectedTicket.user?.username ?? "User")}
+                        </span>
+                        <span className="text-[#4a4a5a] text-xs">{ticketTimeAgo(reply.createdAt)}</span>
+                      </div>
+                      <p className="text-[#a0a0b0] text-sm leading-relaxed whitespace-pre-wrap">{reply.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {selectedTicket.status !== "closed" && (
+              <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-4">
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold">Admin Reply</label>
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  rows={3}
+                  placeholder="Write your reply to the user..."
+                  className="admin-input resize-none mb-3"
+                />
+                <button
+                  onClick={sendReply}
+                  disabled={sendingReply || !replyText.trim()}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
+                >
+                  <Send className="w-4 h-4" />
+                  {sendingReply ? "Sending..." : "Send Reply & Notify User"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-4">
+              <h3 className="text-xs font-black uppercase tracking-widest text-[#a0a0b0] mb-3">Change Status</h3>
+              <div className="space-y-2">
+                {Object.entries(TICKET_STATUS_CFG).map(([status, cfg]) => (
+                  <button
+                    key={status}
+                    onClick={() => changeStatus(selectedTicket.id, status)}
+                    disabled={selectedTicket.status === status}
+                    className={`w-full px-3 py-2 rounded-xl text-xs font-bold uppercase border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${cfg.cls}`}
+                  >
+                    {selectedTicket.status === status ? `● ${cfg.label} (Current)` : cfg.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-4">
+              <h3 className="text-xs font-black uppercase tracking-widest text-[#a0a0b0] mb-3">Ticket Info</h3>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-[#a0a0b0]">Ticket ID</span>
+                  <span className="text-white font-mono">#{selectedTicket.id}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#a0a0b0]">Category</span>
+                  <span className="text-white">{TICKET_CATEGORY_LABELS[selectedTicket.category]}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#a0a0b0]">Replies</span>
+                  <span className="text-white">{(selectedTicket.replies ?? []).length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#a0a0b0]">Created</span>
+                  <span className="text-white">{new Date(selectedTicket.createdAt).toLocaleDateString()}</span>
+                </div>
+                {selectedTicket.user?.email && (
+                  <div className="flex justify-between">
+                    <span className="text-[#a0a0b0]">User Email</span>
+                    <span className="text-white truncate max-w-[120px]">{selectedTicket.user.email}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex gap-2 flex-wrap">
+          {["all", "open", "in_progress", "resolved", "closed"].map((f) => (
+            <button
+              key={f}
+              onClick={() => setStatusFilter(f)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-colors ${statusFilter === f ? "bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/30" : "text-[#a0a0b0] hover:text-white border border-transparent"}`}
+            >
+              {f === "all" ? "All" : TICKET_STATUS_CFG[f]?.label ?? f}
+              {f === "all" ? ` (${tickets.length})` : ` (${tickets.filter((t) => t.status === f).length})`}
+            </button>
+          ))}
+        </div>
+        <button onClick={loadTickets} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+          <RefreshCw className="w-4 h-4" /> Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">{[1,2,3,4].map((i) => <div key={i} className="h-20 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
+      ) : filtered.length === 0 ? (
+        <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/10 p-14 text-center">
+          <MessageCircle className="w-12 h-12 text-[#a0a0b0] mx-auto mb-3 opacity-20" />
+          <p className="text-[#a0a0b0]">{statusFilter === "all" ? "No support tickets yet." : `No ${TICKET_STATUS_CFG[statusFilter]?.label.toLowerCase()} tickets.`}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map((ticket: any) => (
+            <div
+              key={ticket.id}
+              onClick={() => openTicket(ticket.id)}
+              className="bg-[#12121a] border border-[#ff6b00]/10 hover:border-[#ff6b00]/30 rounded-xl p-4 cursor-pointer transition-colors flex items-center gap-4"
+            >
+              <div className="w-10 h-10 rounded-xl bg-[#ff6b00]/10 flex items-center justify-center shrink-0">
+                <MessageCircle className="w-5 h-5 text-[#ff6b00]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-bold text-white text-sm truncate">{ticket.subject}</span>
+                  <span className="text-[#4a4a5a] text-xs whitespace-nowrap shrink-0">{ticketTimeAgo(ticket.createdAt)}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  <TicketStatusBadge status={ticket.status} />
+                  <span className="text-[#4a4a5a] text-xs">{TICKET_CATEGORY_LABELS[ticket.category] ?? ticket.category}</span>
+                  <span className="text-[#4a4a5a] text-xs">#{ticket.id}</span>
+                  {ticket.user && (
+                    <span className="text-[#4a4a5a] text-xs">· {ticket.user.displayName ?? ticket.user.username ?? ticket.user.email ?? "User"}</span>
+                  )}
+                  {ticket.replyCount > 0 && (
+                    <span className="text-[#4a4a5a] text-xs">· {ticket.replyCount} {ticket.replyCount === 1 ? "reply" : "replies"}</span>
+                  )}
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#4a4a5a] shrink-0" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SupportSettingsView({ apiFetch, toast }: { apiFetch: any; toast: any }) {
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ whatsapp_number: "", telegram_link: "" });
+
+  useEffect(() => {
+    setLoading(true);
+    apiFetch("/support-settings")
+      .then((r: Response) => r.json())
+      .then((d: any) => {
+        if (d?.whatsapp_number) setForm({ whatsapp_number: d.whatsapp_number, telegram_link: d.telegram_link });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.whatsapp_number.trim() || !form.telegram_link.trim()) {
+      toast({ title: "Both fields are required.", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await apiFetch("/admin/support-settings", {
+        method: "PUT",
+        body: JSON.stringify(form),
+      });
+      if (res.ok) {
+        toast({ title: "Support settings updated!", description: "Changes are live immediately." });
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error ?? "Failed to save", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const waHref = form.whatsapp_number ? `https://wa.me/88${form.whatsapp_number.replace(/^0/, "")}` : "#";
+
+  return (
+    <div className="max-w-lg space-y-6">
+      <div className="flex items-center gap-3 mb-2">
+        <MessageCircle className="w-5 h-5 text-[#ff6b00]" />
+        <h2 className="text-white font-black uppercase tracking-wide text-lg">Support Contact Settings</h2>
+      </div>
+      <p className="text-[#a0a0b0] text-sm -mt-3">Update the WhatsApp number and Telegram link shown to all users.</p>
+
+      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/15 p-5">
+        <h3 className="text-white font-black uppercase text-xs tracking-widest mb-4 flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88]" /> Current Live Links
+        </h3>
+        {loading ? (
+          <div className="space-y-3">{[1,2].map(i => <div key={i} className="h-12 bg-[#0a0a0f] rounded-xl animate-pulse" />)}</div>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-xl border border-[#00ff88]/20 bg-[#00ff88]/5 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <MessageCircle className="w-4 h-4 text-[#00ff88]" />
+                <span className="font-black text-xs uppercase text-[#00ff88] tracking-wider">WhatsApp</span>
+              </div>
+              <a href={waHref} target="_blank" rel="noopener noreferrer" className="font-mono font-bold text-white hover:text-[#00ff88] text-sm">
+                {form.whatsapp_number || "—"}
+              </a>
+            </div>
+            <div className="flex items-center justify-between rounded-xl border border-[#229ED9]/20 bg-[#229ED9]/5 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <Send className="w-4 h-4 text-[#229ED9]" />
+                <span className="font-black text-xs uppercase text-[#229ED9] tracking-wider">Telegram</span>
+              </div>
+              <a href={form.telegram_link} target="_blank" rel="noopener noreferrer" className="font-bold text-white hover:text-[#229ED9] text-sm truncate max-w-[180px]">
+                {form.telegram_link || "—"}
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/15 p-5">
+        <h3 className="text-white font-black uppercase text-xs tracking-widest mb-5 flex items-center gap-2">
+          <Edit className="w-3.5 h-3.5 text-[#ff6b00]" /> Update Support Contacts
+        </h3>
+        {loading ? (
+          <div className="space-y-4">{[1,2].map(i => <div key={i} className="h-16 bg-[#0a0a0f] rounded-xl animate-pulse" />)}</div>
+        ) : (
+          <form onSubmit={handleSave} className="space-y-4">
+            <div>
+              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
+                <span className="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#00ff88]" />
+                WhatsApp Number *
+              </label>
+              <input
+                type="text"
+                value={form.whatsapp_number}
+                onChange={(e) => setForm({ ...form, whatsapp_number: e.target.value })}
+                required
+                placeholder="01768177772"
+                className="admin-input font-mono"
+              />
+              <p className="text-[#4a4a5a] text-xs mt-1">Enter the number without country code (e.g. 01768177772)</p>
+            </div>
+            <div>
+              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
+                <span className="inline-block w-2 h-2 rounded-full mr-1.5 bg-[#229ED9]" />
+                Telegram Link *
+              </label>
+              <input
+                type="url"
+                value={form.telegram_link}
+                onChange={(e) => setForm({ ...form, telegram_link: e.target.value })}
+                required
+                placeholder="https://t.me/ayman990"
+                className="admin-input"
+              />
+            </div>
+            <div className="bg-yellow-500/8 border border-yellow-500/20 rounded-xl px-4 py-3 flex items-start gap-2">
+              <Shield className="w-4 h-4 text-yellow-400 shrink-0 mt-0.5" />
+              <p className="text-yellow-400 text-xs">These contacts are shown to all users on the Support page, Contact page, and Footer. Only admins can update them.</p>
+            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-6 py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
+            >
+              {saving ? "Saving..." : "Save Support Settings"}
             </button>
           </form>
         )}

@@ -31,6 +31,8 @@ import ForgotPasswordPage from "@/pages/forgot-password";
 import WalletPage from "@/pages/wallet";
 import ProfilePage from "@/pages/profile";
 import ReferralPage from "@/pages/referral";
+import SupportPage from "@/pages/support";
+import MyTicketsPage from "@/pages/my-tickets";
 import NotFound from "@/pages/not-found";
 import MaintenancePage from "@/pages/maintenance";
 
@@ -94,6 +96,10 @@ function App() {
                   </Route>
                   <Route path="/referral">
                     {() => <UserRoute component={ReferralPage} />}
+                  </Route>
+                  <Route path="/support" component={SupportPage} />
+                  <Route path="/my-tickets">
+                    {() => <UserRoute component={MyTicketsPage} />}
                   </Route>
 
                   {/* Admin-only route */}
