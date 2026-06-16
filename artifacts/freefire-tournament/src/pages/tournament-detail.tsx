@@ -771,15 +771,13 @@ export default function TournamentDetailPage() {
                 </div>
               )}
 
-              {/* Game Rules Button */}
-              {rules.length > 0 && (
-                <button
-                  onClick={() => setShowRulesModal(true)}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase text-sm rounded-xl hover:text-white hover:border-[#ff6b00]/30 transition-all"
-                >
-                  <BookOpen className="w-4 h-4" /> Game Rules
-                </button>
-              )}
+              {/* Game Rules Button — always visible */}
+              <button
+                onClick={() => setShowRulesModal(true)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase text-sm rounded-xl hover:text-white hover:border-[#ff6b00]/30 transition-all"
+              >
+                <BookOpen className="w-4 h-4" /> Game Rules
+              </button>
 
               <div className="border-t border-[#2a2a36] pt-3">
                 {!user && !authLoading && (

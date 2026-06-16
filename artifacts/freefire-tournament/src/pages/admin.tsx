@@ -68,8 +68,9 @@ export default function AdminPage() {
   const [showTForm, setShowTForm] = useState(false);
 
   // Announcement form
-  const [annForm, setAnnForm] = useState({ title: "", content: "", type: "info" });
+  const [annForm, setAnnForm] = useState({ title: "", content: "", type: "info", displayMode: "banner", isPinned: false, isActive: true, expiresAt: "" });
   const [showAnnForm, setShowAnnForm] = useState(false);
+  const [editingAnn, setEditingAnn] = useState<any>(null);
 
   // Match form
   const [matchForm, setMatchForm] = useState({ matchNumber: "", scheduledAt: "", mapName: "", roomId: "", roomPassword: "", roomReleaseMinutes: "10" });
@@ -133,7 +134,7 @@ export default function AdminPage() {
 
   const loadAnnouncements = useCallback(async () => {
     try {
-      const res = await apiFetch("/announcements");
+      const res = await apiFetch("/announcements/all");
       if (res.ok) setAnnouncements(await res.json());
     } catch {}
   }, [apiFetch]);
@@ -293,18 +294,55 @@ export default function AdminPage() {
   };
 
   // Announcement actions
-  const createAnnouncement = async (e: React.FormEvent) => {
+  const emptyAnnForm = { title: "", content: "", type: "info", displayMode: "banner", isPinned: false, isActive: true, expiresAt: "" };
+
+  const saveAnnouncement = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await apiFetch("/announcements", {
-      method: "POST",
-      body: JSON.stringify(annForm),
+    const payload = {
+      title: annForm.title,
+      content: annForm.content,
+      type: annForm.type,
+      displayMode: annForm.displayMode,
+      isPinned: annForm.isPinned,
+      isActive: annForm.isActive,
+      expiresAt: annForm.expiresAt || null,
+    };
+    const isEdit = !!editingAnn;
+    const res = await apiFetch(isEdit ? `/announcements/${editingAnn.id}` : "/announcements", {
+      method: isEdit ? "PUT" : "POST",
+      body: JSON.stringify(payload),
     });
     if (res.ok) {
-      toast({ title: "Announcement posted" });
-      setAnnForm({ title: "", content: "", type: "info" });
-      setShowAnnForm(false); loadAnnouncements();
+      toast({ title: isEdit ? "Announcement updated" : "Announcement posted" });
+      setAnnForm(emptyAnnForm);
+      setShowAnnForm(false);
+      setEditingAnn(null);
+      loadAnnouncements();
+    } else {
+      const d = await safeJson(res);
+      toast({ title: "Error", description: d.error ?? "Failed", variant: "destructive" });
     }
   };
+
+  const editAnnouncement = (a: any) => {
+    setEditingAnn(a);
+    setAnnForm({
+      title: a.title,
+      content: a.content,
+      type: a.type,
+      displayMode: a.displayMode ?? "banner",
+      isPinned: a.isPinned ?? false,
+      isActive: a.isActive !== false,
+      expiresAt: a.expiresAt ? new Date(a.expiresAt).toISOString().slice(0, 16) : "",
+    });
+    setShowAnnForm(true);
+  };
+
+  const pinAnnouncement = async (id: number) => {
+    const res = await apiFetch(`/announcements/${id}/pin`, { method: "PATCH" });
+    if (res.ok) { toast({ title: "Pin status updated" }); loadAnnouncements(); }
+  };
+
   const deleteAnnouncement = async (id: number) => {
     if (!confirm("Delete this announcement?")) return;
     const res = await apiFetch(`/announcements/${id}`, { method: "DELETE" });
@@ -1497,35 +1535,66 @@ export default function AdminPage() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-black uppercase">Manage <span className="text-[#ff6b00]">Announcements</span></h1>
-                <button onClick={() => setShowAnnForm(true)} className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">
+                <button
+                  onClick={() => { setEditingAnn(null); setAnnForm(emptyAnnForm); setShowAnnForm((v) => !v); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors"
+                >
                   <Plus className="w-4 h-4" /> New Announcement
                 </button>
               </div>
 
               {showAnnForm && (
                 <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-6">
-                  <h2 className="font-black uppercase text-[#ff6b00] mb-4">Post Announcement</h2>
-                  <form onSubmit={createAnnouncement} className="space-y-4">
-                    <div>
-                      <label className="label-sm">Title *</label>
-                      <input value={annForm.title} onChange={(e) => setAnnForm({ ...annForm, title: e.target.value })} required placeholder="Announcement title..." className="admin-input" />
+                  <h2 className="font-black uppercase text-[#ff6b00] mb-4">{editingAnn ? "Edit Announcement" : "Post Announcement"}</h2>
+                  <form onSubmit={saveAnnouncement} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="label-sm">Title *</label>
+                        <input value={annForm.title} onChange={(e) => setAnnForm({ ...annForm, title: e.target.value })} required placeholder="Announcement title..." className="admin-input" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="label-sm">Content *</label>
+                        <textarea value={annForm.content} onChange={(e) => setAnnForm({ ...annForm, content: e.target.value })} required rows={4} placeholder="Write the announcement content here..." className="admin-input resize-none" />
+                      </div>
+                      <div>
+                        <label className="label-sm">Type</label>
+                        <select value={annForm.type} onChange={(e) => setAnnForm({ ...annForm, type: e.target.value })} className="admin-input">
+                          <option value="info">ℹ️ Info (Blue)</option>
+                          <option value="success">✅ Success (Green)</option>
+                          <option value="warning">⚠️ Warning (Yellow)</option>
+                          <option value="urgent">🚨 Urgent (Red)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label-sm">Display Mode</label>
+                        <select value={annForm.displayMode} onChange={(e) => setAnnForm({ ...annForm, displayMode: e.target.value })} className="admin-input">
+                          <option value="banner">🔔 Banner (Homepage feed)</option>
+                          <option value="popup">💬 Popup (Login notification)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="label-sm">Expiry Date <span className="font-normal normal-case text-[#a0a0b0]">(optional)</span></label>
+                        <input type="datetime-local" value={annForm.expiresAt} onChange={(e) => setAnnForm({ ...annForm, expiresAt: e.target.value })} className="admin-input" />
+                      </div>
+                      <div className="flex gap-6 items-center pt-5">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input type="checkbox" checked={annForm.isPinned} onChange={(e) => setAnnForm({ ...annForm, isPinned: e.target.checked })}
+                            className="w-4 h-4 accent-[#ff6b00]" />
+                          <span className="text-sm font-bold text-white">📌 Pin to top</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input type="checkbox" checked={annForm.isActive} onChange={(e) => setAnnForm({ ...annForm, isActive: e.target.checked })}
+                            className="w-4 h-4 accent-[#00ff88]" />
+                          <span className="text-sm font-bold text-white">✅ Active</span>
+                        </label>
+                      </div>
                     </div>
-                    <div>
-                      <label className="label-sm">Content *</label>
-                      <textarea value={annForm.content} onChange={(e) => setAnnForm({ ...annForm, content: e.target.value })} required rows={4} placeholder="Announcement content..." className="admin-input resize-none" />
-                    </div>
-                    <div>
-                      <label className="label-sm">Type</label>
-                      <select value={annForm.type} onChange={(e) => setAnnForm({ ...annForm, type: e.target.value })} className="admin-input">
-                        <option value="info">Info (Blue)</option>
-                        <option value="success">Success (Green)</option>
-                        <option value="warning">Warning (Yellow)</option>
-                        <option value="urgent">Urgent (Red)</option>
-                      </select>
-                    </div>
-                    <div className="flex gap-3">
-                      <button type="submit" className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">Post Announcement</button>
-                      <button type="button" onClick={() => setShowAnnForm(false)} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">Cancel</button>
+                    <div className="flex gap-3 pt-2">
+                      <button type="submit" className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">
+                        {editingAnn ? "Update Announcement" : "Post Announcement"}
+                      </button>
+                      <button type="button" onClick={() => { setShowAnnForm(false); setEditingAnn(null); setAnnForm(emptyAnnForm); }}
+                        className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">Cancel</button>
                     </div>
                   </form>
                 </div>
@@ -1535,26 +1604,44 @@ export default function AdminPage() {
                 {announcements.length === 0 ? (
                   <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
                     <Bell className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                    <p>No announcements yet.</p>
+                    <p>No announcements yet. Click "New Announcement" to create one.</p>
                   </div>
                 ) : announcements.map((a: any) => (
-                  <div key={a.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-white">{a.title}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded border font-bold uppercase ${
-                          a.type === "urgent" ? "text-[#ff2244] border-[#ff2244]/30 bg-[#ff2244]/10" :
-                          a.type === "warning" ? "text-yellow-400 border-yellow-400/30 bg-yellow-400/10" :
-                          a.type === "success" ? "text-[#00ff88] border-[#00ff88]/30 bg-[#00ff88]/10" :
-                          "text-blue-400 border-blue-400/30 bg-blue-400/10"
-                        }`}>{a.type}</span>
+                  <div key={a.id} className={`bg-[#12121a] rounded-xl border p-4 ${a.isPinned ? "border-[#ffd700]/30" : a.isActive ? "border-[#ff6b00]/10" : "border-[#2a2a36] opacity-60"}`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          {a.isPinned && <span className="text-[#ffd700] text-xs">📌</span>}
+                          <span className="font-bold text-white truncate">{a.title}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded border font-bold uppercase shrink-0 ${
+                            a.type === "urgent" ? "text-[#ff2244] border-[#ff2244]/30 bg-[#ff2244]/10" :
+                            a.type === "warning" ? "text-yellow-400 border-yellow-400/30 bg-yellow-400/10" :
+                            a.type === "success" ? "text-[#00ff88] border-[#00ff88]/30 bg-[#00ff88]/10" :
+                            "text-blue-400 border-blue-400/30 bg-blue-400/10"
+                          }`}>{a.type}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded border font-bold uppercase shrink-0 ${
+                            a.displayMode === "popup" ? "text-purple-400 border-purple-400/30 bg-purple-400/10" : "text-[#a0a0b0] border-[#2a2a36] bg-[#1a1a24]"
+                          }`}>{a.displayMode ?? "banner"}</span>
+                          {!a.isActive && <span className="text-xs px-2 py-0.5 rounded border font-bold uppercase text-[#a0a0b0] border-[#2a2a36] bg-[#1a1a24]">Inactive</span>}
+                        </div>
+                        <p className="text-[#a0a0b0] text-sm line-clamp-2">{a.content}</p>
+                        <div className="flex flex-wrap gap-3 mt-1 text-xs text-[#a0a0b0]">
+                          <span>{new Date(a.createdAt).toLocaleString()}</span>
+                          {a.expiresAt && <span>Expires: {new Date(a.expiresAt).toLocaleString()}</span>}
+                        </div>
                       </div>
-                      <p className="text-[#a0a0b0] text-sm">{a.content}</p>
-                      <p className="text-[#a0a0b0] text-xs mt-1">{new Date(a.createdAt).toLocaleString()}</p>
+                      <div className="flex gap-1.5 shrink-0">
+                        <button onClick={() => pinAnnouncement(a.id)} title={a.isPinned ? "Unpin" : "Pin"} className={`p-2 rounded-lg border transition-colors ${a.isPinned ? "bg-[#ffd700]/20 border-[#ffd700]/30 text-[#ffd700]" : "bg-[#1a1a24] border-[#2a2a36] text-[#a0a0b0] hover:text-[#ffd700]"}`}>
+                          📌
+                        </button>
+                        <button onClick={() => editAnnouncement(a)} title="Edit" className="p-2 bg-[#1a1a24] border border-[#2a2a36] rounded-lg text-[#a0a0b0] hover:text-[#ff6b00] hover:border-[#ff6b00]/30 transition-colors">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => deleteAnnouncement(a.id)} title="Delete" className="p-2 bg-[#ff2244]/10 border border-[#ff2244]/20 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                    <button onClick={() => deleteAnnouncement(a.id)} className="p-2 bg-[#ff2244]/10 border border-[#ff2244]/20 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors shrink-0">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
                 ))}
               </div>

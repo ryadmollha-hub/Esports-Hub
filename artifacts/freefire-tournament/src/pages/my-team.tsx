@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
+import { useAuthContext } from "@/lib/AuthContext";
 import { useLocation } from "wouter";
-import { Shield, Users, Crown, Check, X, Plus, LogOut, Trash2, Edit2 } from "lucide-react";
+import { Shield, Users, Crown, Check, X, LogOut, Trash2, Edit2, UserMinus, Save } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod/v4";
@@ -24,18 +25,28 @@ const createSchema = z.object({
   maxMembers: z.coerce.number().min(2).max(10).default(4),
 });
 
+const editSchema = z.object({
+  name: z.string().min(2, "Team name must be at least 2 characters"),
+  tag: z.string().max(6, "Tag max 6 characters").optional(),
+  logoUrl: z.string().optional(),
+  maxMembers: z.coerce.number().min(2).max(10),
+});
+
 type CreateForm = z.infer<typeof createSchema>;
+type EditForm = z.infer<typeof editSchema>;
 
 export default function MyTeamPage() {
   const { isSignedIn, isLoaded } = useAuth();
+  const { user } = useAuthContext();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [leavingTeam, setLeavingTeam] = useState(false);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [deletingTeam, setDeletingTeam] = useState(false);
-  const [showJoinForm, setShowJoinForm] = useState(false);
-  const [joinFormData, setJoinFormData] = useState({ teamId: 0, freefireUid: "", playerName: "" });
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [kickingId, setKickingId] = useState<number | null>(null);
 
   const token = typeof window !== "undefined" ? localStorage.getItem("ff_auth_token") : null;
 
@@ -63,6 +74,26 @@ export default function MyTeamPage() {
     defaultValues: { name: "", tag: "", freefireUid: "", playerName: "", maxMembers: 4 },
   });
 
+  const editForm = useForm<EditForm>({
+    resolver: zodResolver(editSchema),
+    defaultValues: { name: team?.name ?? "", tag: team?.tag ?? "", logoUrl: team?.logoUrl ?? "", maxMembers: team?.maxMembers ?? 4 },
+  });
+
+  useEffect(() => {
+    if (team && showEditForm) {
+      editForm.reset({
+        name: team.name ?? "",
+        tag: team.tag ?? "",
+        logoUrl: team.logoUrl ?? "",
+        maxMembers: team.maxMembers ?? 4,
+      });
+    }
+  }, [team, showEditForm]);
+
+  // Determine if the current logged-in user is the team captain
+  const isCaptain = !!user && !!team && team.captainId === user.userId;
+  const activeMembers = team?.members?.filter((m: any) => m.status === "active") ?? [];
+
   const onCreateTeam = (data: CreateForm) => {
     createTeam.mutate(
       { data: { name: data.name, tag: data.tag, freefireUid: data.freefireUid, playerName: data.playerName, maxMembers: data.maxMembers } as any },
@@ -76,6 +107,26 @@ export default function MyTeamPage() {
         },
       }
     );
+  };
+
+  const onEditTeam = async (data: EditForm) => {
+    if (!token || !team) return;
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`${BASE}/api/teams/${team.id}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: data.name, tag: data.tag || null, logoUrl: data.logoUrl || null, maxMembers: data.maxMembers }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Failed to update team");
+      toast({ title: "Team updated!" });
+      setShowEditForm(false);
+      qc.invalidateQueries({ queryKey: getGetMyTeamQueryKey() });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+    setSavingEdit(false);
   };
 
   const handleApprove = (teamId: number, memberId: number) => {
@@ -112,6 +163,25 @@ export default function MyTeamPage() {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     }
     setRejectingId(null);
+  };
+
+  const handleKickMember = async (memberId: number, playerName: string) => {
+    if (!token || !team) return;
+    if (!confirm(`Remove ${playerName} from the team?`)) return;
+    setKickingId(memberId);
+    try {
+      const res = await fetch(`${BASE}/api/teams/${team.id}/members/${memberId}/reject`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error ?? "Failed to remove member");
+      toast({ title: "Member removed from team." });
+      qc.invalidateQueries({ queryKey: getGetMyTeamQueryKey() });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+    setKickingId(null);
   };
 
   const handleLeaveTeam = async () => {
@@ -162,9 +232,6 @@ export default function MyTeamPage() {
       </div>
     );
   }
-
-  const isCaptain = team && team.captainId === team?.members?.find((m: any) => m.status === "active" && m.role === "captain")?.userId;
-  const activeMembers = team?.members?.filter((m: any) => m.status === "active") ?? [];
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -253,7 +320,16 @@ export default function MyTeamPage() {
 
               {/* Captain actions */}
               <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-[#ff6b00]/10">
-                {team.captainId && (
+                {isCaptain && (
+                  <button
+                    onClick={() => setShowEditForm((v) => !v)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] rounded-lg text-xs font-bold uppercase hover:bg-[#ff6b00]/20 transition-colors"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    Edit Team
+                  </button>
+                )}
+                {isCaptain && (
                   <button
                     onClick={handleDeleteTeam}
                     disabled={deletingTeam}
@@ -263,7 +339,7 @@ export default function MyTeamPage() {
                     {deletingTeam ? "Deleting..." : "Delete Team"}
                   </button>
                 )}
-                {!team.captainId && (
+                {!isCaptain && (
                   <button
                     onClick={handleLeaveTeam}
                     disabled={leavingTeam}
@@ -274,6 +350,52 @@ export default function MyTeamPage() {
                   </button>
                 )}
               </div>
+
+              {/* Edit Team Form */}
+              {showEditForm && isCaptain && (
+                <form onSubmit={editForm.handleSubmit(onEditTeam)} className="mt-4 pt-4 border-t border-[#ff6b00]/10 space-y-3">
+                  <h3 className="text-sm font-black uppercase text-[#ff6b00] mb-3">Edit Team Details</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wide text-[#a0a0b0] mb-1">Team Name</label>
+                      <input {...editForm.register("name")}
+                        className="w-full px-3 py-2.5 bg-[#1a1a24] border border-[#2a2a36] rounded-lg text-white text-sm placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors" />
+                      {editForm.formState.errors.name && <p className="text-[#ff2244] text-xs mt-1">{editForm.formState.errors.name.message}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wide text-[#a0a0b0] mb-1">Tag</label>
+                      <input {...editForm.register("tag")} placeholder="e.g. FIRE"
+                        className="w-full px-3 py-2.5 bg-[#1a1a24] border border-[#2a2a36] rounded-lg text-white text-sm placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors font-mono" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wide text-[#a0a0b0] mb-1">Logo URL <span className="font-normal normal-case">(optional)</span></label>
+                    <input {...editForm.register("logoUrl")} placeholder="https://..."
+                      className="w-full px-3 py-2.5 bg-[#1a1a24] border border-[#2a2a36] rounded-lg text-white text-sm placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wide text-[#a0a0b0] mb-1">Max Members</label>
+                    <select {...editForm.register("maxMembers")}
+                      className="w-full px-3 py-2.5 bg-[#1a1a24] border border-[#2a2a36] rounded-lg text-white text-sm focus:outline-none focus:border-[#ff6b00] transition-colors">
+                      <option value={2}>2 (Duo)</option>
+                      <option value={4}>4 (Squad)</option>
+                      <option value={6}>6</option>
+                      <option value={10}>10</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={savingEdit}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-lg hover:bg-[#e66000] disabled:opacity-50 transition-all">
+                      <Save className="w-3.5 h-3.5" />
+                      {savingEdit ? "Saving..." : "Save Changes"}
+                    </button>
+                    <button type="button" onClick={() => setShowEditForm(false)}
+                      className="px-4 py-2 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-lg hover:text-white transition-colors">
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
 
             {/* Members */}
@@ -294,6 +416,17 @@ export default function MyTeamPage() {
                     <span className={`text-xs font-bold uppercase px-2 py-0.5 rounded ${member.role === "captain" ? "text-[#ffd700] bg-[#ffd700]/10" : "text-[#a0a0b0] bg-[#1a1a24]"}`}>
                       {member.role}
                     </span>
+                    {/* Captain can remove non-captain members */}
+                    {isCaptain && member.role !== "captain" && (
+                      <button
+                        onClick={() => handleKickMember(member.id, member.playerName ?? member.userId)}
+                        disabled={kickingId === member.id}
+                        title="Remove from team"
+                        className="p-1.5 bg-[#ff2244]/10 border border-[#ff2244]/20 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors disabled:opacity-50"
+                      >
+                        <UserMinus className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 ))}
                 {activeMembers.length === 0 && (
@@ -302,8 +435,8 @@ export default function MyTeamPage() {
               </div>
             </div>
 
-            {/* Join Requests */}
-            {(joinRequests as any[]).length > 0 && (
+            {/* Join Requests (captain only) */}
+            {isCaptain && (joinRequests as any[]).length > 0 && (
               <div className="bg-[#12121a] rounded-2xl border border-yellow-400/20 p-6">
                 <h3 className="font-black uppercase text-sm text-yellow-400 mb-4 tracking-wider">
                   Pending Join Requests ({(joinRequests as any[]).length})

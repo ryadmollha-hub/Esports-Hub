@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/lib/ThemeContext";
 import { UserRoute, AdminRoute } from "@/components/ProtectedRoute";
 import BottomNav from "@/components/BottomNav";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
+import AnnouncementPopup from "@/components/AnnouncementPopup";
 import { useMaintenanceMode } from "@/lib/useMaintenanceMode";
 import { isAdminAuthenticated } from "@/lib/adminAuth";
 
@@ -112,6 +113,7 @@ function App() {
 
                 <BottomNav />
                 <PwaInstallBanner />
+                <AnnouncementPopup />
               </MaintenanceGuard>
             </WouterRouter>
             <Toaster />
