@@ -102,7 +102,7 @@ export default function ReferralPage() {
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 pt-16 pb-20">
-        <h1 className="text-4xl font-black uppercase mb-2">
+        <h1 className="text-2xl sm:text-4xl font-black uppercase mb-2">
           Referral <span className="text-[#ff6b00]">Program</span>
         </h1>
         <p className="text-[#a0a0b0] mb-8">Invite friends and earn ৳50 for every successful referral</p>

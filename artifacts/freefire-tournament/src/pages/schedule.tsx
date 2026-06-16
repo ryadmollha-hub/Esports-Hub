@@ -27,7 +27,7 @@ export default function SchedulePage() {
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 pt-16 pb-20">
         <div className="mb-8">
-          <h1 className="text-4xl font-black uppercase mb-1" data-testid="heading-schedule">
+          <h1 className="text-2xl sm:text-4xl font-black uppercase mb-1" data-testid="heading-schedule">
             Match <span className="text-[#ff6b00]">Schedule</span>
           </h1>
           <p className="text-[#a0a0b0] text-sm">Upcoming and completed matches with full results</p>

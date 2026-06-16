@@ -26,7 +26,7 @@ export default function PrizesPage() {
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
       <div className="max-w-4xl mx-auto px-4 pt-16 pb-16">
-        <h1 className="text-4xl font-black uppercase mb-2" data-testid="heading-prizes">
+        <h1 className="text-2xl sm:text-4xl font-black uppercase mb-2" data-testid="heading-prizes">
           Prize <span className="text-[#ff6b00]">Pool</span>
         </h1>
         <p className="text-[#a0a0b0] mb-8">Win big — claim your share of the prize pool</p>
@@ -36,7 +36,7 @@ export default function PrizesPage() {
             value={tournamentId ?? ""}
             onChange={(e) => setSelectedId(e.target.value ? parseInt(e.target.value) : null)}
             data-testid="select-tournament-prizes"
-            className="mb-10 px-4 py-3 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors"
+            className="w-full mb-10 px-4 py-3 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors"
           >
             {tournaments.map((t: any) => (
               <option key={t.id} value={t.id}>{t.name}</option>
@@ -60,7 +60,7 @@ export default function PrizesPage() {
               <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1559827260-dc66d52bef19?q=80&w=2070')] bg-cover bg-center opacity-5" />
               <Trophy className="w-12 h-12 mx-auto text-[#ffd700] mb-3" />
               <p className="text-[#a0a0b0] uppercase text-sm tracking-wider mb-1">Total Prize Pool</p>
-              <p className="text-5xl font-black text-[#ffd700] [text-shadow:0_0_30px_rgba(255,215,0,0.4)]" data-testid="text-total-prize">
+              <p className="text-3xl sm:text-5xl font-black text-[#ffd700] [text-shadow:0_0_30px_rgba(255,215,0,0.4)]" data-testid="text-total-prize">
                 ৳{Number(t.prizePool).toLocaleString()}
               </p>
               <p className="text-[#a0a0b0] mt-3">{t.name}</p>

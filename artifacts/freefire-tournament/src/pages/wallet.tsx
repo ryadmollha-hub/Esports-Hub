@@ -231,7 +231,7 @@ export default function WalletPage() {
             {loadingBalance ? (
               <div className="h-9 w-36 bg-[#1a1a24] rounded-xl animate-pulse mb-0.5" />
             ) : (
-              <div className="text-4xl font-black text-white mb-0.5 tracking-tight">
+              <div className="text-3xl sm:text-4xl font-black text-white mb-0.5 tracking-tight">
                 ৳{Number(balance?.balance ?? 0).toLocaleString("en-BD", { minimumFractionDigits: 2 })}
               </div>
             )}

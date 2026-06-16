@@ -42,7 +42,7 @@ export default function Home() {
             Bangladesh Free Fire Esports
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-black uppercase leading-none tracking-tight mb-4">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase leading-none tracking-tight mb-4">
             <span className="text-white">Dominate </span>
             <span className="text-[#ff6b00] [text-shadow:0_0_40px_rgba(255,107,0,0.5)]">Free Fire</span>
             <br />

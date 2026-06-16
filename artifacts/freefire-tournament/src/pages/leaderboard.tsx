@@ -34,7 +34,7 @@ export default function LeaderboardPage() {
       <div className="max-w-4xl mx-auto px-4 pt-16 pb-20">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
           <div>
-            <h1 className="text-3xl font-black uppercase" data-testid="heading-leaderboard">
+            <h1 className="text-2xl sm:text-3xl font-black uppercase" data-testid="heading-leaderboard">
               <span className="text-[#ff6b00]">Leaderboard</span>
             </h1>
             <p className="text-[#a0a0b0] text-sm mt-0.5">Top ranked Free Fire players</p>
@@ -43,7 +43,7 @@ export default function LeaderboardPage() {
             value={tournamentId ?? ""}
             onChange={(e) => setTournamentId(e.target.value ? parseInt(e.target.value) : null)}
             data-testid="select-tournament-filter"
-            className="px-4 py-2.5 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
+            className="w-full md:w-auto px-4 py-2.5 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
           >
             <option value="">Global Rankings</option>
             {(tournaments as any[]).map((t: any) => (

@@ -43,7 +43,7 @@ export default function TeamsPage() {
       <div className="max-w-7xl mx-auto px-4 pt-16 pb-16">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-black uppercase" data-testid="heading-teams">
+            <h1 className="text-2xl sm:text-4xl font-black uppercase" data-testid="heading-teams">
               All <span className="text-[#ff6b00]">Teams</span>
             </h1>
             <p className="text-[#a0a0b0] mt-1">Find a team or create your own squad</p>

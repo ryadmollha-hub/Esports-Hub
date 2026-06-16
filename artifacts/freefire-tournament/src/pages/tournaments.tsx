@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Trophy, Filter, Plus, X, ChevronDown, Users, Calendar, Swords, CheckCircle } from "lucide-react";
+import { Search, Trophy, Plus, X, Users, Calendar, Swords, CheckCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import TournamentCard from "@/components/TournamentCard";
@@ -9,9 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Link } from "wouter";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-const MODES = ["", "solo", "duo", "squad"];
-const STATUSES = ["", "upcoming", "ongoing", "completed"];
 
 const MATCH_TYPES = ["1v1", "2v2", "3v3", "4v4"];
 const PRIZE_PRESETS = [1000, 5000, 10000, 15000, 20000];
@@ -334,10 +331,10 @@ export default function TournamentsPage() {
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 pt-16 pb-24">
 
-        {/* Header + Create Match button */}
-        <div className="flex items-start justify-between gap-4 mb-5">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 mb-5">
           <div>
-            <h1 className="text-3xl md:text-4xl font-black uppercase mb-1" data-testid="heading-tournaments">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black uppercase mb-1" data-testid="heading-tournaments">
               All <span className="text-[#ff6b00]">Tournaments</span>
             </h1>
             <p className="text-[#a0a0b0] text-sm">Find and join the hottest Free Fire competitions</p>
@@ -345,17 +342,15 @@ export default function TournamentsPage() {
           {user && (
             <button
               onClick={() => setShowCreate(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-all shadow-[0_0_20px_rgba(255,107,0,0.3)] shrink-0 whitespace-nowrap"
+              className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-all shadow-[0_0_16px_rgba(255,107,0,0.3)] shrink-0 whitespace-nowrap"
             >
-              <Plus className="w-4 h-4" />
-              <span className="hidden sm:inline">Create Match</span>
-              <span className="sm:hidden">+ Match</span>
+              <Plus className="w-4 h-4" /> Create Match
             </button>
           )}
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-2.5 mb-5">
+        <div className="flex flex-col sm:flex-row gap-2 mb-5">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a0a0b0]" />
             <input
@@ -364,31 +359,33 @@ export default function TournamentsPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               data-testid="input-search-tournaments"
-              className="w-full pl-9 pr-3 py-2 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
+              className="w-full pl-9 pr-3 py-2.5 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
             />
           </div>
-          <select
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-            data-testid="select-filter-mode"
-            className="px-3 py-2 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
-          >
-            <option value="">All Modes</option>
-            <option value="solo">Solo</option>
-            <option value="duo">Duo</option>
-            <option value="squad">Squad</option>
-          </select>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            data-testid="select-filter-status"
-            className="px-3 py-2 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
-          >
-            <option value="">All Status</option>
-            <option value="upcoming">Upcoming</option>
-            <option value="ongoing">Ongoing</option>
-            <option value="completed">Completed</option>
-          </select>
+          <div className="grid grid-cols-2 sm:flex gap-2">
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value)}
+              data-testid="select-filter-mode"
+              className="w-full px-3 py-2.5 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
+            >
+              <option value="">All Modes</option>
+              <option value="solo">Solo</option>
+              <option value="duo">Duo</option>
+              <option value="squad">Squad</option>
+            </select>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              data-testid="select-filter-status"
+              className="w-full px-3 py-2.5 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
+            >
+              <option value="">All Status</option>
+              <option value="upcoming">Upcoming</option>
+              <option value="ongoing">Ongoing</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
         </div>
 
         {/* Official Tournaments */}
@@ -467,6 +464,18 @@ export default function TournamentsPage() {
           onSuccess={fetchCommunityMatches}
         />
       )}
+
+      {/* Mobile FAB — Create Match (only for logged-in users) */}
+      {user && !showCreate && (
+        <button
+          onClick={() => setShowCreate(true)}
+          className="sm:hidden fixed bottom-20 right-4 z-40 w-14 h-14 bg-[#ff6b00] text-white rounded-full shadow-[0_4px_20px_rgba(255,107,0,0.5)] flex items-center justify-center hover:bg-[#e66000] transition-all active:scale-95"
+          aria-label="Create Match"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
+      )}
+
     </div>
   );
 }
