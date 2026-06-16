@@ -1,0 +1,95 @@
+Fix and upgrade the following systems across the entire website.
+
+1. MY TEAM SYSTEM
+
+* My Team section is not working properly.
+* Make My Team fully functional.
+* Users can:
+
+  * Create Team
+  * Edit Team
+  * Add Players
+  * Remove Players
+  * View Team Details
+  * View Team Members
+* Team data must save correctly in the database.
+* Team changes must update instantly.
+
+2. GAME RULES UPGRADE
+
+* Upgrade the Game Rules system.
+* On every tournament page show:
+
+  * Join Tournament button
+  * Game Rules button
+* Both buttons should appear together.
+* Clicking Game Rules should open a professional popup/modal.
+* Rules should support:
+
+  * Headings
+  * Bullet Points
+  * Highlighted Important Rules
+* Admin can edit rules from admin panel.
+
+3. NEWS & OFFER POPUP SYSTEM
+
+* Add a News / Announcement popup system.
+* When a user logs in:
+
+  * Latest news should automatically appear in a popup.
+* User can close the popup.
+* Popup should not appear repeatedly after closing.
+* Show again only when a new announcement is published.
+
+4. ADMIN ANNOUNCEMENT SYSTEM
+
+* Announcement button is not working.
+* Fix Announcement system completely.
+
+Admin can:
+
+* Create Announcement
+* Edit Announcement
+* Delete Announcement
+* Pin Announcement
+* Set Expiry Date
+* Choose Popup or Banner mode
+* Send announcement to all users
+
+5. POPUP ANNOUNCEMENTS
+
+* Admin can create:
+
+  * Tournament News
+  * Offers
+  * Updates
+  * Maintenance Notices
+* Popup should be modern and mobile friendly.
+
+6. ADMIN CONTROL PANEL
+
+* Give admin full control over:
+
+  * Announcements
+  * Rules
+  * News
+  * Offers
+  * Support Information
+  * WhatsApp Number
+  * Telegram Link
+  * Tournament Messages
+  * Homepage Notices
+
+7. BUG FIX
+
+* Fix all broken routes.
+* Fix preview issues.
+* Fix rendering issues.
+* Fix announcement button.
+* Fix My Team bugs.
+* Fix database syncing issues.
+
+8. FINAL RESULT
+   Everything must be fully functional, connected to the database, responsive on mobile, and production-ready.
+   Do not create demo functionality.
+   Implement real working systems.
