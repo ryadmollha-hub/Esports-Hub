@@ -292,6 +292,35 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
             )}
           </div>
 
+          {/* Admin Room Credentials (set by admin, read-only for creator) */}
+          {(match.adminRoomId || match.adminRoomPassword) && (
+            <div className="bg-[#0a0a0f] border border-[#ff6b00]/20 rounded-xl p-3 space-y-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-[10px] font-black uppercase text-[#ff6b00] tracking-wider">Admin Room Credentials</span>
+              </div>
+              {match.adminRoomId && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[#a0a0b0] text-xs w-20 shrink-0">Room ID</span>
+                  <code className="flex-1 text-[#00ff88] font-mono text-sm font-bold truncate">{match.adminRoomId}</code>
+                  <button onClick={() => copyToClipboard(match.adminRoomId, toast)}
+                    className="w-7 h-7 bg-[#1a1a24] rounded-lg flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors shrink-0">
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              {match.adminRoomPassword && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[#a0a0b0] text-xs w-20 shrink-0">Password</span>
+                  <code className="flex-1 text-yellow-400 font-mono text-sm font-bold truncate">{match.adminRoomPassword}</code>
+                  <button onClick={() => copyToClipboard(match.adminRoomPassword, toast)}
+                    className="w-7 h-7 bg-[#1a1a24] rounded-lg flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors shrink-0">
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Password */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -577,7 +606,7 @@ function MyRequestCard({ req }: { req: any }) {
       {req.status !== "accepted" && req.status !== "rejected" && (
         <div className="mt-2 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2 text-xs text-[#606070] flex items-center gap-1.5">
           <Lock className="w-3 h-3 shrink-0" />
-          Room details will be visible here after you join and pay.
+          Room details will be visible once your request is accepted.
         </div>
       )}
     </div>

@@ -220,7 +220,7 @@ export default function TournamentsPage() {
               <p className="text-[#a0a0b0] text-xs mt-0.5">
                 Public player-created matches — join and compete
                 {user && (
-                  <Link href="/profile" className="ml-2 text-[#ff6b00] hover:underline font-bold">
+                  <Link href="/my-matches" className="ml-2 text-[#ff6b00] hover:underline font-bold">
                     → Create a Match
                   </Link>
                 )}
@@ -244,7 +244,7 @@ export default function TournamentsPage() {
               <h3 className="font-bold text-white mb-1">No community matches yet</h3>
               <p className="text-[#a0a0b0] text-sm">
                 {user ? (
-                  <>Head to your <Link href="/profile" className="text-[#ff6b00] font-bold hover:underline">Profile</Link> to create the first match!</>
+                  <>Head to <Link href="/my-matches" className="text-[#ff6b00] font-bold hover:underline">My Matches</Link> to create the first match!</>
                 ) : (
                   <>Sign in and create a match to get things started.</>
                 )}

@@ -40,12 +40,12 @@ function effectiveStatus(match: typeof userMatchesTable.$inferSelect): string {
 }
 
 function stripMatch(m: typeof userMatchesTable.$inferSelect, includeRoom = false) {
-  const { passwordHash, roomId, adminRoomPassword, ...rest } = m as any;
+  const { passwordHash, roomId, adminRoomId, adminRoomPassword, ...rest } = m as any;
   return {
     ...rest,
     isPasswordProtected: !!passwordHash,
     effectiveStatus: effectiveStatus(m),
-    ...(includeRoom ? { roomId: roomId ?? null, adminRoomPassword: adminRoomPassword ?? null } : {}),
+    ...(includeRoom ? { roomId: roomId ?? null, adminRoomId: adminRoomId ?? null, adminRoomPassword: adminRoomPassword ?? null } : {}),
   };
 }
 

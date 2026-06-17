@@ -1270,7 +1270,7 @@ export default function AdminPage() {
                           <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex-1">
                               <div className="font-bold text-white text-base">Match #{m.matchNumber} — {m.mapName ?? "TBD"}</div>
-                              <div className="text-[#a0a0b0] text-sm">{new Date(m.scheduledAt).toLocaleString()}</div>
+                              {m.scheduledAt && <div className="text-[#a0a0b0] text-sm">{new Date(m.scheduledAt).toLocaleString()}</div>}
                               {m.roomId && (
                                 <div className="text-[#00ff88] text-xs mt-1 font-bold flex items-center gap-1">
                                   <Key className="w-3 h-3" /> Room: {m.roomId} · Pass: {m.roomPassword}
@@ -1882,7 +1882,7 @@ export default function AdminPage() {
                             {m.status !== "pending_approval" && (
                               <div>Entry Fee: <span className="text-[#00ff88] font-bold">৳{Number(m.entryFee).toLocaleString()}</span></div>
                             )}
-                            <div>Scheduled: <span className="text-white">{new Date(m.scheduledAt).toLocaleString()}</span></div>
+                            {m.scheduledAt && <div>Scheduled: <span className="text-white">{new Date(m.scheduledAt).toLocaleString()}</span></div>}
                             {m.description && <div className="text-[#a0a0b0] mt-1 italic">"{m.description}"</div>}
                             {m.adminNote && <div className="text-[#ff2244] mt-1">Note: {m.adminNote}</div>}
                           </div>
