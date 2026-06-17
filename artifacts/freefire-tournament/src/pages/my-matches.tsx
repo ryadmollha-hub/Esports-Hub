@@ -13,6 +13,7 @@ import {
 import { useCreateMatch } from "@/lib/CreateMatchContext";
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
+  pending_approval: { label: "Pending Approval", className: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30" },
   waiting:  { label: "Waiting",   className: "bg-blue-500/10 text-blue-400 border-blue-400/30" },
   active:   { label: "LIVE",      className: "bg-[#00ff88]/10 text-[#00ff88] border-[#00ff88]/30" },
   ended:    { label: "Ended",     className: "bg-[#606070]/10 text-[#606070] border-[#606070]/30" },
@@ -28,6 +29,7 @@ const REQUEST_STATUS: Record<string, { label: string; className: string }> = {
 
 function getEffectiveStatus(match: any): string {
   if (match.effectiveStatus) return match.effectiveStatus;
+  if (match.status === "pending_approval") return "pending_approval";
   if (match.status === "active" || match.status === "ended" || match.status === "cancelled") return match.status;
   if (match.timerStartedAt && match.startDelayMinutes) {
     const startMs = new Date(match.timerStartedAt).getTime() + match.startDelayMinutes * 60 * 1000;
@@ -225,6 +227,13 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
           </div>
         </div>
 
+        {/* Pending approval banner */}
+        {effStatus === "pending_approval" && (
+          <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl px-3 py-2 text-xs text-yellow-400 font-bold flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            Awaiting admin approval — your match will go live once reviewed
+          </div>
+        )}
         {/* Timer display */}
         {isTimerRunning && startsAt && (
           <div className="bg-[#0a0a0f] rounded-xl px-3 py-2 flex items-center justify-between">
@@ -319,7 +328,7 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
           </div>
 
           {/* Timer controls */}
-          {!isActive && effStatus !== "ended" && effStatus !== "cancelled" && (
+          {!isActive && effStatus !== "ended" && effStatus !== "cancelled" && effStatus !== "pending_approval" && (
             <div>
               <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold flex items-center gap-1">
                 <Timer className="w-3 h-3" />
@@ -386,7 +395,22 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
                   <div key={r.id} className="bg-[#0a0a0f] rounded-xl p-3 flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="text-white text-xs font-bold truncate">{r.username || "Unknown"}</div>
-                      <div className="text-[#606070] text-[10px]">IGN: {r.inGameName} · UID: {r.gameUid}</div>
+                      {r.teamPlayers ? (
+                        (() => {
+                          try {
+                            const players = JSON.parse(r.teamPlayers);
+                            return (
+                              <div className="text-[#606070] text-[10px] space-y-0.5 mt-0.5">
+                                {players.map((p: any, i: number) => (
+                                  <div key={i}>P{i + 1}: <span className="text-[#a0a0b0]">{p.name}</span> · UID: <span className="font-mono">{p.uid}</span></div>
+                                ))}
+                              </div>
+                            );
+                          } catch { return <div className="text-[#606070] text-[10px]">IGN: {r.inGameName} · UID: {r.gameUid}</div>; }
+                        })()
+                      ) : (
+                        <div className="text-[#606070] text-[10px]">IGN: {r.inGameName} · UID: {r.gameUid}</div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${REQUEST_STATUS[r.status]?.className ?? ""}`}>

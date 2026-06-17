@@ -51,10 +51,16 @@ export default function TournamentsPage() {
   const [communityMatches, setCommunityMatches] = useState<any[]>([]);
   const [communityLoading, setCommunityLoading] = useState(true);
   const [joinMatch, setJoinMatch] = useState<any>(null);
-  const [joinForm, setJoinForm] = useState({ inGameName: "", gameUid: "", password: "" });
+  const [joinPlayers, setJoinPlayers] = useState<{ name: string; uid: string }[]>([{ name: "", uid: "" }]);
+  const [joinPassword, setJoinPassword] = useState("");
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [joining, setJoining] = useState(false);
   const [, setTick] = useState(0);
+
+  const playersForType = (matchType: string) => {
+    const map: Record<string, number> = { "1v1": 1, "2v2": 2, "3v3": 3, "4v4": 4 };
+    return map[matchType] ?? 1;
+  };
 
   // Re-compute effective statuses every 30s
   useEffect(() => {
@@ -87,9 +93,15 @@ export default function TournamentsPage() {
       toast({ title: "Sign in required", description: "Please sign in to join a match.", variant: "destructive" });
       return;
     }
+    const count = playersForType(match.matchType);
     setJoinMatch(match);
-    setJoinForm({ inGameName: "", gameUid: "", password: "" });
+    setJoinPlayers(Array.from({ length: count }, () => ({ name: "", uid: "" })));
+    setJoinPassword("");
     setWalletBalance(null);
+  };
+
+  const updatePlayer = (idx: number, field: "name" | "uid", value: string) => {
+    setJoinPlayers((prev) => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
   };
 
   const doJoin = async () => {
@@ -100,9 +112,8 @@ export default function TournamentsPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          inGameName: joinForm.inGameName.trim(),
-          gameUid: joinForm.gameUid.trim(),
-          ...(joinMatch.isPasswordProtected ? { password: joinForm.password } : {}),
+          players: joinPlayers.map((p) => ({ name: p.name.trim(), uid: p.uid.trim() })),
+          ...(joinMatch.isPasswordProtected ? { password: joinPassword } : {}),
         }),
       });
       const data = await res.json();
@@ -128,9 +139,8 @@ export default function TournamentsPage() {
 
   const joinDisabled =
     joining ||
-    !joinForm.inGameName.trim() ||
-    !joinForm.gameUid.trim() ||
-    (joinMatch?.isPasswordProtected && !joinForm.password.trim()) ||
+    joinPlayers.some((p) => !p.name.trim() || !p.uid.trim()) ||
+    (joinMatch?.isPasswordProtected && !joinPassword.trim()) ||
     (walletBalance !== null && Number(joinMatch?.entryFee ?? 0) > 0 && walletBalance < Number(joinMatch?.entryFee ?? 0));
 
   return (
@@ -383,23 +393,38 @@ export default function TournamentsPage() {
               )}
             </div>
 
-            <div className="space-y-3 mb-3">
-              <div>
-                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">In-Game Name *</label>
-                <input type="text" placeholder="Your in-game nickname"
-                  value={joinForm.inGameName}
-                  onChange={(e) => setJoinForm({ ...joinForm, inGameName: e.target.value })}
-                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                />
-              </div>
-              <div>
-                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Game UID *</label>
-                <input type="text" placeholder="Your Free Fire UID"
-                  value={joinForm.gameUid}
-                  onChange={(e) => setJoinForm({ ...joinForm, gameUid: e.target.value })}
-                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                />
-              </div>
+            <div className="space-y-4 mb-3">
+              {joinPlayers.map((player, idx) => (
+                <div key={idx} className="space-y-2">
+                  {joinPlayers.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      <div className="w-5 h-5 rounded-full bg-[#ff6b00]/20 border border-[#ff6b00]/40 flex items-center justify-center text-[#ff6b00] text-[10px] font-black">{idx + 1}</div>
+                      <span className="text-[#a0a0b0] text-xs font-bold uppercase tracking-wider">Player {idx + 1}</span>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
+                      {joinPlayers.length > 1 ? `P${idx + 1} ` : ""}In-Game Name *
+                    </label>
+                    <input type="text" placeholder="In-game nickname"
+                      value={player.name}
+                      onChange={(e) => updatePlayer(idx, "name", e.target.value)}
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
+                      {joinPlayers.length > 1 ? `P${idx + 1} ` : ""}Game UID *
+                    </label>
+                    <input type="text" placeholder="Free Fire UID"
+                      value={player.uid}
+                      onChange={(e) => updatePlayer(idx, "uid", e.target.value)}
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    />
+                  </div>
+                  {idx < joinPlayers.length - 1 && <div className="border-t border-[#2a2a36]" />}
+                </div>
+              ))}
               {joinMatch.isPasswordProtected && (
                 <div>
                   <label className="block text-xs uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1.5">
@@ -407,8 +432,8 @@ export default function TournamentsPage() {
                     <span className="text-yellow-400">Match Password *</span>
                   </label>
                   <input type="password" placeholder="Enter match password"
-                    value={joinForm.password}
-                    onChange={(e) => setJoinForm({ ...joinForm, password: e.target.value })}
+                    value={joinPassword}
+                    onChange={(e) => setJoinPassword(e.target.value)}
                     className="w-full bg-[#0a0a0f] border border-yellow-500/30 rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-yellow-400 transition-colors"
                   />
                 </div>

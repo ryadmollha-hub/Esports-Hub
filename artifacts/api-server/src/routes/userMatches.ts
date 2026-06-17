@@ -29,6 +29,7 @@ async function getUserBalance(userId: string): Promise<number> {
 }
 
 function effectiveStatus(match: typeof userMatchesTable.$inferSelect): string {
+  if (match.status === "pending_approval") return "pending_approval";
   if (match.status === "active" || match.status === "ended" || match.status === "cancelled") return match.status;
   if (match.timerStartedAt && match.startDelayMinutes) {
     const startMs = new Date(match.timerStartedAt).getTime() + match.startDelayMinutes * 60 * 1000;
@@ -84,7 +85,7 @@ router.post("/user-matches", async (req, res) => {
       passwordHash,
       roomId: roomId?.trim() || null,
       isPrivate: !!isPrivate,
-      status: "waiting",
+      status: "pending_approval",
     }).returning();
 
     res.status(201).json(stripMatch(match, true));
@@ -266,15 +267,16 @@ router.get("/user-matches/:id/details", async (req, res) => {
 
 // ─── Join a match ─────────────────────────────────────────────────────────────
 
+const PLAYERS_FOR_TYPE: Record<string, number> = {
+  "1v1": 1, "2v2": 2, "3v3": 3, "4v4": 4,
+};
+
 router.post("/user-matches/:id/join", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
   try {
     const id = parseInt(req.params.id);
-    const { inGameName, gameUid, password } = req.body;
-
-    if (!inGameName || !String(inGameName).trim()) return res.status(400).json({ error: "In-Game Name is required." });
-    if (!gameUid || !String(gameUid).trim()) return res.status(400).json({ error: "Game UID is required." });
+    const { players, password } = req.body;
 
     const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
     if (!match) return res.status(404).json({ error: "Match not found." });
@@ -286,6 +288,16 @@ router.post("/user-matches/:id/join", async (req, res) => {
     if (match.creatorId === userId) return res.status(400).json({ error: "You cannot join your own match." });
     if (match.filledSlots >= match.maxSlots) return res.status(400).json({ error: "This match is full." });
 
+    const requiredPlayers = PLAYERS_FOR_TYPE[match.matchType] ?? 1;
+    if (!Array.isArray(players) || players.length !== requiredPlayers) {
+      return res.status(400).json({ error: `This ${match.matchType} match requires ${requiredPlayers} player(s).` });
+    }
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      if (!p?.name || !String(p.name).trim()) return res.status(400).json({ error: `Player ${i + 1} In-Game Name is required.` });
+      if (!p?.uid || !String(p.uid).trim()) return res.status(400).json({ error: `Player ${i + 1} Game UID is required.` });
+    }
+
     const existing = await db.select({ id: userMatchJoinsTable.id })
       .from(userMatchJoinsTable)
       .where(and(eq(userMatchJoinsTable.matchId, id), eq(userMatchJoinsTable.userId, userId)))
@@ -295,13 +307,17 @@ router.post("/user-matches/:id/join", async (req, res) => {
     const [user] = await db.select({ username: usersTable.username, displayName: usersTable.displayName })
       .from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
 
+    const firstPlayer = players[0];
+    const teamPlayersJson = JSON.stringify(players.map((p: any) => ({ name: String(p.name).trim(), uid: String(p.uid).trim() })));
+
     if (match.isPrivate) {
       await db.insert(userMatchJoinsTable).values({
         matchId: id,
         userId,
         username: user?.displayName ?? user?.username ?? "Unknown",
-        inGameName: String(inGameName).trim(),
-        gameUid: String(gameUid).trim(),
+        inGameName: String(firstPlayer.name).trim(),
+        gameUid: String(firstPlayer.uid).trim(),
+        teamPlayers: teamPlayersJson,
         status: "pending",
       });
       return res.json({ success: true, message: "Join request submitted! The creator will review it.", isPending: true });
@@ -335,8 +351,9 @@ router.post("/user-matches/:id/join", async (req, res) => {
       matchId: id,
       userId,
       username: user?.displayName ?? user?.username ?? "Unknown",
-      inGameName: String(inGameName).trim(),
-      gameUid: String(gameUid).trim(),
+      inGameName: String(firstPlayer.name).trim(),
+      gameUid: String(firstPlayer.uid).trim(),
+      teamPlayers: teamPlayersJson,
       status: "accepted",
     });
 
@@ -399,6 +416,7 @@ router.post("/user-matches/:id/start-timer", async (req, res) => {
     const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
     if (!match) return res.status(404).json({ error: "Match not found." });
     if (match.creatorId !== userId) return res.status(403).json({ error: "Not your match." });
+    if (match.status === "pending_approval") return res.status(400).json({ error: "This match is pending admin approval. You can start the timer once it is approved." });
     if (effectiveStatus(match) === "active") return res.status(400).json({ error: "Match is already active." });
 
     const now = new Date();

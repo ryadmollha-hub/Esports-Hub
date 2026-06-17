@@ -31,6 +31,7 @@ export const userMatchJoinsTable = pgTable("user_match_joins", {
   username: text("username"),
   inGameName: text("in_game_name"),
   gameUid: text("game_uid"),
+  teamPlayers: text("team_players"),
   status: text("status").notNull().default("accepted"),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
