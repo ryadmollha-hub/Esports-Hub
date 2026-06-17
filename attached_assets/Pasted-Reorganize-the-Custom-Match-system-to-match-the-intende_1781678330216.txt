@@ -1,0 +1,162 @@
+Reorganize the Custom Match system to match the intended platform structure.
+
+Do not redesign the website.
+Do not remove existing features.
+Only adjust match visibility, navigation placement, and workflow.
+
+==================================
+BOTTOM NAVIGATION UPDATE
+==================================
+
+Update the bottom navigation to:
+
+Home | Tournament | Wallet | + Create Match | Profile | Menu
+
+Requirements:
+
+- Add a compact "+ Create Match" button between Wallet and Profile.
+- Mobile responsive.
+- Same theme as the website.
+- Small icon/button, not oversized.
+- Must not overlap any navigation item.
+- Remove the Create Match button from the Community Matches section.
+
+==================================
+TOURNAMENT PAGE CHANGES
+==================================
+
+Remove user-created matches from the Tournament page and Community Matches section.
+
+Tournament page should display ONLY:
+
+- Official Tournaments
+- Admin Created Matches
+- Admin Published Matches
+
+User-created matches must never appear here automatically.
+
+==================================
+USER MATCH REQUEST SYSTEM
+==================================
+
+Create a new section inside Profile:
+
+Profile
+ └── My Match Requests
+
+This page should contain:
+
+- Pending Matches
+- Approved Matches
+- Rejected Matches
+
+When a user creates a match:
+
+- Save it as a Match Request
+- Send it to Admin Review
+- Do not publish it automatically
+- Do not show it in Tournament page
+- Do not show it in Community Matches
+
+==================================
+CREATE MATCH FLOW
+==================================
+
+User clicks:
++ Create Match
+
+Then:
+
+Create Match Form
+→ Submit for Review
+→ Status = Pending
+→ Sent to Admin Panel
+
+After submission:
+
+- User cannot edit match
+- User can view status inside My Match Requests
+
+==================================
+ADMIN REVIEW SYSTEM
+==================================
+
+Admin receives all submitted match requests.
+
+Admin can:
+
+- Review match
+- Set Entry Fee manually
+- Approve
+- Reject
+
+Validation:
+
+- Admin must set Entry Fee before approval
+- Entry Fee cannot be empty
+- Entry Fee cannot be zero
+
+If Entry Fee is empty:
+
+Show:
+"Please set an Entry Fee before approving this match."
+
+==================================
+AFTER APPROVAL
+==================================
+
+When admin approves:
+
+- Match becomes Public
+- Match appears in Tournament page
+- Match appears in Admin Published Matches
+- Users can join the match
+- Users pay the Entry Fee set by Admin
+
+==================================
+PROFILE STATUS SYSTEM
+==================================
+
+Inside My Match Requests show:
+
+Match Title
+Match Type
+Prize Pool
+Entry Fee (if approved)
+Status
+
+Status badges:
+
+Pending Review
+Approved
+Rejected
+
+==================================
+UI REQUIREMENTS
+==================================
+
+- Fully mobile responsive
+- No oversized cards
+- No overlapping buttons
+- No horizontal scrolling
+- Keep existing dark gaming theme
+- Keep existing functionality intact
+
+==================================
+EXPECTED FLOW
+==================================
+
+User
+→ + Create Match
+→ Submit for Review
+→ Admin Review
+→ Admin Sets Entry Fee
+→ Admin Approves
+→ Match Published
+→ Users Join & Pay
+
+Tournament Page:
+Admin Matches Only
+
+Profile:
+My Match Requests (Pending / Approved / Rejected)

@@ -2,15 +2,23 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   User, Trophy, Wallet, Shield, History, ChevronRight,
-  Edit, Save, X, Flame, Star, Target, Swords, Settings,
-  Camera, LogOut
+  Edit, Save, X, Flame, Star, Target, Swords,
+  Clock, CheckCircle, XCircle, LogOut
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useGetMyProfile, useUpdateMyProfile } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 
-type Section = "overview" | "edit";
+type Section = "overview" | "edit" | "my-matches";
+
+function matchStatusBadge(status: string) {
+  if (status === "approved")
+    return { label: "Approved", color: "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30", Icon: CheckCircle };
+  if (status === "rejected")
+    return { label: "Rejected", color: "text-[#ff2244] bg-[#ff2244]/10 border-[#ff2244]/30", Icon: XCircle };
+  return { label: "Pending Review", color: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30", Icon: Clock };
+}
 
 export default function ProfilePage() {
   const { user: authUser, isLoading, logout, authFetch } = useAuthContext();
@@ -18,6 +26,8 @@ export default function ProfilePage() {
   const { toast } = useToast();
   const [section, setSection] = useState<Section>("overview");
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [myMatches, setMyMatches] = useState<any[]>([]);
+  const [myMatchesLoading, setMyMatchesLoading] = useState(false);
 
   const { data: profile, refetch } = useGetMyProfile();
   const updateProfile = useUpdateMyProfile();
@@ -52,6 +62,23 @@ export default function ProfilePage() {
       }).catch(() => {});
     }
   }, [authUser]);
+
+  const loadMyMatches = async () => {
+    setMyMatchesLoading(true);
+    try {
+      const res = await authFetch("/user-matches/mine");
+      if (res.ok) setMyMatches(await res.json());
+      else setMyMatches([]);
+    } catch {
+      setMyMatches([]);
+    } finally {
+      setMyMatchesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (section === "my-matches" && authUser) loadMyMatches();
+  }, [section, authUser]);
 
   const saveProfile = async () => {
     updateProfile.mutate(
@@ -105,12 +132,22 @@ export default function ProfilePage() {
     },
   ];
 
+  const BackButton = () => (
+    <button
+      onClick={() => setSection("overview")}
+      className="w-9 h-9 rounded-xl bg-[#12121a] border border-[#2a2a36] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors mb-6"
+    >
+      <X className="w-4 h-4" />
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white pb-24">
       <Navbar />
 
       <div className="max-w-lg mx-auto px-4 pt-16 pb-6">
 
+        {/* ── OVERVIEW ─────────────────────────────────────────── */}
         {section === "overview" && (
           <>
             {/* Profile Card */}
@@ -173,9 +210,26 @@ export default function ProfilePage() {
             <div className="bg-[#12121a] rounded-2xl border border-[#2a2a36] px-4 py-3 mb-4 flex items-center justify-between">
               <span className="text-[#a0a0b0] text-sm">Member Since</span>
               <span className="text-white font-bold text-sm">
-                {prof?.createdAt ? new Date(prof.createdAt).toLocaleDateString("en-BD", { day: "numeric", month: "long", year: "numeric" }) : "—"}
+                {prof?.createdAt
+                  ? new Date(prof.createdAt).toLocaleDateString("en-BD", { day: "numeric", month: "long", year: "numeric" })
+                  : "—"}
               </span>
             </div>
+
+            {/* My Match Requests */}
+            <button
+              onClick={() => setSection("my-matches")}
+              className="w-full flex items-center gap-3 p-4 bg-[#12121a] rounded-2xl border border-[#2a2a36] hover:border-[#ff6b00]/20 transition-colors group mb-2"
+            >
+              <div className="w-11 h-11 rounded-xl border bg-[#ff6b00]/10 border-[#ff6b00]/20 flex items-center justify-center shrink-0">
+                <Swords className="w-5 h-5 text-[#ff6b00]" />
+              </div>
+              <div className="flex-1 text-left">
+                <div className="text-white font-bold text-sm">My Match Requests</div>
+                <div className="text-[#606070] text-xs">Track pending, approved & rejected</div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-[#606070] group-hover:text-[#a0a0b0] transition-colors" />
+            </button>
 
             {/* Quick Links */}
             <div className="space-y-2 mb-4">
@@ -224,16 +278,94 @@ export default function ProfilePage() {
           </>
         )}
 
+        {/* ── MY MATCH REQUESTS ────────────────────────────────── */}
+        {section === "my-matches" && (
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <BackButton />
+              <div className="-mt-6">
+                <h2 className="font-black text-white text-lg">My Match Requests</h2>
+                <p className="text-[#a0a0b0] text-xs">Your submitted match history</p>
+              </div>
+            </div>
+
+            {myMatchesLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-28 bg-[#12121a] rounded-2xl animate-pulse" />
+                ))}
+              </div>
+            ) : myMatches.length === 0 ? (
+              <div className="text-center py-16">
+                <Swords className="w-12 h-12 mx-auto mb-3 text-[#ff6b00]/20" />
+                <p className="font-bold text-white mb-1">No match requests yet</p>
+                <p className="text-[#a0a0b0] text-sm">Tap + Create in the navigation to submit a match request.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {myMatches.map((m: any) => {
+                  const badge = matchStatusBadge(m.status === "pending_approval" ? "pending" : m.status);
+                  const BadgeIcon = badge.Icon;
+                  return (
+                    <div key={m.id} className="bg-[#12121a] rounded-2xl border border-[#2a2a36] p-4">
+                      {/* Header row */}
+                      <div className="flex items-start justify-between gap-2 mb-3">
+                        <div>
+                          <div className="font-black text-white text-sm">{m.matchType} Match</div>
+                          <div className="text-[#606070] text-xs mt-0.5">
+                            {new Date(m.scheduledAt).toLocaleDateString(undefined, {
+                              month: "short", day: "numeric", year: "numeric",
+                              hour: "2-digit", minute: "2-digit",
+                            })}
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0 ${badge.color}`}>
+                          <BadgeIcon className="w-2.5 h-2.5" />
+                          {badge.label}
+                        </span>
+                      </div>
+
+                      {/* Stats row */}
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="bg-[#0a0a0f] rounded-xl px-3 py-2">
+                          <div className="text-[#606070] mb-0.5">Prize Pool</div>
+                          <div className="font-black text-[#ffd700]">৳{Number(m.prizePool).toLocaleString()}</div>
+                        </div>
+                        <div className="bg-[#0a0a0f] rounded-xl px-3 py-2">
+                          <div className="text-[#606070] mb-0.5">Entry Fee</div>
+                          {m.status === "approved" && Number(m.entryFee) > 0 ? (
+                            <div className="font-black text-[#00ff88]">৳{Number(m.entryFee).toLocaleString()}</div>
+                          ) : (
+                            <div className="font-black text-[#4a4a5a]">Set by Admin</div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Admin note */}
+                      {m.adminNote && (
+                        <div className="mt-2 text-xs text-[#ff2244] bg-[#ff2244]/5 border border-[#ff2244]/10 rounded-lg px-3 py-2">
+                          Admin: {m.adminNote}
+                        </div>
+                      )}
+
+                      {/* Description */}
+                      {m.description && (
+                        <p className="text-[#4a4a5a] text-xs mt-2 italic">"{m.description}"</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── EDIT PROFILE ─────────────────────────────────────── */}
         {section === "edit" && (
           <div>
             <div className="flex items-center gap-3 mb-6">
-              <button
-                onClick={() => setSection("overview")}
-                className="w-9 h-9 rounded-xl bg-[#12121a] border border-[#2a2a36] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <div>
+              <BackButton />
+              <div className="-mt-6">
                 <h2 className="font-black text-white text-lg">Edit Profile</h2>
                 <p className="text-[#a0a0b0] text-xs">Update your information</p>
               </div>

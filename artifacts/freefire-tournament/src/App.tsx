@@ -5,10 +5,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/AuthContext";
 import { ThemeProvider } from "@/lib/ThemeContext";
+import { CreateMatchProvider } from "@/lib/CreateMatchContext";
 import { UserRoute, AdminRoute } from "@/components/ProtectedRoute";
 import BottomNav from "@/components/BottomNav";
 import PwaInstallBanner from "@/components/PwaInstallBanner";
 import AnnouncementPopup from "@/components/AnnouncementPopup";
+import CreateMatchModal from "@/components/CreateMatchModal";
 import { useMaintenanceMode } from "@/lib/useMaintenanceMode";
 import { isAdminAuthenticated } from "@/lib/adminAuth";
 
@@ -57,11 +59,12 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <WouterRouter base={basePath}>
-              <MaintenanceGuard>
-                <Switch>
+        <CreateMatchProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <WouterRouter base={basePath}>
+                <MaintenanceGuard>
+                  <Switch>
                   {/* Public routes */}
                   <Route path="/" component={Home} />
                   <Route path="/tournaments" component={TournamentsPage} />
@@ -109,14 +112,16 @@ function App() {
                   <Route component={NotFound} />
                 </Switch>
 
-                <BottomNav />
-                <PwaInstallBanner />
-                <AnnouncementPopup />
-              </MaintenanceGuard>
-            </WouterRouter>
-            <Toaster />
-          </TooltipProvider>
-        </QueryClientProvider>
+                  <BottomNav />
+                  <PwaInstallBanner />
+                  <AnnouncementPopup />
+                  <CreateMatchModal />
+                </MaintenanceGuard>
+              </WouterRouter>
+              <Toaster />
+            </TooltipProvider>
+          </QueryClientProvider>
+        </CreateMatchProvider>
       </AuthProvider>
     </ThemeProvider>
   );
