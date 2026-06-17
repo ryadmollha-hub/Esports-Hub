@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Trophy, Plus, Swords, Clock, Lock, X, Timer, Zap } from "lucide-react";
+import { Search, Trophy, Swords, Clock, Lock, X, Timer, Zap } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import TournamentCard from "@/components/TournamentCard";
@@ -7,7 +7,6 @@ import CountdownTimer from "@/components/CountdownTimer";
 import { useListTournaments, getListTournamentsQueryKey } from "@workspace/api-client-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useCreateMatch } from "@/lib/CreateMatchContext";
 import { Link } from "wouter";
 
 const MATCH_TYPE_COLOR: Record<string, string> = {
@@ -38,7 +37,6 @@ export default function TournamentsPage() {
   const [status, setStatus] = useState("");
   const { user, authFetch } = useAuthContext();
   const { toast } = useToast();
-  const { openCreateMatch } = useCreateMatch();
 
   const params = {
     ...(search && { search }),
@@ -148,14 +146,6 @@ export default function TournamentsPage() {
             </h1>
             <p className="text-[#a0a0b0] text-sm">Find and join the hottest Free Fire competitions</p>
           </div>
-          {user && (
-            <button
-              onClick={openCreateMatch}
-              className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-all shadow-[0_0_16px_rgba(255,107,0,0.3)] shrink-0 whitespace-nowrap"
-            >
-              <Plus className="w-4 h-4" /> Create Match
-            </button>
-          )}
         </div>
 
         {/* Filters */}
@@ -220,18 +210,13 @@ export default function TournamentsPage() {
               <p className="text-[#a0a0b0] text-xs mt-0.5">
                 Public player-created matches — join and compete
                 {user && (
-                  <Link href="/my-matches" className="ml-2 text-[#ff6b00] hover:underline font-bold">
-                    → My Match Requests
+                  <Link href="/profile" className="ml-2 text-[#ff6b00] hover:underline font-bold">
+                    → Create a Match
                   </Link>
                 )}
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {!user && (
-                <Link href="/sign-up" className="text-xs text-[#ff6b00] font-bold hover:underline">
-                  Sign up to create
-                </Link>
-              )}
               <button onClick={fetchCommunity} title="Refresh"
                 className="w-7 h-7 rounded-lg bg-[#12121a] border border-[#2a2a36] flex items-center justify-center text-[#606070] hover:text-[#a0a0b0] transition-colors">
                 <Search className="w-3 h-3" />
@@ -247,18 +232,13 @@ export default function TournamentsPage() {
             <div className="bg-[#12121a] border border-[#ff6b00]/10 rounded-2xl p-10 text-center">
               <Swords className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/20" />
               <h3 className="font-bold text-white mb-1">No community matches yet</h3>
-              <p className="text-[#a0a0b0] text-sm mb-4">Be the first to create a public match!</p>
-              {user ? (
-                <button onClick={openCreateMatch}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
-                  <Plus className="w-4 h-4" /> Create Match
-                </button>
-              ) : (
-                <Link href="/sign-in"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
-                  Sign in to create
-                </Link>
-              )}
+              <p className="text-[#a0a0b0] text-sm">
+                {user ? (
+                  <>Head to your <Link href="/profile" className="text-[#ff6b00] font-bold hover:underline">Profile</Link> to create the first match!</>
+                ) : (
+                  <>Sign in and create a match to get things started.</>
+                )}
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -353,15 +333,6 @@ export default function TournamentsPage() {
 
       </div>
       <Footer />
-
-      {/* Mobile FAB */}
-      {user && (
-        <button onClick={openCreateMatch}
-          className="sm:hidden fixed bottom-20 right-4 z-40 w-14 h-14 bg-[#ff6b00] text-white rounded-full shadow-[0_4px_20px_rgba(255,107,0,0.5)] flex items-center justify-center hover:bg-[#e66000] transition-all active:scale-95"
-          aria-label="Create Match">
-          <Plus className="w-6 h-6" />
-        </button>
-      )}
 
       {/* ── Join Match Modal ── */}
       {joinMatch && (

@@ -1,12 +1,11 @@
 import { useState } from "react";
-import { X, Swords, CheckCircle, Lock, Globe, Trophy } from "lucide-react";
+import { X, Swords, CheckCircle, Lock, Globe, Clock } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateMatch } from "@/lib/CreateMatchContext";
 import { useLocation } from "wouter";
 
 const MATCH_TYPES = ["1v1", "2v2", "3v3", "4v4"];
-const PRIZE_PRESETS = [1000, 5000, 10000, 15000, 20000];
 const SLOTS_FOR_TYPE: Record<string, number> = { "1v1": 2, "2v2": 4, "3v3": 6, "4v4": 8 };
 
 export default function CreateMatchModal() {
@@ -18,27 +17,22 @@ export default function CreateMatchModal() {
   const [form, setForm] = useState({
     matchName: "",
     matchType: "1v1",
-    prizePool: "",
-    customPrize: "",
-    entryFee: "",
+    scheduledAt: "",
     description: "",
     isPrivate: false,
     password: "",
     roomId: "",
   });
-  const [useCustomPrize, setUseCustomPrize] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<any>(null);
 
   if (!open) return null;
 
-  const prizeValue = useCustomPrize ? form.customPrize : form.prizePool;
   const slots = SLOTS_FOR_TYPE[form.matchType] ?? 2;
 
   const handleClose = () => {
     closeCreateMatch();
-    setForm({ matchName: "", matchType: "1v1", prizePool: "", customPrize: "", entryFee: "", description: "", isPrivate: false, password: "", roomId: "" });
-    setUseCustomPrize(false);
+    setForm({ matchName: "", matchType: "1v1", scheduledAt: "", description: "", isPrivate: false, password: "", roomId: "" });
     setCreated(null);
   };
 
@@ -50,10 +44,6 @@ export default function CreateMatchModal() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) { toast({ title: "Sign in required", variant: "destructive" }); return; }
-    if (!prizeValue || parseFloat(prizeValue) < 0) {
-      toast({ title: "Select or enter a prize pool", variant: "destructive" });
-      return;
-    }
     if (form.isPrivate && !form.password.trim()) {
       toast({ title: "Password required for private match", variant: "destructive" });
       return;
@@ -67,8 +57,7 @@ export default function CreateMatchModal() {
         body: JSON.stringify({
           matchName: form.matchName.trim() || undefined,
           matchType: form.matchType,
-          prizePool: parseFloat(prizeValue) || 0,
-          entryFee: parseFloat(form.entryFee) || 0,
+          scheduledAt: form.scheduledAt || undefined,
           description: form.description || undefined,
           password: form.password.trim() || undefined,
           roomId: form.roomId.trim() || undefined,
@@ -161,43 +150,20 @@ export default function CreateMatchModal() {
                 <p className="text-[#4a4a5a] text-xs mt-1.5">{slots} players total · {slots} slots</p>
               </div>
 
-              {/* Prize Pool */}
-              <div>
-                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold">Prize Pool (৳)</label>
-                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-2">
-                  {PRIZE_PRESETS.map((p) => (
-                    <button key={p} type="button"
-                      onClick={() => { setForm({ ...form, prizePool: String(p) }); setUseCustomPrize(false); }}
-                      className={`py-2 rounded-xl border text-xs font-black transition-all ${!useCustomPrize && form.prizePool === String(p) ? "bg-[#ff6b00]/15 border-[#ff6b00] text-[#ff6b00]" : "bg-[#12121a] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"}`}>
-                      ৳{p.toLocaleString()}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex items-center gap-2">
-                  <button type="button" onClick={() => setUseCustomPrize(!useCustomPrize)}
-                    className={`text-xs font-bold uppercase px-3 py-1.5 rounded-lg border transition-colors ${useCustomPrize ? "border-[#ff6b00]/40 text-[#ff6b00] bg-[#ff6b00]/10" : "border-[#2a2a36] text-[#606070] hover:text-[#a0a0b0]"}`}>
-                    Custom
-                  </button>
-                  {useCustomPrize && (
-                    <input type="number" min="0" placeholder="Enter amount..."
-                      value={form.customPrize}
-                      onChange={(e) => setForm({ ...form, customPrize: e.target.value })}
-                      className="flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-1.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Entry Fee */}
+              {/* Match Start Time */}
               <div>
                 <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
-                  Entry Fee (৳) <span className="normal-case text-[#4a4a5a]">(0 = free)</span>
+                  Match Start Time <span className="normal-case text-[#4a4a5a]">(optional)</span>
                 </label>
-                <input type="number" min="0" placeholder="0"
-                  value={form.entryFee}
-                  onChange={(e) => setForm({ ...form, entryFee: e.target.value })}
-                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                />
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4a4a5a] pointer-events-none" />
+                  <input
+                    type="datetime-local"
+                    value={form.scheduledAt}
+                    onChange={(e) => setForm({ ...form, scheduledAt: e.target.value })}
+                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl pl-10 pr-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00] transition-colors [color-scheme:dark]"
+                  />
+                </div>
               </div>
 
               {/* Room ID */}
@@ -227,7 +193,7 @@ export default function CreateMatchModal() {
                   </button>
                 </div>
                 <p className="text-[#4a4a5a] text-xs mt-1.5">
-                  {form.isPrivate ? "Only visible in your My Match Requests — invite only." : "Visible in the public Tournament list."}
+                  {form.isPrivate ? "Only visible in your My Match Requests — invite only." : "Visible in the public community match feed."}
                 </p>
                 {form.isPrivate && (
                   <div className="mt-2">
@@ -252,8 +218,8 @@ export default function CreateMatchModal() {
               </div>
 
               <div className="bg-[#ff6b00]/5 border border-[#ff6b00]/15 rounded-xl px-4 py-3 text-xs text-[#a0a0b0] flex items-start gap-2">
-                <Trophy className="w-3.5 h-3.5 text-[#ff6b00] mt-0.5 shrink-0" />
-                <span>Match goes live instantly. Set the Room ID and start the countdown timer from <strong className="text-white">My Matches</strong> to reveal it to players.</span>
+                <Swords className="w-3.5 h-3.5 text-[#ff6b00] mt-0.5 shrink-0" />
+                <span>Match goes live instantly. Prize pool &amp; entry fee are set by admins after review. Set the Room ID and start the countdown from <strong className="text-white">My Matches</strong>.</span>
               </div>
 
               <button type="submit" disabled={submitting}

@@ -54,18 +54,14 @@ router.post("/user-matches", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
   try {
-    const { matchName, matchType, prizePool, entryFee, description, password, roomId, isPrivate } = req.body;
+    const { matchName, matchType, scheduledAt, description, password, roomId, isPrivate } = req.body;
     if (!matchType) return res.status(400).json({ error: "matchType is required." });
-    if (!prizePool) return res.status(400).json({ error: "prizePool is required." });
 
     const maxSlots = SLOTS_FOR_TYPE[matchType];
     if (!maxSlots) return res.status(400).json({ error: "Invalid matchType. Must be 1v1, 2v2, 3v3, or 4v4." });
 
-    const prize = parseFloat(prizePool);
-    if (isNaN(prize) || prize < 0) return res.status(400).json({ error: "prizePool must be a non-negative number." });
-
-    const fee = parseFloat(entryFee ?? "0");
-    if (isNaN(fee) || fee < 0) return res.status(400).json({ error: "entryFee must be a non-negative number." });
+    const prize = 0;
+    const fee = 0;
 
     const [user] = await db.select({ username: usersTable.username, displayName: usersTable.displayName })
       .from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
@@ -83,7 +79,7 @@ router.post("/user-matches", async (req, res) => {
       prizePool: prize.toFixed(2),
       entryFee: fee.toFixed(2),
       maxSlots,
-      scheduledAt: null,
+      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       description: description ?? null,
       passwordHash,
       roomId: roomId?.trim() || null,

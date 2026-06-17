@@ -3,12 +3,13 @@ import { Link, useLocation } from "wouter";
 import {
   User, Trophy, Wallet, Shield, History, ChevronRight,
   Edit, Save, X, Flame, Star, Target, Swords, Trash2,
-  Clock, CheckCircle, XCircle, LogOut, AlertTriangle, Lock
+  Clock, CheckCircle, XCircle, LogOut, AlertTriangle, Lock, Plus
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useGetMyProfile, useUpdateMyProfile } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { useCreateMatch } from "@/lib/CreateMatchContext";
 
 type Section = "overview" | "edit" | "my-matches";
 
@@ -22,6 +23,7 @@ function matchStatusBadge(status: string) {
 
 export default function ProfilePage() {
   const { user: authUser, isLoading, logout, authFetch } = useAuthContext();
+  const { openCreateMatch } = useCreateMatch();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [section, setSection] = useState<Section>("overview");
@@ -301,10 +303,16 @@ export default function ProfilePage() {
           <div>
             <div className="flex items-center gap-3 mb-6">
               <BackButton />
-              <div className="-mt-6">
+              <div className="-mt-6 flex-1">
                 <h2 className="font-black text-white text-lg">My Match Requests</h2>
                 <p className="text-[#a0a0b0] text-xs">Your submitted match history</p>
               </div>
+              <button
+                onClick={openCreateMatch}
+                className="-mt-6 flex items-center gap-1.5 px-3 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-xs hover:bg-[#e66000] transition-all shadow-[0_0_12px_rgba(255,107,0,0.3)] shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" /> New Match
+              </button>
             </div>
 
             {myMatchesLoading ? (
@@ -317,7 +325,13 @@ export default function ProfilePage() {
               <div className="text-center py-16">
                 <Swords className="w-12 h-12 mx-auto mb-3 text-[#ff6b00]/20" />
                 <p className="font-bold text-white mb-1">No match requests yet</p>
-                <p className="text-[#a0a0b0] text-sm">Tap + Create in the navigation to submit a match request.</p>
+                <p className="text-[#a0a0b0] text-sm mb-5">Create your first match using the button above.</p>
+                <button
+                  onClick={openCreateMatch}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Create Match
+                </button>
               </div>
             ) : (
               <div className="space-y-3">
