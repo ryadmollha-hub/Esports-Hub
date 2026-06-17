@@ -56,6 +56,9 @@ export default function AdminPage() {
   const [rejectingMatch, setRejectingMatch] = useState<number | null>(null);
   const [rejectNote, setRejectNote] = useState("");
   const [matchEntryFees, setMatchEntryFees] = useState<Record<number, string>>({});
+  const [communityRules, setCommunityRules] = useState("");
+  const [communityRulesLoading, setCommunityRulesLoading] = useState(false);
+  const [communityRulesSaving, setCommunityRulesSaving] = useState(false);
   const [deletingMatch, setDeletingMatch] = useState<number | null>(null);
   const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -171,6 +174,37 @@ export default function AdminPage() {
     }
   }, [apiFetch]);
 
+  const loadCommunityRules = useCallback(async () => {
+    setCommunityRulesLoading(true);
+    try {
+      const res = await fetch("/api/settings/community-match-rules");
+      if (res.ok) { const d = await res.json(); setCommunityRules(d.rules ?? ""); }
+    } catch {} finally {
+      setCommunityRulesLoading(false);
+    }
+  }, []);
+
+  const saveCommunityRules = useCallback(async () => {
+    if (!communityRules.trim()) return;
+    setCommunityRulesSaving(true);
+    try {
+      const res = await apiFetch("/admin/settings/community-match-rules", {
+        method: "PUT",
+        body: JSON.stringify({ rules: communityRules }),
+      });
+      if (res.ok) {
+        toast({ title: "Rules saved", description: "Community match rules updated." });
+      } else {
+        const d = await res.json();
+        toast({ title: "Error", description: d.error ?? "Failed to save", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setCommunityRulesSaving(false);
+    }
+  }, [apiFetch, communityRules, toast]);
+
   const loadMaintenance = useCallback(async () => {
     try {
       const res = await apiFetch("/settings/maintenance");
@@ -215,7 +249,7 @@ export default function AdminPage() {
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "deposits" || activeTab === "withdrawals") loadWallet();
     if (activeTab === "matches") { loadTournaments(); if (selectedTournament) loadMatches(); }
-    if (activeTab === "user-matches") loadUserMatches();
+    if (activeTab === "user-matches") { loadUserMatches(); loadCommunityRules(); }
     if (activeTab === "maintenance") loadMaintenance();
   }, [activeTab]);
 
@@ -1771,8 +1805,41 @@ export default function AdminPage() {
                   <h1 className="text-2xl font-black uppercase">User <span className="text-[#ff6b00]">Matches</span></h1>
                   <p className="text-[#a0a0b0] text-sm mt-1">Review and approve user-submitted matches</p>
                 </div>
-                <button onClick={loadUserMatches} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                <button onClick={() => { loadUserMatches(); loadCommunityRules(); }} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
                   <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              </div>
+
+              {/* Community Match Rules Editor */}
+              <div className="bg-[#0d0d16] border border-[#ff6b00]/20 rounded-2xl p-5 mb-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="w-8 h-8 bg-[#ff6b00]/15 rounded-xl flex items-center justify-center">
+                    <BookOpen className="w-4 h-4 text-[#ff6b00]" />
+                  </div>
+                  <div>
+                    <h2 className="font-black text-white text-sm uppercase">Community Match Rules</h2>
+                    <p className="text-[#606070] text-xs">Shown to users before creating a match. One rule per line.</p>
+                  </div>
+                </div>
+                {communityRulesLoading ? (
+                  <div className="space-y-2 mb-4">
+                    {[1,2,3].map(i => <div key={i} className="h-4 bg-[#1a1a24] rounded animate-pulse" />)}
+                  </div>
+                ) : (
+                  <textarea
+                    value={communityRules}
+                    onChange={(e) => setCommunityRules(e.target.value)}
+                    rows={7}
+                    placeholder={"1. Be respectful to all players.\n2. No cheating or hacking.\n3. Room ID shared before match starts."}
+                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-3 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors resize-none font-mono mb-4"
+                  />
+                )}
+                <button
+                  onClick={saveCommunityRules}
+                  disabled={communityRulesSaving || communityRulesLoading || !communityRules.trim()}
+                  className="px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
+                >
+                  {communityRulesSaving ? "Saving..." : "Save Rules"}
                 </button>
               </div>
 

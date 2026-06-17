@@ -84,4 +84,35 @@ router.put("/admin/payment-settings", async (req, res) => {
   }
 });
 
+const DEFAULT_COMMUNITY_RULES = `1. Be respectful to all players.
+2. No cheating, hacking, or use of unauthorized software.
+3. Room ID and password will be shared before the match starts.
+4. Players must join the room within 5 minutes of it being shared.
+5. Match results are final once submitted by the host.
+6. Entry fee is non-refundable once the match goes live.
+7. Any disputes must be raised with the match host immediately after the match.`;
+
+router.get("/settings/community-match-rules", async (_req, res) => {
+  try {
+    const rules = await getSetting("community_match_rules");
+    res.json({ rules: rules || DEFAULT_COMMUNITY_RULES });
+  } catch {
+    res.status(500).json({ error: "Failed to load rules." });
+  }
+});
+
+router.put("/admin/settings/community-match-rules", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  const { rules } = req.body;
+  if (typeof rules !== "string" || !rules.trim()) {
+    return res.status(400).json({ error: "rules (string) is required." });
+  }
+  try {
+    await setSetting("community_match_rules", rules.trim());
+    res.json({ success: true, rules: rules.trim() });
+  } catch {
+    res.status(500).json({ error: "Failed to save rules." });
+  }
+});
+
 export default router;
