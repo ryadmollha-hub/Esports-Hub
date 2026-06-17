@@ -621,20 +621,28 @@ export default function TournamentDetailPage() {
               <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
                 <h3 className="text-white font-bold uppercase text-sm mb-3 tracking-wider">Prize Distribution</h3>
                 <div className="space-y-2">
-                  {t.prizes.map((prize: any, i: number) => (
-                    <div key={prize.id} className="flex items-center justify-between py-2 border-b border-[#ff6b00]/10 last:border-0">
-                      <div className="flex items-center gap-3">
-                        <Trophy className={`w-5 h-5 ${["text-[#ffd700]","text-gray-300","text-amber-600"][i] ?? "text-[#a0a0b0]"}`} />
-                        <div>
-                          <div className="font-bold text-white text-sm">{prize.rank}</div>
-                          {prize.percentage && <div className="text-[#a0a0b0] text-xs">{prize.percentage}% of pool</div>}
+                  {t.prizes.map((prize: any, i: number) => {
+                    const rankColors = [
+                      { trophy: "text-[#FFD700]", amount: "text-[#FFD700]", label: "text-[#FFD700]" },
+                      { trophy: "text-[#C0C0C0]", amount: "text-[#C0C0C0]", label: "text-[#C0C0C0]" },
+                      { trophy: "text-[#CD7F32]", amount: "text-[#CD7F32]", label: "text-[#CD7F32]" },
+                    ];
+                    const rc = rankColors[i] ?? { trophy: "text-[#a0a0b0]", amount: "text-white", label: "text-white" };
+                    return (
+                      <div key={prize.id} className="flex items-center justify-between py-2 border-b border-[#ff6b00]/10 last:border-0">
+                        <div className="flex items-center gap-3">
+                          <Trophy className={`w-5 h-5 ${rc.trophy}`} />
+                          <div>
+                            <div className={`font-bold text-sm ${i < 3 ? rc.label : "text-white"}`}>{prize.rank}</div>
+                            {prize.percentage && <div className="text-[#a0a0b0] text-xs">{prize.percentage}% of pool</div>}
+                          </div>
+                        </div>
+                        <div className={`font-black text-lg ${rc.amount}`}>
+                          ৳{Number(prize.amount).toLocaleString()}
                         </div>
                       </div>
-                      <div className={`font-black text-lg ${["text-[#ffd700]","text-gray-300","text-amber-600"][i] ?? "text-white"}`}>
-                        ৳{Number(prize.amount).toLocaleString()}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

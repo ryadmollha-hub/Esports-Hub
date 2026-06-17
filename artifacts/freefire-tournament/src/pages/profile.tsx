@@ -185,14 +185,22 @@ export default function ProfilePage() {
                       </div>
                     )}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 overflow-hidden">
                     <h1 className="text-xl font-black text-white truncate">{displayName}</h1>
                     <p className="text-[#a0a0b0] text-sm truncate">{authUser?.email}</p>
                     {prof?.freefireNickname && (
+                      <div className="flex items-center gap-1.5 mt-1.5 min-w-0">
+                        <Flame className="w-3.5 h-3.5 text-[#ff6b00] shrink-0" />
+                        <span className="text-[#ff6b00] text-sm font-bold truncate">{prof.freefireNickname}</span>
+                        {prof?.freefireUid && (
+                          <span className="text-[#606070] text-xs font-mono shrink-0">#{prof.freefireUid}</span>
+                        )}
+                      </div>
+                    )}
+                    {!prof?.freefireNickname && prof?.freefireUid && (
                       <div className="flex items-center gap-1.5 mt-1.5">
-                        <Flame className="w-3.5 h-3.5 text-[#ff6b00]" />
-                        <span className="text-[#ff6b00] text-sm font-bold">{prof.freefireNickname}</span>
-                        <span className="text-[#606070] text-xs font-mono">#{prof.freefireUid}</span>
+                        <Flame className="w-3.5 h-3.5 text-[#ff6b00] shrink-0" />
+                        <span className="text-[#606070] text-xs font-mono">UID: {prof.freefireUid}</span>
                       </div>
                     )}
                     {authUser?.isAdmin && (
