@@ -1,0 +1,109 @@
+Fix the My Tournaments and Admin Tournament Management system without changing the website design.
+
+Current Issues:
+
+1. Users cannot join approved tournaments properly.
+2. Users can create tournaments but cannot delete their own tournament requests.
+3. Admin can see user tournament requests, but there is no delete/remove option in Admin Panel.
+4. Tournament management workflow is incomplete.
+
+==================================
+USER SIDE FIXES
+==================================
+
+My Tournaments page:
+
+- Add Delete button for tournament requests created by the user.
+- Allow deletion only if status is:
+  - Pending
+  - Rejected
+
+Restrictions:
+- Approved tournaments cannot be deleted by users.
+- Joined tournaments cannot be deleted.
+
+Before deletion show confirmation:
+
+"Are you sure you want to delete this tournament request?"
+
+After deletion:
+- Remove from database
+- Remove from My Tournaments list
+
+==================================
+TOURNAMENT JOIN FIX
+==================================
+
+Fix Join Tournament functionality.
+
+Requirements:
+
+- Users must be able to join approved tournaments.
+- Verify wallet balance before joining.
+- Deduct entry fee correctly.
+- Update player count automatically.
+- Prevent duplicate joins.
+- Show success message after joining.
+
+==================================
+ADMIN PANEL FIXES
+==================================
+
+Admin Tournament Requests page:
+
+Add buttons:
+
+- Approve
+- Reject
+- Delete
+
+Admin Delete Rules:
+
+- Admin can permanently delete any tournament request.
+- Remove it from:
+  - Tournament list
+  - User history
+  - Admin panel
+
+Show confirmation before deletion.
+
+==================================
+DATABASE FIX
+==================================
+
+Ensure:
+
+- Deleted tournaments are removed correctly.
+- No orphan records remain.
+- Tournament status updates properly.
+- Join records stay consistent.
+
+==================================
+UI REQUIREMENTS
+==================================
+
+- Match current website theme
+- Mobile responsive
+- No layout redesign
+- Keep existing functionality intact
+
+==================================
+EXPECTED FLOW
+==================================
+
+User Creates Tournament
+→ My Tournaments
+
+User Deletes Pending/Rejected Tournament
+→ Removed Successfully
+
+Admin Reviews Tournament
+→ Approve / Reject / Delete
+
+Approved Tournament
+→ Visible Publicly
+
+User Joins Tournament
+→ Entry Fee Deducted
+→ Player Count Updated
+→ Join Successful

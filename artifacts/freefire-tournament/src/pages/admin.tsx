@@ -56,6 +56,7 @@ export default function AdminPage() {
   const [rejectingMatch, setRejectingMatch] = useState<number | null>(null);
   const [rejectNote, setRejectNote] = useState("");
   const [matchEntryFees, setMatchEntryFees] = useState<Record<number, string>>({});
+  const [deletingMatch, setDeletingMatch] = useState<number | null>(null);
   const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [showRoomPass, setShowRoomPass] = useState<Record<number, boolean>>({});
@@ -1817,54 +1818,62 @@ export default function AdminPage() {
                             {m.adminNote && <div className="text-[#ff2244] mt-1">Note: {m.adminNote}</div>}
                           </div>
                         </div>
-                        {m.status === "pending_approval" && (
-                          <div className="flex flex-col gap-2 shrink-0 min-w-[160px]">
-                            <div>
-                              <label className="text-[#a0a0b0] text-xs font-bold uppercase block mb-1">Entry Fee (৳) <span className="text-[#ff2244]">*</span></label>
-                              <input
-                                type="number"
-                                min="1"
-                                step="1"
-                                placeholder="e.g. 100"
-                                value={matchEntryFees[m.id] ?? ""}
-                                onChange={(e) => setMatchEntryFees((prev) => ({ ...prev, [m.id]: e.target.value }))}
-                                className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-1.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
-                              />
+                        <div className="flex flex-col gap-2 shrink-0">
+                          {m.status === "pending_approval" && (
+                            <div className="flex flex-col gap-2 min-w-[160px]">
+                              <div>
+                                <label className="text-[#a0a0b0] text-xs font-bold uppercase block mb-1">Entry Fee (৳) <span className="text-[#ff2244]">*</span></label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  placeholder="e.g. 100"
+                                  value={matchEntryFees[m.id] ?? ""}
+                                  onChange={(e) => setMatchEntryFees((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-1.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={async () => {
+                                    const fee = parseFloat(matchEntryFees[m.id] ?? "");
+                                    if (!fee || fee <= 0) {
+                                      toast({ title: "Entry Fee required", description: "Please set an Entry Fee before approving this match.", variant: "destructive" });
+                                      return;
+                                    }
+                                    const res = await apiFetch(`/admin/user-matches/${m.id}/approve`, {
+                                      method: "PATCH",
+                                      body: JSON.stringify({ entryFee: fee }),
+                                    });
+                                    if (res.ok) {
+                                      toast({ title: "Match approved!", description: `Entry Fee set to ৳${fee.toLocaleString()}` });
+                                      setMatchEntryFees((prev) => { const n = { ...prev }; delete n[m.id]; return n; });
+                                      loadUserMatches();
+                                    } else {
+                                      const d = await safeJson(res);
+                                      toast({ title: "Error", description: d.error, variant: "destructive" });
+                                    }
+                                  }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] text-xs font-bold rounded-lg hover:bg-[#00ff88]/20 transition-colors"
+                                >
+                                  <CheckCircle className="w-3.5 h-3.5" /> Approve
+                                </button>
+                                <button
+                                  onClick={() => { setRejectingMatch(m.id); setRejectNote(""); setDeletingMatch(null); }}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors"
+                                >
+                                  <XCircle className="w-3.5 h-3.5" /> Reject
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={async () => {
-                                  const fee = parseFloat(matchEntryFees[m.id] ?? "");
-                                  if (!fee || fee <= 0) {
-                                    toast({ title: "Entry Fee required", description: "Please set an Entry Fee before approving this match.", variant: "destructive" });
-                                    return;
-                                  }
-                                  const res = await apiFetch(`/admin/user-matches/${m.id}/approve`, {
-                                    method: "PATCH",
-                                    body: JSON.stringify({ entryFee: fee }),
-                                  });
-                                  if (res.ok) {
-                                    toast({ title: "Match approved!", description: `Entry Fee set to ৳${fee.toLocaleString()}` });
-                                    setMatchEntryFees((prev) => { const n = { ...prev }; delete n[m.id]; return n; });
-                                    loadUserMatches();
-                                  } else {
-                                    const d = await safeJson(res);
-                                    toast({ title: "Error", description: d.error, variant: "destructive" });
-                                  }
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] text-xs font-bold rounded-lg hover:bg-[#00ff88]/20 transition-colors"
-                              >
-                                <CheckCircle className="w-3.5 h-3.5" /> Approve
-                              </button>
-                              <button
-                                onClick={() => { setRejectingMatch(m.id); setRejectNote(""); }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors"
-                              >
-                                <XCircle className="w-3.5 h-3.5" /> Reject
-                              </button>
-                            </div>
-                          </div>
-                        )}
+                          )}
+                          <button
+                            onClick={() => { setDeletingMatch(m.id); setRejectingMatch(null); }}
+                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" /> Delete
+                          </button>
+                        </div>
                       </div>
 
                       {/* Reject note form */}
@@ -1892,6 +1901,26 @@ export default function AdminPage() {
                               Confirm Reject
                             </button>
                             <button onClick={() => setRejectingMatch(null)} className="px-3 py-1.5 text-[#a0a0b0] text-xs font-bold rounded-lg hover:text-white transition-colors">Cancel</button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Delete confirmation */}
+                      {deletingMatch === m.id && (
+                        <div className="mt-3 pt-3 border-t border-[#ff2244]/20">
+                          <p className="text-sm font-bold text-[#ff2244] mb-2">⚠ Permanently delete this match and all join records? Players who paid will be refunded automatically.</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                const res = await apiFetch(`/admin/user-matches/${m.id}`, { method: "DELETE" });
+                                if (res.ok) { toast({ title: "Match deleted" }); setDeletingMatch(null); loadUserMatches(); }
+                                else { const d = await safeJson(res); toast({ title: "Error", description: d.error, variant: "destructive" }); }
+                              }}
+                              className="px-3 py-1.5 bg-[#ff2244] text-white text-xs font-bold rounded-lg hover:bg-[#dd1133] transition-colors"
+                            >
+                              Confirm Delete
+                            </button>
+                            <button onClick={() => setDeletingMatch(null)} className="px-3 py-1.5 text-[#a0a0b0] text-xs font-bold rounded-lg hover:text-white transition-colors">Cancel</button>
                           </div>
                         </div>
                       )}

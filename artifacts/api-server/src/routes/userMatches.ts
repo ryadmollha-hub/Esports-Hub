@@ -242,4 +242,58 @@ router.patch("/admin/user-matches/:id/reject", async (req, res) => {
   }
 });
 
+// ─── User: delete own pending/rejected match ──────────────────────────────────
+
+router.delete("/user-matches/:id", async (req, res) => {
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+    if (match.creatorId !== userId) return res.status(403).json({ error: "Not your match." });
+    if (match.status === "approved") {
+      return res.status(400).json({ error: "Approved matches cannot be deleted. Contact admin to remove it." });
+    }
+    await db.delete(userMatchJoinsTable).where(eq(userMatchJoinsTable.matchId, id));
+    await db.delete(userMatchesTable).where(eq(userMatchesTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Failed to delete match");
+    res.status(500).json({ error: "Failed to delete match." });
+  }
+});
+
+// ─── Admin: delete any match ──────────────────────────────────────────────────
+
+router.delete("/admin/user-matches/:id", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+
+    if (match.status === "approved" && parseFloat(match.entryFee) > 0) {
+      const joins = await db.select().from(userMatchJoinsTable).where(eq(userMatchJoinsTable.matchId, id));
+      for (const join of joins) {
+        await db.insert(walletTransactionsTable).values({
+          userId: join.userId,
+          type: "tournament_prize",
+          amount: match.entryFee,
+          status: "approved",
+          notes: `Refund: match #${match.id} (${match.matchType}) deleted by admin`,
+          tournamentId: null,
+        });
+      }
+    }
+
+    await db.delete(userMatchJoinsTable).where(eq(userMatchJoinsTable.matchId, id));
+    await db.delete(userMatchesTable).where(eq(userMatchesTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Failed to delete match");
+    res.status(500).json({ error: "Failed to delete match." });
+  }
+});
+
 export default router;

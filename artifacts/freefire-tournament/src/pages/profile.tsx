@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   User, Trophy, Wallet, Shield, History, ChevronRight,
-  Edit, Save, X, Flame, Star, Target, Swords,
-  Clock, CheckCircle, XCircle, LogOut
+  Edit, Save, X, Flame, Star, Target, Swords, Trash2,
+  Clock, CheckCircle, XCircle, LogOut, AlertTriangle
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuthContext } from "@/lib/AuthContext";
@@ -28,6 +28,7 @@ export default function ProfilePage() {
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [myMatches, setMyMatches] = useState<any[]>([]);
   const [myMatchesLoading, setMyMatchesLoading] = useState(false);
+  const [deletingMatchId, setDeletingMatchId] = useState<number | null>(null);
 
   const { data: profile, refetch } = useGetMyProfile();
   const updateProfile = useUpdateMyProfile();
@@ -73,6 +74,23 @@ export default function ProfilePage() {
       setMyMatches([]);
     } finally {
       setMyMatchesLoading(false);
+    }
+  };
+
+  const deleteMatch = async (id: number) => {
+    try {
+      const res = await authFetch(`/user-matches/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setMyMatches((prev) => prev.filter((m) => m.id !== id));
+        setDeletingMatchId(null);
+        toast({ title: "Match request deleted" });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        toast({ title: "Cannot delete", description: data.error ?? "Error deleting match", variant: "destructive" });
+        setDeletingMatchId(null);
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
     }
   };
 
@@ -351,6 +369,41 @@ export default function ProfilePage() {
                       {/* Description */}
                       {m.description && (
                         <p className="text-[#4a4a5a] text-xs mt-2 italic">"{m.description}"</p>
+                      )}
+
+                      {/* Delete button — only for pending/rejected */}
+                      {(m.status === "pending_approval" || m.status === "rejected") && (
+                        <div className="mt-3 pt-3 border-t border-[#2a2a36]">
+                          {deletingMatchId === m.id ? (
+                            <div>
+                              <p className="text-xs text-[#ff2244] font-bold mb-2 flex items-center gap-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                Are you sure you want to delete this match request?
+                              </p>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => deleteMatch(m.id)}
+                                  className="px-3 py-1.5 bg-[#ff2244] text-white text-xs font-black rounded-lg hover:bg-[#dd1133] transition-colors"
+                                >
+                                  Confirm Delete
+                                </button>
+                                <button
+                                  onClick={() => setDeletingMatchId(null)}
+                                  className="px-3 py-1.5 text-[#a0a0b0] text-xs font-bold rounded-lg hover:text-white transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeletingMatchId(m.id)}
+                              className="flex items-center gap-1.5 text-[#606070] text-xs font-bold hover:text-[#ff2244] transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete Request
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   );
