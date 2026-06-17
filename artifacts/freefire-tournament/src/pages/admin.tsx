@@ -55,6 +55,7 @@ export default function AdminPage() {
   const [userMatchesLoading, setUserMatchesLoading] = useState(false);
   const [rejectingMatch, setRejectingMatch] = useState<number | null>(null);
   const [rejectNote, setRejectNote] = useState("");
+  const [matchEntryFees, setMatchEntryFees] = useState<Record<number, string>>({});
   const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [showRoomPass, setShowRoomPass] = useState<Record<number, boolean>>({});
@@ -1807,30 +1808,61 @@ export default function AdminPage() {
                           </div>
                           <div className="text-[#a0a0b0] text-xs space-y-0.5">
                             <div>By: <span className="text-white font-bold">{m.creatorName ?? "Unknown"}</span></div>
-                            <div>Prize Pool: <span className="text-[#ffd700] font-bold">৳{Number(m.prizePool).toLocaleString()}</span> · Entry Fee: <span className="text-[#00ff88] font-bold">৳{Number(m.entryFee).toLocaleString()}</span> · Slots: <span className="text-white font-bold">{m.filledSlots}/{m.maxSlots}</span></div>
+                            <div>Prize Pool: <span className="text-[#ffd700] font-bold">৳{Number(m.prizePool).toLocaleString()}</span> · Slots: <span className="text-white font-bold">{m.filledSlots}/{m.maxSlots}</span></div>
+                            {m.status !== "pending_approval" && (
+                              <div>Entry Fee: <span className="text-[#00ff88] font-bold">৳{Number(m.entryFee).toLocaleString()}</span></div>
+                            )}
                             <div>Scheduled: <span className="text-white">{new Date(m.scheduledAt).toLocaleString()}</span></div>
                             {m.description && <div className="text-[#a0a0b0] mt-1 italic">"{m.description}"</div>}
                             {m.adminNote && <div className="text-[#ff2244] mt-1">Note: {m.adminNote}</div>}
                           </div>
                         </div>
                         {m.status === "pending_approval" && (
-                          <div className="flex gap-2 shrink-0">
-                            <button
-                              onClick={async () => {
-                                const res = await apiFetch(`/admin/user-matches/${m.id}/approve`, { method: "PATCH" });
-                                if (res.ok) { toast({ title: "Match approved!" }); loadUserMatches(); }
-                                else { const d = await safeJson(res); toast({ title: "Error", description: d.error, variant: "destructive" }); }
-                              }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] text-xs font-bold rounded-lg hover:bg-[#00ff88]/20 transition-colors"
-                            >
-                              <CheckCircle className="w-3.5 h-3.5" /> Approve
-                            </button>
-                            <button
-                              onClick={() => { setRejectingMatch(m.id); setRejectNote(""); }}
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors"
-                            >
-                              <XCircle className="w-3.5 h-3.5" /> Reject
-                            </button>
+                          <div className="flex flex-col gap-2 shrink-0 min-w-[160px]">
+                            <div>
+                              <label className="text-[#a0a0b0] text-xs font-bold uppercase block mb-1">Entry Fee (৳) <span className="text-[#ff2244]">*</span></label>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                placeholder="e.g. 100"
+                                value={matchEntryFees[m.id] ?? ""}
+                                onChange={(e) => setMatchEntryFees((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                                className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-1.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={async () => {
+                                  const fee = parseFloat(matchEntryFees[m.id] ?? "");
+                                  if (!fee || fee <= 0) {
+                                    toast({ title: "Entry Fee required", description: "Please set an Entry Fee before approving this match.", variant: "destructive" });
+                                    return;
+                                  }
+                                  const res = await apiFetch(`/admin/user-matches/${m.id}/approve`, {
+                                    method: "PATCH",
+                                    body: JSON.stringify({ entryFee: fee }),
+                                  });
+                                  if (res.ok) {
+                                    toast({ title: "Match approved!", description: `Entry Fee set to ৳${fee.toLocaleString()}` });
+                                    setMatchEntryFees((prev) => { const n = { ...prev }; delete n[m.id]; return n; });
+                                    loadUserMatches();
+                                  } else {
+                                    const d = await safeJson(res);
+                                    toast({ title: "Error", description: d.error, variant: "destructive" });
+                                  }
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] text-xs font-bold rounded-lg hover:bg-[#00ff88]/20 transition-colors"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" /> Approve
+                              </button>
+                              <button
+                                onClick={() => { setRejectingMatch(m.id); setRejectNote(""); }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors"
+                              >
+                                <XCircle className="w-3.5 h-3.5" /> Reject
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>

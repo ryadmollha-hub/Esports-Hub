@@ -204,9 +204,16 @@ router.patch("/admin/user-matches/:id/approve", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
   try {
     const id = parseInt(req.params.id);
+    const { entryFee } = req.body;
+
+    const fee = parseFloat(entryFee);
+    if (isNaN(fee) || fee <= 0) {
+      return res.status(400).json({ error: "Please set a valid Entry Fee (greater than zero) before approving." });
+    }
+
     const [updated] = await db
       .update(userMatchesTable)
-      .set({ status: "approved", adminNote: null })
+      .set({ status: "approved", adminNote: null, entryFee: fee.toFixed(2) })
       .where(eq(userMatchesTable.id, id))
       .returning();
     if (!updated) return res.status(404).json({ error: "Match not found." });
