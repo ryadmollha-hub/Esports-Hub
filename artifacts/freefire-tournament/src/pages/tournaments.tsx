@@ -406,8 +406,16 @@ export default function TournamentsPage() {
               </h2>
               <p className="text-[#a0a0b0] text-xs mt-0.5">Player-created matches — join and compete</p>
             </div>
-            {!user && (
-              <Link href="/sign-up" className="text-xs text-[#ff6b00] font-bold hover:underline">
+            {user ? (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-lg text-xs hover:bg-[#e66000] transition-colors active:scale-95 shrink-0"
+                style={{ height: "36px" }}
+              >
+                <Plus className="w-3.5 h-3.5" /> Create Match
+              </button>
+            ) : (
+              <Link href="/sign-up" className="text-xs text-[#ff6b00] font-bold hover:underline shrink-0">
                 Sign up to create
               </Link>
             )}
@@ -418,23 +426,7 @@ export default function TournamentsPage() {
               {[1,2,3].map((i) => <div key={i} className="h-44 bg-[#12121a] rounded-2xl animate-pulse" />)}
             </div>
           ) : communityMatches.length === 0 ? (
-            <div className="bg-[#12121a] border border-[#ff6b00]/10 rounded-2xl p-10 text-center">
-              <Swords className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/20" />
-              <h3 className="font-bold text-white mb-1">No community matches yet</h3>
-              <p className="text-[#a0a0b0] text-sm mb-4">Be the first to create a match!</p>
-              {user ? (
-                <button
-                  onClick={() => setShowCreate(true)}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors"
-                >
-                  <Plus className="w-4 h-4" /> Create Match
-                </button>
-              ) : (
-                <Link href="/sign-in" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
-                  Sign in to create
-                </Link>
-              )}
-            </div>
+            <p className="text-[#a0a0b0] text-sm py-4">No community matches yet. Be the first to create one!</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {communityMatches.map((m) => (
@@ -453,17 +445,6 @@ export default function TournamentsPage() {
           onClose={() => setShowCreate(false)}
           onSuccess={fetchCommunityMatches}
         />
-      )}
-
-      {/* FAB — Create Match (all screen sizes, logged-in users only) */}
-      {user && !showCreate && (
-        <button
-          onClick={() => setShowCreate(true)}
-          className="fixed bottom-20 right-4 z-40 w-14 h-14 bg-[#ff6b00] text-white rounded-full shadow-[0_4px_24px_rgba(255,107,0,0.55)] flex items-center justify-center hover:bg-[#e66000] transition-all active:scale-95"
-          aria-label="Create Match"
-        >
-          <Plus className="w-6 h-6" />
-        </button>
       )}
 
     </div>
