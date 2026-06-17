@@ -21,6 +21,8 @@ export const userMatchesTable = pgTable("user_matches", {
   startDelayMinutes: integer("start_delay_minutes"),
   timerStartedAt: timestamp("timer_started_at"),
   adminNote: text("admin_note"),
+  adminRoomId: text("admin_room_id"),
+  adminRoomPassword: text("admin_room_password"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

@@ -59,6 +59,8 @@ export default function AdminPage() {
   const [communityRules, setCommunityRules] = useState("");
   const [communityRulesLoading, setCommunityRulesLoading] = useState(false);
   const [communityRulesSaving, setCommunityRulesSaving] = useState(false);
+  const [roomCredentials, setRoomCredentials] = useState<Record<number, { roomId: string; password: string }>>({});
+  const [submittingCredentials, setSubmittingCredentials] = useState<number | null>(null);
   const [deletingMatch, setDeletingMatch] = useState<number | null>(null);
   const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1942,6 +1944,69 @@ export default function AdminPage() {
                           </button>
                         </div>
                       </div>
+
+                      {/* Room Credentials — shown for full matches that are approved/waiting/active */}
+                      {(m.filledSlots >= m.maxSlots || m.status === "approved") && m.status !== "pending_approval" && m.status !== "rejected" && (
+                        <div className="mt-3 pt-3 border-t border-[#ff6b00]/10">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Key className="w-3.5 h-3.5 text-[#ff6b00]" />
+                            <span className="text-[#a0a0b0] text-xs font-black uppercase">
+                              {m.filledSlots >= m.maxSlots ? "Match Full — Set Room Credentials" : "Room Credentials"}
+                            </span>
+                            {m.adminRoomId && (
+                              <span className="text-[10px] font-bold text-[#00ff88] border border-[#00ff88]/30 px-1.5 py-0.5 rounded-full">Set ✓</span>
+                            )}
+                          </div>
+                          {m.adminRoomId && (
+                            <div className="bg-[#0a0a0f] rounded-lg px-3 py-2 mb-2 flex flex-wrap gap-3 text-xs">
+                              <span className="text-[#606070]">Room ID: <span className="text-[#00ff88] font-mono font-bold">{m.adminRoomId}</span></span>
+                              {m.adminRoomPassword && <span className="text-[#606070]">Password: <span className="text-yellow-400 font-mono font-bold">{m.adminRoomPassword}</span></span>}
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              placeholder="Custom Room ID *"
+                              value={roomCredentials[m.id]?.roomId ?? ""}
+                              onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: e.target.value, password: prev[m.id]?.password ?? "" } }))}
+                              className="flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-1.5 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Room Password"
+                              value={roomCredentials[m.id]?.password ?? ""}
+                              onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: prev[m.id]?.roomId ?? "", password: e.target.value } }))}
+                              className="flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-1.5 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
+                            />
+                            <button
+                              disabled={submittingCredentials === m.id || !roomCredentials[m.id]?.roomId?.trim()}
+                              onClick={async () => {
+                                const creds = roomCredentials[m.id];
+                                if (!creds?.roomId?.trim()) return;
+                                setSubmittingCredentials(m.id);
+                                try {
+                                  const res = await apiFetch(`/admin/user-matches/${m.id}/room-credentials`, {
+                                    method: "PATCH",
+                                    body: JSON.stringify({ adminRoomId: creds.roomId.trim(), adminRoomPassword: creds.password?.trim() || undefined }),
+                                  });
+                                  if (res.ok) {
+                                    toast({ title: "Room credentials set!", description: "Participants can now see the Room ID and password." });
+                                    setRoomCredentials((prev) => { const n = { ...prev }; delete n[m.id]; return n; });
+                                    loadUserMatches();
+                                  } else {
+                                    const d = await safeJson(res);
+                                    toast({ title: "Error", description: d.error, variant: "destructive" });
+                                  }
+                                } catch { toast({ title: "Connection error", variant: "destructive" }); }
+                                finally { setSubmittingCredentials(null); }
+                              }}
+                              className="px-3 py-1.5 bg-[#ff6b00] text-white text-xs font-black rounded-lg hover:bg-[#e66000] disabled:opacity-50 transition-colors whitespace-nowrap"
+                            >
+                              {submittingCredentials === m.id ? "..." : "Submit Credentials"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Reject note form */}
                       {rejectingMatch === m.id && (

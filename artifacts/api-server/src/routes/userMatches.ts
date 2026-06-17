@@ -40,12 +40,12 @@ function effectiveStatus(match: typeof userMatchesTable.$inferSelect): string {
 }
 
 function stripMatch(m: typeof userMatchesTable.$inferSelect, includeRoom = false) {
-  const { passwordHash, roomId, ...rest } = m as any;
+  const { passwordHash, roomId, adminRoomPassword, ...rest } = m as any;
   return {
     ...rest,
     isPasswordProtected: !!passwordHash,
     effectiveStatus: effectiveStatus(m),
-    ...(includeRoom ? { roomId: roomId ?? null } : {}),
+    ...(includeRoom ? { roomId: roomId ?? null, adminRoomPassword: adminRoomPassword ?? null } : {}),
   };
 }
 
@@ -173,6 +173,7 @@ router.get("/user-matches/my-requests", async (req, res) => {
       if (!match) return null;
       const effStatus = effectiveStatus(match);
       const isActive = effStatus === "active";
+      const isPaidMember = j.status === "accepted";
       return {
         joinId: j.id,
         matchId: j.matchId,
@@ -189,7 +190,9 @@ router.get("/user-matches/my-requests", async (req, res) => {
         effectiveStatus: effStatus,
         timerStartedAt: match.timerStartedAt,
         startDelayMinutes: match.startDelayMinutes,
-        roomId: (j.status === "accepted" && isActive) ? match.roomId : null,
+        roomId: (isPaidMember && isActive) ? match.roomId : null,
+        adminRoomId: isPaidMember ? (match.adminRoomId ?? null) : null,
+        adminRoomPassword: isPaidMember ? (match.adminRoomPassword ?? null) : null,
       };
     }).filter(Boolean);
 
@@ -285,7 +288,8 @@ router.post("/user-matches/:id/join", async (req, res) => {
     if (!["waiting", "active", "approved"].includes(effStatus)) {
       return res.status(400).json({ error: "This match is not open for joining." });
     }
-    if (match.creatorId === userId) return res.status(400).json({ error: "You cannot join your own match." });
+    // Temporarily disabled for testing: creators may join their own match
+    // if (match.creatorId === userId) return res.status(400).json({ error: "You cannot join your own match." });
     if (match.filledSlots >= match.maxSlots) return res.status(400).json({ error: "This match is full." });
 
     const requiredPlayers = PLAYERS_FOR_TYPE[match.matchType] ?? 1;
@@ -538,6 +542,36 @@ router.delete("/user-matches/:id", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to cancel match");
     res.status(500).json({ error: "Failed to cancel match." });
+  }
+});
+
+// ─── Admin: set room credentials for a match ─────────────────────────────────
+
+router.patch("/admin/user-matches/:id/room-credentials", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const { adminRoomId, adminRoomPassword } = req.body;
+
+    if (!adminRoomId || !String(adminRoomId).trim()) {
+      return res.status(400).json({ error: "adminRoomId is required." });
+    }
+
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+
+    const [updated] = await db.update(userMatchesTable)
+      .set({
+        adminRoomId: String(adminRoomId).trim(),
+        adminRoomPassword: adminRoomPassword ? String(adminRoomPassword).trim() : null,
+      })
+      .where(eq(userMatchesTable.id, id))
+      .returning();
+
+    res.json({ success: true, adminRoomId: updated.adminRoomId, adminRoomPassword: updated.adminRoomPassword });
+  } catch (err) {
+    logger.error({ err }, "Failed to set room credentials");
+    res.status(500).json({ error: "Failed to set room credentials." });
   }
 });
 
