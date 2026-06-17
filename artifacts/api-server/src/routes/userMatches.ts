@@ -7,24 +7,18 @@ import {
   walletTransactionsTable,
   usersTable,
 } from "@workspace/db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { requireAdmin, requireAuth } from "../middlewares/requireAdmin";
 import bcrypt from "bcryptjs";
 
 const router: IRouter = Router();
 
 const SLOTS_FOR_TYPE: Record<string, number> = {
-  "1v1": 2,
-  "2v2": 4,
-  "3v3": 6,
-  "4v4": 8,
+  "1v1": 2, "2v2": 4, "3v3": 6, "4v4": 8,
 };
 
 async function getUserBalance(userId: string): Promise<number> {
-  const txs = await db
-    .select()
-    .from(walletTransactionsTable)
-    .where(eq(walletTransactionsTable.userId, userId));
+  const txs = await db.select().from(walletTransactionsTable).where(eq(walletTransactionsTable.userId, userId));
   const credits = txs
     .filter((t) => (t.type === "deposit" || t.type === "tournament_prize") && t.status === "approved")
     .reduce((sum, t) => sum + parseFloat(t.amount), 0);
@@ -34,34 +28,44 @@ async function getUserBalance(userId: string): Promise<number> {
   return Math.max(0, credits - debits);
 }
 
-function stripMatch(m: typeof userMatchesTable.$inferSelect) {
-  const { passwordHash, ...rest } = m as any;
-  return { ...rest, isPasswordProtected: !!passwordHash };
+function effectiveStatus(match: typeof userMatchesTable.$inferSelect): string {
+  if (match.status === "active" || match.status === "ended" || match.status === "cancelled") return match.status;
+  if (match.timerStartedAt && match.startDelayMinutes) {
+    const startMs = new Date(match.timerStartedAt).getTime() + match.startDelayMinutes * 60 * 1000;
+    if (Date.now() >= startMs) return "active";
+  }
+  if (match.status === "approved") return "waiting";
+  return match.status;
 }
 
-// ─── Create a user match (auth required) ─────────────────────────────────────
+function stripMatch(m: typeof userMatchesTable.$inferSelect, includeRoom = false) {
+  const { passwordHash, roomId, ...rest } = m as any;
+  return {
+    ...rest,
+    isPasswordProtected: !!passwordHash,
+    effectiveStatus: effectiveStatus(m),
+    ...(includeRoom ? { roomId: roomId ?? null } : {}),
+  };
+}
+
+// ─── Create a user match ──────────────────────────────────────────────────────
 
 router.post("/user-matches", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
   try {
-    const { matchName, matchType, prizePool, scheduledAt, description, password } = req.body;
-    if (!matchType || !prizePool || !scheduledAt) {
-      return res.status(400).json({ error: "matchType, prizePool, and scheduledAt are required." });
-    }
-    const maxSlots = SLOTS_FOR_TYPE[matchType];
-    if (!maxSlots) {
-      return res.status(400).json({ error: "Invalid matchType. Must be 1v1, 2v2, 3v3, or 4v4." });
-    }
-    const prize = parseFloat(prizePool);
-    if (isNaN(prize) || prize <= 0) {
-      return res.status(400).json({ error: "prizePool must be a positive number." });
-    }
+    const { matchName, matchType, prizePool, entryFee, description, password, roomId, isPrivate } = req.body;
+    if (!matchType) return res.status(400).json({ error: "matchType is required." });
+    if (!prizePool) return res.status(400).json({ error: "prizePool is required." });
 
-    const schedDate = new Date(scheduledAt);
-    if (isNaN(schedDate.getTime()) || schedDate <= new Date()) {
-      return res.status(400).json({ error: "scheduledAt must be a future date." });
-    }
+    const maxSlots = SLOTS_FOR_TYPE[matchType];
+    if (!maxSlots) return res.status(400).json({ error: "Invalid matchType. Must be 1v1, 2v2, 3v3, or 4v4." });
+
+    const prize = parseFloat(prizePool);
+    if (isNaN(prize) || prize < 0) return res.status(400).json({ error: "prizePool must be a non-negative number." });
+
+    const fee = parseFloat(entryFee ?? "0");
+    if (isNaN(fee) || fee < 0) return res.status(400).json({ error: "entryFee must be a non-negative number." });
 
     const [user] = await db.select({ username: usersTable.username, displayName: usersTable.displayName })
       .from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
@@ -77,37 +81,44 @@ router.post("/user-matches", async (req, res) => {
       matchName: matchName?.trim() || null,
       matchType,
       prizePool: prize.toFixed(2),
-      entryFee: "0.00",
+      entryFee: fee.toFixed(2),
       maxSlots,
-      scheduledAt: schedDate,
+      scheduledAt: null,
       description: description ?? null,
       passwordHash,
-      status: "pending_approval",
+      roomId: roomId?.trim() || null,
+      isPrivate: !!isPrivate,
+      status: "waiting",
     }).returning();
 
-    res.status(201).json(stripMatch(match));
+    res.status(201).json(stripMatch(match, true));
   } catch (err) {
     logger.error({ err }, "Failed to create match");
     res.status(500).json({ error: "Failed to create match." });
   }
 });
 
-// ─── List approved user matches (public) ─────────────────────────────────────
+// ─── List public matches ──────────────────────────────────────────────────────
 
 router.get("/user-matches", async (_req, res) => {
   try {
     const matches = await db
       .select()
       .from(userMatchesTable)
-      .where(eq(userMatchesTable.status, "approved"))
-      .orderBy(desc(userMatchesTable.scheduledAt));
-    res.json(matches.map(stripMatch));
+      .where(
+        and(
+          eq(userMatchesTable.isPrivate, false),
+          inArray(userMatchesTable.status, ["waiting", "active", "approved"])
+        )
+      )
+      .orderBy(desc(userMatchesTable.createdAt));
+    res.json(matches.map((m) => stripMatch(m)));
   } catch {
     res.status(500).json({ error: "Failed to load matches." });
   }
 });
 
-// ─── List my submitted matches (auth required) ────────────────────────────────
+// ─── My created matches ───────────────────────────────────────────────────────
 
 router.get("/user-matches/mine", async (req, res) => {
   const userId = await requireAuth(req, res);
@@ -118,13 +129,146 @@ router.get("/user-matches/mine", async (req, res) => {
       .from(userMatchesTable)
       .where(eq(userMatchesTable.creatorId, userId))
       .orderBy(desc(userMatchesTable.createdAt));
-    res.json(matches.map(stripMatch));
-  } catch {
+
+    const matchIds = matches.map((m) => m.id);
+    let pendingCounts: Record<number, number> = {};
+    let participants: typeof userMatchJoinsTable.$inferSelect[] = [];
+    if (matchIds.length > 0) {
+      const joins = await db.select().from(userMatchJoinsTable).where(inArray(userMatchJoinsTable.matchId, matchIds));
+      participants = joins;
+      for (const j of joins) {
+        if (j.status === "pending") pendingCounts[j.matchId] = (pendingCounts[j.matchId] ?? 0) + 1;
+      }
+    }
+
+    res.json(matches.map((m) => ({
+      ...stripMatch(m, true),
+      pendingRequests: pendingCounts[m.id] ?? 0,
+      participants: participants.filter((j) => j.matchId === m.id && j.status === "accepted"),
+    })));
+  } catch (err) {
+    logger.error({ err }, "Failed to load mine");
     res.status(500).json({ error: "Failed to load your matches." });
   }
 });
 
-// ─── Join a match (auth required) ─────────────────────────────────────────────
+// ─── My join requests (matches I requested to join) ───────────────────────────
+
+router.get("/user-matches/my-requests", async (req, res) => {
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+  try {
+    const joins = await db.select().from(userMatchJoinsTable)
+      .where(eq(userMatchJoinsTable.userId, userId))
+      .orderBy(desc(userMatchJoinsTable.joinedAt));
+
+    if (joins.length === 0) return res.json([]);
+
+    const matchIds = [...new Set(joins.map((j) => j.matchId))];
+    const matches = await db.select().from(userMatchesTable)
+      .where(inArray(userMatchesTable.id, matchIds));
+
+    const matchMap: Record<number, typeof userMatchesTable.$inferSelect> = {};
+    for (const m of matches) matchMap[m.id] = m;
+
+    const result = joins.map((j) => {
+      const match = matchMap[j.matchId];
+      if (!match) return null;
+      const effStatus = effectiveStatus(match);
+      const isActive = effStatus === "active";
+      return {
+        joinId: j.id,
+        matchId: j.matchId,
+        matchName: match.matchName || `${match.matchType} Match`,
+        matchType: match.matchType,
+        creatorName: match.creatorName,
+        prizePool: match.prizePool,
+        entryFee: match.entryFee,
+        maxSlots: match.maxSlots,
+        filledSlots: match.filledSlots,
+        isPrivate: match.isPrivate,
+        status: j.status,
+        joinedAt: j.joinedAt,
+        effectiveStatus: effStatus,
+        timerStartedAt: match.timerStartedAt,
+        startDelayMinutes: match.startDelayMinutes,
+        roomId: (j.status === "accepted" && isActive) ? match.roomId : null,
+      };
+    }).filter(Boolean);
+
+    res.json(result);
+  } catch (err) {
+    logger.error({ err }, "Failed to load requests");
+    res.status(500).json({ error: "Failed to load your requests." });
+  }
+});
+
+// ─── Get participants for a match ─────────────────────────────────────────────
+
+router.get("/user-matches/:id/participants", async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const participants = await db.select().from(userMatchJoinsTable)
+      .where(and(eq(userMatchJoinsTable.matchId, id), eq(userMatchJoinsTable.status, "accepted")))
+      .orderBy(userMatchJoinsTable.joinedAt);
+    res.json(participants);
+  } catch {
+    res.status(500).json({ error: "Failed to load participants." });
+  }
+});
+
+// ─── Get join requests for my match (creator) ────────────────────────────────
+
+router.get("/user-matches/:id/join-requests", async (req, res) => {
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+    if (match.creatorId !== userId) return res.status(403).json({ error: "Not your match." });
+
+    const requests = await db.select().from(userMatchJoinsTable)
+      .where(eq(userMatchJoinsTable.matchId, id))
+      .orderBy(userMatchJoinsTable.joinedAt);
+    res.json(requests);
+  } catch {
+    res.status(500).json({ error: "Failed to load requests." });
+  }
+});
+
+// ─── Get room details (creator or accepted participants when active) ───────────
+
+router.get("/user-matches/:id/details", async (req, res) => {
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+
+    const isCreator = match.creatorId === userId;
+    const effStatus = effectiveStatus(match);
+
+    if (!isCreator) {
+      const [join] = await db.select().from(userMatchJoinsTable)
+        .where(and(eq(userMatchJoinsTable.matchId, id), eq(userMatchJoinsTable.userId, userId)))
+        .limit(1);
+      if (!join || join.status !== "accepted") {
+        return res.status(403).json({ error: "You are not an accepted participant." });
+      }
+      if (effStatus !== "active") {
+        return res.status(403).json({ error: "Room details are only visible once the match is active." });
+      }
+    }
+
+    res.json({ roomId: match.roomId ?? null, hasPassword: !!match.passwordHash });
+  } catch {
+    res.status(500).json({ error: "Failed to load match details." });
+  }
+});
+
+// ─── Join a match ─────────────────────────────────────────────────────────────
 
 router.post("/user-matches/:id/join", async (req, res) => {
   const userId = await requireAuth(req, res);
@@ -133,54 +277,63 @@ router.post("/user-matches/:id/join", async (req, res) => {
     const id = parseInt(req.params.id);
     const { inGameName, gameUid, password } = req.body;
 
-    if (!inGameName || !String(inGameName).trim()) {
-      return res.status(400).json({ error: "In-Game Name is required." });
-    }
-    if (!gameUid || !String(gameUid).trim()) {
-      return res.status(400).json({ error: "Game UID is required." });
-    }
+    if (!inGameName || !String(inGameName).trim()) return res.status(400).json({ error: "In-Game Name is required." });
+    if (!gameUid || !String(gameUid).trim()) return res.status(400).json({ error: "Game UID is required." });
 
     const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
-
     if (!match) return res.status(404).json({ error: "Match not found." });
-    if (match.status !== "approved") return res.status(400).json({ error: "This match is not open for joining." });
+
+    const effStatus = effectiveStatus(match);
+    if (!["waiting", "active", "approved"].includes(effStatus)) {
+      return res.status(400).json({ error: "This match is not open for joining." });
+    }
     if (match.creatorId === userId) return res.status(400).json({ error: "You cannot join your own match." });
     if (match.filledSlots >= match.maxSlots) return res.status(400).json({ error: "This match is full." });
-
-    if (match.passwordHash) {
-      if (!password || !String(password).trim()) {
-        return res.status(400).json({ error: "This match is password protected. Please enter the password." });
-      }
-      const valid = await bcrypt.compare(String(password), match.passwordHash);
-      if (!valid) {
-        return res.status(400).json({ error: "Incorrect match password." });
-      }
-    }
 
     const existing = await db.select({ id: userMatchJoinsTable.id })
       .from(userMatchJoinsTable)
       .where(and(eq(userMatchJoinsTable.matchId, id), eq(userMatchJoinsTable.userId, userId)))
       .limit(1);
-    if (existing.length > 0) return res.status(400).json({ error: "You have already joined this match." });
+    if (existing.length > 0) return res.status(400).json({ error: "You have already joined or requested this match." });
+
+    const [user] = await db.select({ username: usersTable.username, displayName: usersTable.displayName })
+      .from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
+
+    if (match.isPrivate) {
+      await db.insert(userMatchJoinsTable).values({
+        matchId: id,
+        userId,
+        username: user?.displayName ?? user?.username ?? "Unknown",
+        inGameName: String(inGameName).trim(),
+        gameUid: String(gameUid).trim(),
+        status: "pending",
+      });
+      return res.json({ success: true, message: "Join request submitted! The creator will review it.", isPending: true });
+    }
+
+    if (match.passwordHash) {
+      if (!password || !String(password).trim()) {
+        return res.status(400).json({ error: "This match requires a password." });
+      }
+      const valid = await bcrypt.compare(String(password), match.passwordHash);
+      if (!valid) return res.status(400).json({ error: "Incorrect match password." });
+    }
 
     const entryFee = parseFloat(match.entryFee);
     if (entryFee > 0) {
       const balance = await getUserBalance(userId);
       if (balance < entryFee) {
-        return res.status(400).json({ error: `Insufficient wallet balance. You need ৳${entryFee.toFixed(2)} but have ৳${balance.toFixed(2)}.` });
+        return res.status(400).json({ error: `Insufficient balance. Need ৳${entryFee.toFixed(2)}, have ৳${balance.toFixed(2)}.` });
       }
       await db.insert(walletTransactionsTable).values({
         userId,
         type: "tournament_entry",
         amount: entryFee.toFixed(2),
         status: "approved",
-        notes: `Entry fee for ${match.matchName || match.matchType} match #${match.id}`,
+        notes: `Entry: ${match.matchName || match.matchType} match #${match.id}`,
         tournamentId: null,
       });
     }
-
-    const [user] = await db.select({ username: usersTable.username, displayName: usersTable.displayName })
-      .from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
 
     await db.insert(userMatchJoinsTable).values({
       matchId: id,
@@ -188,6 +341,7 @@ router.post("/user-matches/:id/join", async (req, res) => {
       username: user?.displayName ?? user?.username ?? "Unknown",
       inGameName: String(inGameName).trim(),
       gameUid: String(gameUid).trim(),
+      status: "accepted",
     });
 
     await db.update(userMatchesTable)
@@ -201,82 +355,140 @@ router.post("/user-matches/:id/join", async (req, res) => {
   }
 });
 
-// ─── Get participants for a match (public) ───────────────────────────────────
+// ─── Creator: update match (room id, name, description, password) ─────────────
 
-router.get("/user-matches/:id/participants", async (req, res) => {
+router.patch("/user-matches/:id", async (req, res) => {
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
   try {
     const id = parseInt(req.params.id);
-    const participants = await db
-      .select()
-      .from(userMatchJoinsTable)
-      .where(eq(userMatchJoinsTable.matchId, id))
-      .orderBy(userMatchJoinsTable.joinedAt);
-    res.json(participants);
-  } catch {
-    res.status(500).json({ error: "Failed to load participants." });
-  }
-});
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+    if (match.creatorId !== userId) return res.status(403).json({ error: "Not your match." });
 
-// ─── Admin: list all user matches ────────────────────────────────────────────
-
-router.get("/admin/user-matches", async (req, res) => {
-  if (!await requireAdmin(req, res)) return;
-  try {
-    const matches = await db
-      .select()
-      .from(userMatchesTable)
-      .orderBy(desc(userMatchesTable.createdAt));
-    res.json(matches.map(stripMatch));
-  } catch {
-    res.status(500).json({ error: "Failed to load matches." });
-  }
-});
-
-// ─── Admin: approve ───────────────────────────────────────────────────────────
-
-router.patch("/admin/user-matches/:id/approve", async (req, res) => {
-  if (!await requireAdmin(req, res)) return;
-  try {
-    const id = parseInt(req.params.id);
-    const { entryFee } = req.body;
-
-    const fee = parseFloat(entryFee ?? "0");
-    if (isNaN(fee) || fee < 0) {
-      return res.status(400).json({ error: "Please set a valid Entry Fee (0 or greater) before approving." });
+    const updates: Partial<typeof userMatchesTable.$inferInsert> = {};
+    if (req.body.matchName !== undefined) updates.matchName = req.body.matchName?.trim() || null;
+    if (req.body.description !== undefined) updates.description = req.body.description || null;
+    if (req.body.roomId !== undefined) updates.roomId = req.body.roomId?.trim() || null;
+    if (req.body.password !== undefined) {
+      if (req.body.password && req.body.password.trim().length > 0) {
+        updates.passwordHash = await bcrypt.hash(req.body.password.trim(), 10);
+      } else {
+        updates.passwordHash = null;
+      }
     }
 
-    const [updated] = await db
-      .update(userMatchesTable)
-      .set({ status: "approved", adminNote: null, entryFee: fee.toFixed(2) })
-      .where(eq(userMatchesTable.id, id))
-      .returning();
-    if (!updated) return res.status(404).json({ error: "Match not found." });
-    res.json(stripMatch(updated));
-  } catch {
-    res.status(500).json({ error: "Failed to approve match." });
+    const [updated] = await db.update(userMatchesTable).set(updates).where(eq(userMatchesTable.id, id)).returning();
+    res.json(stripMatch(updated, true));
+  } catch (err) {
+    logger.error({ err }, "Failed to update match");
+    res.status(500).json({ error: "Failed to update match." });
   }
 });
 
-// ─── Admin: reject ────────────────────────────────────────────────────────────
+// ─── Creator: start timer ─────────────────────────────────────────────────────
 
-router.patch("/admin/user-matches/:id/reject", async (req, res) => {
-  if (!await requireAdmin(req, res)) return;
+router.post("/user-matches/:id/start-timer", async (req, res) => {
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
   try {
     const id = parseInt(req.params.id);
-    const { adminNote } = req.body;
-    const [updated] = await db
-      .update(userMatchesTable)
-      .set({ status: "rejected", adminNote: adminNote ?? null })
+    const { delayMinutes } = req.body;
+
+    const delay = parseInt(delayMinutes);
+    if (isNaN(delay) || delay < 1 || delay > 120) {
+      return res.status(400).json({ error: "delayMinutes must be between 1 and 120." });
+    }
+
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+    if (match.creatorId !== userId) return res.status(403).json({ error: "Not your match." });
+    if (effectiveStatus(match) === "active") return res.status(400).json({ error: "Match is already active." });
+
+    const now = new Date();
+    const [updated] = await db.update(userMatchesTable)
+      .set({ timerStartedAt: now, startDelayMinutes: delay, status: "waiting" })
       .where(eq(userMatchesTable.id, id))
       .returning();
-    if (!updated) return res.status(404).json({ error: "Match not found." });
-    res.json(stripMatch(updated));
-  } catch {
-    res.status(500).json({ error: "Failed to reject match." });
+
+    res.json({ success: true, timerStartedAt: now, startDelayMinutes: delay, startsAt: new Date(now.getTime() + delay * 60000) });
+  } catch (err) {
+    logger.error({ err }, "Failed to start timer");
+    res.status(500).json({ error: "Failed to start timer." });
   }
 });
 
-// ─── User: delete own pending/rejected match ──────────────────────────────────
+// ─── Creator: approve join request ───────────────────────────────────────────
+
+router.patch("/user-matches/:id/join-requests/:joinId/approve", async (req, res) => {
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+  try {
+    const matchId = parseInt(req.params.id);
+    const joinId = parseInt(req.params.joinId);
+
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, matchId)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+    if (match.creatorId !== userId) return res.status(403).json({ error: "Not your match." });
+    if (match.filledSlots >= match.maxSlots) return res.status(400).json({ error: "Match is full." });
+
+    const [join] = await db.select().from(userMatchJoinsTable).where(eq(userMatchJoinsTable.id, joinId)).limit(1);
+    if (!join || join.matchId !== matchId) return res.status(404).json({ error: "Request not found." });
+    if (join.status !== "pending") return res.status(400).json({ error: "Request is not pending." });
+
+    const entryFee = parseFloat(match.entryFee);
+    if (entryFee > 0) {
+      const balance = await getUserBalance(join.userId);
+      if (balance < entryFee) {
+        return res.status(400).json({ error: `Player has insufficient balance (৳${balance.toFixed(2)}).` });
+      }
+      await db.insert(walletTransactionsTable).values({
+        userId: join.userId,
+        type: "tournament_entry",
+        amount: entryFee.toFixed(2),
+        status: "approved",
+        notes: `Entry (approved): ${match.matchName || match.matchType} match #${match.id}`,
+        tournamentId: null,
+      });
+    }
+
+    await db.update(userMatchJoinsTable).set({ status: "accepted" }).where(eq(userMatchJoinsTable.id, joinId));
+    await db.update(userMatchesTable)
+      .set({ filledSlots: sql`${userMatchesTable.filledSlots} + 1` })
+      .where(eq(userMatchesTable.id, matchId));
+
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Failed to approve");
+    res.status(500).json({ error: "Failed to approve request." });
+  }
+});
+
+// ─── Creator: reject join request ────────────────────────────────────────────
+
+router.patch("/user-matches/:id/join-requests/:joinId/reject", async (req, res) => {
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+  try {
+    const matchId = parseInt(req.params.id);
+    const joinId = parseInt(req.params.joinId);
+
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, matchId)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+    if (match.creatorId !== userId) return res.status(403).json({ error: "Not your match." });
+
+    const [join] = await db.select().from(userMatchJoinsTable).where(eq(userMatchJoinsTable.id, joinId)).limit(1);
+    if (!join || join.matchId !== matchId) return res.status(404).json({ error: "Request not found." });
+    if (join.status !== "pending") return res.status(400).json({ error: "Request is not pending." });
+
+    await db.update(userMatchJoinsTable).set({ status: "rejected" }).where(eq(userMatchJoinsTable.id, joinId));
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: "Failed to reject request." });
+  }
+});
+
+// ─── Creator/user: cancel match ───────────────────────────────────────────────
 
 router.delete("/user-matches/:id", async (req, res) => {
   const userId = await requireAuth(req, res);
@@ -286,15 +498,44 @@ router.delete("/user-matches/:id", async (req, res) => {
     const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
     if (!match) return res.status(404).json({ error: "Match not found." });
     if (match.creatorId !== userId) return res.status(403).json({ error: "Not your match." });
-    if (match.status === "approved") {
-      return res.status(400).json({ error: "Approved matches cannot be deleted. Contact admin to remove it." });
+
+    const effStatus = effectiveStatus(match);
+    if (effStatus === "ended") return res.status(400).json({ error: "Ended matches cannot be cancelled." });
+
+    const entryFee = parseFloat(match.entryFee);
+    if (entryFee > 0) {
+      const accepted = await db.select().from(userMatchJoinsTable)
+        .where(and(eq(userMatchJoinsTable.matchId, id), eq(userMatchJoinsTable.status, "accepted")));
+      for (const j of accepted) {
+        await db.insert(walletTransactionsTable).values({
+          userId: j.userId,
+          type: "tournament_prize",
+          amount: entryFee.toFixed(2),
+          status: "approved",
+          notes: `Refund: ${match.matchName || match.matchType} match #${match.id} cancelled`,
+          tournamentId: null,
+        });
+      }
     }
+
     await db.delete(userMatchJoinsTable).where(eq(userMatchJoinsTable.matchId, id));
     await db.delete(userMatchesTable).where(eq(userMatchesTable.id, id));
     res.json({ success: true });
   } catch (err) {
-    logger.error({ err }, "Failed to delete match");
-    res.status(500).json({ error: "Failed to delete match." });
+    logger.error({ err }, "Failed to cancel match");
+    res.status(500).json({ error: "Failed to cancel match." });
+  }
+});
+
+// ─── Admin: list all matches ──────────────────────────────────────────────────
+
+router.get("/admin/user-matches", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const matches = await db.select().from(userMatchesTable).orderBy(desc(userMatchesTable.createdAt));
+    res.json(matches.map((m) => ({ ...stripMatch(m, true), effectiveStatus: effectiveStatus(m) })));
+  } catch {
+    res.status(500).json({ error: "Failed to load matches." });
   }
 });
 
@@ -307,13 +548,15 @@ router.delete("/admin/user-matches/:id", async (req, res) => {
     const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
     if (!match) return res.status(404).json({ error: "Match not found." });
 
-    if (match.status === "approved" && parseFloat(match.entryFee) > 0) {
-      const joins = await db.select().from(userMatchJoinsTable).where(eq(userMatchJoinsTable.matchId, id));
-      for (const join of joins) {
+    const entryFee = parseFloat(match.entryFee);
+    if (entryFee > 0) {
+      const accepted = await db.select().from(userMatchJoinsTable)
+        .where(and(eq(userMatchJoinsTable.matchId, id), eq(userMatchJoinsTable.status, "accepted")));
+      for (const j of accepted) {
         await db.insert(walletTransactionsTable).values({
-          userId: join.userId,
+          userId: j.userId,
           type: "tournament_prize",
-          amount: match.entryFee,
+          amount: entryFee.toFixed(2),
           status: "approved",
           notes: `Refund: ${match.matchName || match.matchType} match #${match.id} deleted by admin`,
           tournamentId: null,
@@ -327,6 +570,43 @@ router.delete("/admin/user-matches/:id", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to delete match");
     res.status(500).json({ error: "Failed to delete match." });
+  }
+});
+
+// ─── Admin: approve/reject (legacy compat) ────────────────────────────────────
+
+router.patch("/admin/user-matches/:id/approve", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const { entryFee } = req.body;
+    const fee = parseFloat(entryFee ?? "0");
+    if (isNaN(fee) || fee < 0) return res.status(400).json({ error: "Invalid entry fee." });
+
+    const [updated] = await db.update(userMatchesTable)
+      .set({ status: "waiting", adminNote: null, entryFee: fee.toFixed(2), isPrivate: false })
+      .where(eq(userMatchesTable.id, id))
+      .returning();
+    if (!updated) return res.status(404).json({ error: "Match not found." });
+    res.json(stripMatch(updated, true));
+  } catch {
+    res.status(500).json({ error: "Failed to approve match." });
+  }
+});
+
+router.patch("/admin/user-matches/:id/reject", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const { adminNote } = req.body;
+    const [updated] = await db.update(userMatchesTable)
+      .set({ status: "cancelled", adminNote: adminNote ?? null })
+      .where(eq(userMatchesTable.id, id))
+      .returning();
+    if (!updated) return res.status(404).json({ error: "Match not found." });
+    res.json(stripMatch(updated, true));
+  } catch {
+    res.status(500).json({ error: "Failed to reject match." });
   }
 });
 

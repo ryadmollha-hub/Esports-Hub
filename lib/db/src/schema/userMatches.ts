@@ -1,4 +1,4 @@
-import { pgTable, serial, text, numeric, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, numeric, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -9,13 +9,17 @@ export const userMatchesTable = pgTable("user_matches", {
   matchName: text("match_name"),
   matchType: text("match_type").notNull(),
   prizePool: numeric("prize_pool", { precision: 10, scale: 2 }).notNull(),
-  entryFee: numeric("entry_fee", { precision: 10, scale: 2 }).notNull(),
+  entryFee: numeric("entry_fee", { precision: 10, scale: 2 }).notNull().default("0.00"),
   maxSlots: integer("max_slots").notNull(),
   filledSlots: integer("filled_slots").notNull().default(0),
-  scheduledAt: timestamp("scheduled_at").notNull(),
+  scheduledAt: timestamp("scheduled_at"),
   description: text("description"),
   passwordHash: text("password_hash"),
-  status: text("status").notNull().default("pending_approval"),
+  roomId: text("room_id"),
+  isPrivate: boolean("is_private").notNull().default(false),
+  status: text("status").notNull().default("waiting"),
+  startDelayMinutes: integer("start_delay_minutes"),
+  timerStartedAt: timestamp("timer_started_at"),
   adminNote: text("admin_note"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -27,6 +31,7 @@ export const userMatchJoinsTable = pgTable("user_match_joins", {
   username: text("username"),
   inGameName: text("in_game_name"),
   gameUid: text("game_uid"),
+  status: text("status").notNull().default("accepted"),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 

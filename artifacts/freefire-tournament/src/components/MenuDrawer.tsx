@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
-  X, User, Wallet, Trophy, History, Settings, HeadphonesIcon,
-  LogOut, Shield, Flame, ChevronRight, Gift, Sun, Moon
+  X, User, Wallet, Trophy, History, HeadphonesIcon,
+  LogOut, Shield, Flame, ChevronRight, Gift, Sun, Moon, Swords
 } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { clearAdminSession, isAdminAuthenticated } from "@/lib/adminAuth";
@@ -40,6 +40,7 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
     ...(user ? [
       { href: "/profile", icon: User, label: "Profile", desc: "View & edit your profile" },
       { href: "/wallet", icon: Wallet, label: "Wallet", desc: "Manage your balance" },
+      { href: "/my-matches", icon: Swords, label: "My Matches", desc: "Manage matches & requests" },
       { href: "/dashboard", icon: Trophy, label: "My Tournaments", desc: "Your tournament history" },
       { href: "/teams/my", icon: Shield, label: "My Team", desc: "Manage your squad" },
       { href: "/referral", icon: Gift, label: "Referral", desc: "Invite friends, earn rewards" },
