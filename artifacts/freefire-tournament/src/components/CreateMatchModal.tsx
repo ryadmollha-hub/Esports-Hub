@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Swords, CheckCircle } from "lucide-react";
+import { X, Swords, CheckCircle, Lock, Globe } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateMatch } from "@/lib/CreateMatchContext";
@@ -15,7 +15,16 @@ export default function CreateMatchModal() {
   const { open, closeCreateMatch } = useCreateMatch();
   const [, setLocation] = useLocation();
 
-  const [form, setForm] = useState({ matchType: "1v1", prizePool: "", customPrize: "", scheduledAt: "", description: "" });
+  const [form, setForm] = useState({
+    matchName: "",
+    matchType: "1v1",
+    prizePool: "",
+    customPrize: "",
+    scheduledAt: "",
+    description: "",
+    isPrivate: false,
+    password: "",
+  });
   const [useCustomPrize, setUseCustomPrize] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -27,7 +36,7 @@ export default function CreateMatchModal() {
 
   const handleClose = () => {
     closeCreateMatch();
-    setForm({ matchType: "1v1", prizePool: "", customPrize: "", scheduledAt: "", description: "" });
+    setForm({ matchName: "", matchType: "1v1", prizePool: "", customPrize: "", scheduledAt: "", description: "", isPrivate: false, password: "" });
     setUseCustomPrize(false);
     setSubmitted(false);
   };
@@ -44,16 +53,22 @@ export default function CreateMatchModal() {
       toast({ title: "Select or enter a prize pool", variant: "destructive" });
       return;
     }
+    if (form.isPrivate && !form.password.trim()) {
+      toast({ title: "Password required", description: "Please set a password for your private match.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await authFetch("/user-matches", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          matchName: form.matchName.trim() || undefined,
           matchType: form.matchType,
           prizePool: parseFloat(prizeValue),
           scheduledAt: form.scheduledAt,
           description: form.description || undefined,
+          password: form.isPrivate ? form.password.trim() : undefined,
         }),
       });
       const data = await res.json();
@@ -97,13 +112,30 @@ export default function CreateMatchModal() {
                 <CheckCircle className="w-8 h-8 text-[#00ff88]" />
               </div>
               <h3 className="font-black text-white text-lg mb-1">Submitted!</h3>
-              <p className="text-[#a0a0b0] text-sm mb-6">Your match is pending admin approval. You can track its status in your profile under <strong className="text-white">My Match Requests</strong>.</p>
+              <p className="text-[#a0a0b0] text-sm mb-6">Your match is pending admin approval. Track its status in your profile under <strong className="text-white">My Match Requests</strong>.</p>
               <button onClick={handleDone} className="px-6 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
                 View My Requests
               </button>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+
+              {/* Match Name */}
+              <div>
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
+                  Match Name <span className="normal-case text-[#4a4a5a]">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sunday Showdown, Squad Wars..."
+                  value={form.matchName}
+                  onChange={(e) => setForm({ ...form, matchName: e.target.value })}
+                  maxLength={80}
+                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                />
+              </div>
+
+              {/* Match Type */}
               <div>
                 <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold">Match Type</label>
                 <div className="grid grid-cols-4 gap-2">
@@ -125,6 +157,7 @@ export default function CreateMatchModal() {
                 <p className="text-[#4a4a5a] text-xs mt-1.5">{slots} players total · {slots} slots to fill</p>
               </div>
 
+              {/* Prize Pool */}
               <div>
                 <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold">Prize Pool (৳)</label>
                 <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-2">
@@ -164,6 +197,7 @@ export default function CreateMatchModal() {
                 </div>
               </div>
 
+              {/* Date & Time */}
               <div>
                 <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Match Date & Time *</label>
                 <input
@@ -176,6 +210,7 @@ export default function CreateMatchModal() {
                 />
               </div>
 
+              {/* Description */}
               <div>
                 <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Description <span className="normal-case text-[#4a4a5a]">(optional)</span></label>
                 <textarea
@@ -188,9 +223,50 @@ export default function CreateMatchModal() {
                 />
               </div>
 
+              {/* Privacy */}
+              <div>
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold">Match Visibility</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, isPrivate: false, password: "" })}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-bold transition-all ${
+                      !form.isPrivate
+                        ? "bg-[#00ff88]/10 border-[#00ff88]/50 text-[#00ff88]"
+                        : "bg-[#12121a] border-[#2a2a36] text-[#a0a0b0] hover:border-[#2a2a36]/80"
+                    }`}
+                  >
+                    <Globe className="w-4 h-4" /> Public
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, isPrivate: true })}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-bold transition-all ${
+                      form.isPrivate
+                        ? "bg-yellow-500/10 border-yellow-500/50 text-yellow-400"
+                        : "bg-[#12121a] border-[#2a2a36] text-[#a0a0b0] hover:border-[#2a2a36]/80"
+                    }`}
+                  >
+                    <Lock className="w-4 h-4" /> Private
+                  </button>
+                </div>
+                {form.isPrivate && (
+                  <div className="mt-2">
+                    <input
+                      type="password"
+                      placeholder="Set a match password..."
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      className="w-full bg-[#0a0a0f] border border-yellow-500/30 rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-yellow-400 transition-colors"
+                    />
+                    <p className="text-[#606070] text-xs mt-1">Players must enter this password to join.</p>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-[#ff6b00]/5 border border-[#ff6b00]/15 rounded-xl px-4 py-3 text-xs text-[#a0a0b0]">
                 <span className="text-[#ff6b00] font-bold">Note: </span>
-                After submission your match is locked and sent for admin review. Once approved, it becomes public and other players can join by paying the entry fee set by admin.
+                After submission your match is sent for admin review. Once approved, it becomes visible and players can join. The entry fee is set by the admin.
               </div>
 
               <button

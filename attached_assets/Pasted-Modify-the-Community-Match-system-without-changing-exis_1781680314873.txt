@@ -1,0 +1,114 @@
+Modify the Community Match system without changing existing website design.
+
+Current Issues:
+
+1. User-created matches are appearing on the Home page.
+2. Match join system is showing errors.
+3. Match creators cannot secure their custom matches with a password.
+4. Join form is incomplete.
+
+Required Changes:
+
+USER MATCH VISIBILITY
+
+* Remove user-created matches from Home page.
+* User-created matches must only appear in:
+
+  * My Tournaments
+  * My Match Requests
+* Home page should only display official/admin tournaments.
+
+CUSTOM MATCH PASSWORD SYSTEM
+
+When a user creates a custom match:
+
+Add an optional field:
+
+Match Password
+
+Options:
+
+* Public Match (No Password)
+* Private Match (Password Protected)
+
+If a password is provided:
+
+* Store the password securely.
+* Require the password before joining.
+
+If no password is provided:
+
+* Anyone can join.
+
+JOIN MATCH FORM
+
+Before joining a custom match, require:
+
+* In-Game Name
+* Game UID
+
+If match is password protected:
+
+* Password field required
+
+Join button should remain disabled until required fields are completed.
+
+JOIN SYSTEM FIX
+
+Fix all join errors.
+
+Requirements:
+
+* User can successfully join approved matches.
+* Validate wallet balance.
+* Validate required fields.
+* Save player data correctly.
+* Update player count automatically.
+* Prevent duplicate joins.
+* Show proper success and error messages.
+
+MY TOURNAMENTS PAGE
+
+For match creators:
+
+Show:
+
+* Match Name
+* Match Type
+* Prize Pool
+* Entry Fee
+* Status
+* Player Count
+* Password Protected (Yes/No)
+
+Users should be able to manage and view their own created matches here.
+
+ADMIN PANEL
+
+Admin must still be able to:
+
+* Review matches
+* Approve matches
+* Reject matches
+* Delete matches
+
+Do not change existing admin workflow.
+
+IMPORTANT
+
+* Do not redesign the website.
+* Do not change navigation.
+* Do not remove existing features.
+* Only fix match visibility, join functionality, password protection, and join form requirements.
+
+Expected Flow:
+
+User Creates Match
+→ Optional Password
+→ Submit for Review
+→ Admin Approves
+→ Match appears in My Tournaments
+→ Player enters IGN + UID
+→ Password required if protected
+→ Join successful
+→ Player count updates correctly

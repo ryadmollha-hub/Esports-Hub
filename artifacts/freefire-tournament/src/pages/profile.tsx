@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import {
   User, Trophy, Wallet, Shield, History, ChevronRight,
   Edit, Save, X, Flame, Star, Target, Swords, Trash2,
-  Clock, CheckCircle, XCircle, LogOut, AlertTriangle
+  Clock, CheckCircle, XCircle, LogOut, AlertTriangle, Lock
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { useAuthContext } from "@/lib/AuthContext";
@@ -328,13 +328,20 @@ export default function ProfilePage() {
                     <div key={m.id} className="bg-[#12121a] rounded-2xl border border-[#2a2a36] p-4">
                       {/* Header row */}
                       <div className="flex items-start justify-between gap-2 mb-3">
-                        <div>
-                          <div className="font-black text-white text-sm">{m.matchType} Match</div>
-                          <div className="text-[#606070] text-xs mt-0.5">
-                            {new Date(m.scheduledAt).toLocaleDateString(undefined, {
-                              month: "short", day: "numeric", year: "numeric",
-                              hour: "2-digit", minute: "2-digit",
-                            })}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-black text-white text-sm truncate">{m.matchName || `${m.matchType} Match`}</div>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-[#606070] text-xs">
+                              {new Date(m.scheduledAt).toLocaleDateString(undefined, {
+                                month: "short", day: "numeric", year: "numeric",
+                                hour: "2-digit", minute: "2-digit",
+                              })}
+                            </span>
+                            {m.isPasswordProtected && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
+                                <Lock className="w-2.5 h-2.5" /> Private
+                              </span>
+                            )}
                           </div>
                         </div>
                         <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0 ${badge.color}`}>
@@ -344,18 +351,24 @@ export default function ProfilePage() {
                       </div>
 
                       {/* Stats row */}
-                      <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="grid grid-cols-3 gap-2 text-xs">
                         <div className="bg-[#0a0a0f] rounded-xl px-3 py-2">
                           <div className="text-[#606070] mb-0.5">Prize Pool</div>
                           <div className="font-black text-[#ffd700]">৳{Number(m.prizePool).toLocaleString()}</div>
                         </div>
                         <div className="bg-[#0a0a0f] rounded-xl px-3 py-2">
                           <div className="text-[#606070] mb-0.5">Entry Fee</div>
-                          {m.status === "approved" && Number(m.entryFee) > 0 ? (
-                            <div className="font-black text-[#00ff88]">৳{Number(m.entryFee).toLocaleString()}</div>
+                          {m.status === "approved" && Number(m.entryFee) >= 0 ? (
+                            <div className={`font-black ${Number(m.entryFee) > 0 ? "text-[#00ff88]" : "text-[#a0a0b0]"}`}>
+                              {Number(m.entryFee) > 0 ? `৳${Number(m.entryFee).toLocaleString()}` : "Free"}
+                            </div>
                           ) : (
-                            <div className="font-black text-[#4a4a5a]">Set by Admin</div>
+                            <div className="font-black text-[#4a4a5a]">Pending</div>
                           )}
+                        </div>
+                        <div className="bg-[#0a0a0f] rounded-xl px-3 py-2">
+                          <div className="text-[#606070] mb-0.5">Players</div>
+                          <div className="font-black text-white">{m.filledSlots ?? 0}/{m.maxSlots}</div>
                         </div>
                       </div>
 

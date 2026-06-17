@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { requireAdmin, requireAuth } from "../middlewares/requireAdmin";
+import bcrypt from "bcryptjs";
 
 const router: IRouter = Router();
 
@@ -33,13 +34,18 @@ async function getUserBalance(userId: string): Promise<number> {
   return Math.max(0, credits - debits);
 }
 
+function stripMatch(m: typeof userMatchesTable.$inferSelect) {
+  const { passwordHash, ...rest } = m as any;
+  return { ...rest, isPasswordProtected: !!passwordHash };
+}
+
 // ─── Create a user match (auth required) ─────────────────────────────────────
 
 router.post("/user-matches", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
   try {
-    const { matchType, prizePool, scheduledAt, description } = req.body;
+    const { matchName, matchType, prizePool, scheduledAt, description, password } = req.body;
     if (!matchType || !prizePool || !scheduledAt) {
       return res.status(400).json({ error: "matchType, prizePool, and scheduledAt are required." });
     }
@@ -60,19 +66,26 @@ router.post("/user-matches", async (req, res) => {
     const [user] = await db.select({ username: usersTable.username, displayName: usersTable.displayName })
       .from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
 
+    let passwordHash: string | null = null;
+    if (password && typeof password === "string" && password.trim().length > 0) {
+      passwordHash = await bcrypt.hash(password.trim(), 10);
+    }
+
     const [match] = await db.insert(userMatchesTable).values({
       creatorId: userId,
       creatorName: user?.displayName ?? user?.username ?? "Unknown",
+      matchName: matchName?.trim() || null,
       matchType,
       prizePool: prize.toFixed(2),
       entryFee: "0.00",
       maxSlots,
       scheduledAt: schedDate,
       description: description ?? null,
+      passwordHash,
       status: "pending_approval",
     }).returning();
 
-    res.status(201).json(match);
+    res.status(201).json(stripMatch(match));
   } catch (err) {
     logger.error({ err }, "Failed to create match");
     res.status(500).json({ error: "Failed to create match." });
@@ -88,7 +101,7 @@ router.get("/user-matches", async (_req, res) => {
       .from(userMatchesTable)
       .where(eq(userMatchesTable.status, "approved"))
       .orderBy(desc(userMatchesTable.scheduledAt));
-    res.json(matches);
+    res.json(matches.map(stripMatch));
   } catch {
     res.status(500).json({ error: "Failed to load matches." });
   }
@@ -105,25 +118,44 @@ router.get("/user-matches/mine", async (req, res) => {
       .from(userMatchesTable)
       .where(eq(userMatchesTable.creatorId, userId))
       .orderBy(desc(userMatchesTable.createdAt));
-    res.json(matches);
+    res.json(matches.map(stripMatch));
   } catch {
     res.status(500).json({ error: "Failed to load your matches." });
   }
 });
 
-// ─── Join a match (auth required, deducts wallet balance) ────────────────────
+// ─── Join a match (auth required) ─────────────────────────────────────────────
 
 router.post("/user-matches/:id/join", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
   try {
     const id = parseInt(req.params.id);
+    const { inGameName, gameUid, password } = req.body;
+
+    if (!inGameName || !String(inGameName).trim()) {
+      return res.status(400).json({ error: "In-Game Name is required." });
+    }
+    if (!gameUid || !String(gameUid).trim()) {
+      return res.status(400).json({ error: "Game UID is required." });
+    }
+
     const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
 
     if (!match) return res.status(404).json({ error: "Match not found." });
     if (match.status !== "approved") return res.status(400).json({ error: "This match is not open for joining." });
     if (match.creatorId === userId) return res.status(400).json({ error: "You cannot join your own match." });
     if (match.filledSlots >= match.maxSlots) return res.status(400).json({ error: "This match is full." });
+
+    if (match.passwordHash) {
+      if (!password || !String(password).trim()) {
+        return res.status(400).json({ error: "This match is password protected. Please enter the password." });
+      }
+      const valid = await bcrypt.compare(String(password), match.passwordHash);
+      if (!valid) {
+        return res.status(400).json({ error: "Incorrect match password." });
+      }
+    }
 
     const existing = await db.select({ id: userMatchJoinsTable.id })
       .from(userMatchJoinsTable)
@@ -142,7 +174,7 @@ router.post("/user-matches/:id/join", async (req, res) => {
         type: "tournament_entry",
         amount: entryFee.toFixed(2),
         status: "approved",
-        notes: `Entry fee for user match #${match.id} (${match.matchType})`,
+        notes: `Entry fee for ${match.matchName || match.matchType} match #${match.id}`,
         tournamentId: null,
       });
     }
@@ -154,6 +186,8 @@ router.post("/user-matches/:id/join", async (req, res) => {
       matchId: id,
       userId,
       username: user?.displayName ?? user?.username ?? "Unknown",
+      inGameName: String(inGameName).trim(),
+      gameUid: String(gameUid).trim(),
     });
 
     await db.update(userMatchesTable)
@@ -192,7 +226,7 @@ router.get("/admin/user-matches", async (req, res) => {
       .select()
       .from(userMatchesTable)
       .orderBy(desc(userMatchesTable.createdAt));
-    res.json(matches);
+    res.json(matches.map(stripMatch));
   } catch {
     res.status(500).json({ error: "Failed to load matches." });
   }
@@ -206,9 +240,9 @@ router.patch("/admin/user-matches/:id/approve", async (req, res) => {
     const id = parseInt(req.params.id);
     const { entryFee } = req.body;
 
-    const fee = parseFloat(entryFee);
-    if (isNaN(fee) || fee <= 0) {
-      return res.status(400).json({ error: "Please set a valid Entry Fee (greater than zero) before approving." });
+    const fee = parseFloat(entryFee ?? "0");
+    if (isNaN(fee) || fee < 0) {
+      return res.status(400).json({ error: "Please set a valid Entry Fee (0 or greater) before approving." });
     }
 
     const [updated] = await db
@@ -217,7 +251,7 @@ router.patch("/admin/user-matches/:id/approve", async (req, res) => {
       .where(eq(userMatchesTable.id, id))
       .returning();
     if (!updated) return res.status(404).json({ error: "Match not found." });
-    res.json(updated);
+    res.json(stripMatch(updated));
   } catch {
     res.status(500).json({ error: "Failed to approve match." });
   }
@@ -236,7 +270,7 @@ router.patch("/admin/user-matches/:id/reject", async (req, res) => {
       .where(eq(userMatchesTable.id, id))
       .returning();
     if (!updated) return res.status(404).json({ error: "Match not found." });
-    res.json(updated);
+    res.json(stripMatch(updated));
   } catch {
     res.status(500).json({ error: "Failed to reject match." });
   }
@@ -281,7 +315,7 @@ router.delete("/admin/user-matches/:id", async (req, res) => {
           type: "tournament_prize",
           amount: match.entryFee,
           status: "approved",
-          notes: `Refund: match #${match.id} (${match.matchType}) deleted by admin`,
+          notes: `Refund: ${match.matchName || match.matchType} match #${match.id} deleted by admin`,
           tournamentId: null,
         });
       }
