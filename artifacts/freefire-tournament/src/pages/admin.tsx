@@ -1865,79 +1865,82 @@ export default function AdminPage() {
                 <div className="space-y-3 max-h-[720px] overflow-y-auto pr-1">
                   {userMatches.map((m: any) => (
                     <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4">
-                      <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span className="font-black text-white text-base">{m.matchType} Match</span>
-                            <span className={statusBadge(m.status === "pending_approval" ? "pending" : m.status)}>{m.status === "pending_approval" ? "Pending" : m.status}</span>
-                          </div>
-                          <div className="text-[#a0a0b0] text-xs space-y-0.5">
-                            <div>By: <span className="text-white font-bold">{m.creatorName ?? "Unknown"}</span></div>
-                            <div>Prize Pool: <span className="text-[#ffd700] font-bold">৳{Number(m.prizePool).toLocaleString()}</span> · Slots: <span className="text-white font-bold">{m.filledSlots}/{m.maxSlots}</span></div>
-                            {m.status !== "pending_approval" && (
-                              <div>Entry Fee: <span className="text-[#00ff88] font-bold">৳{Number(m.entryFee).toLocaleString()}</span></div>
-                            )}
-                            {m.scheduledAt && <div>Scheduled: <span className="text-white">{new Date(m.scheduledAt).toLocaleString()}</span></div>}
-                            {m.description && <div className="text-[#a0a0b0] mt-1 italic">"{m.description}"</div>}
-                            {m.adminNote && <div className="text-[#ff2244] mt-1">Note: {m.adminNote}</div>}
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2 shrink-0">
-                          {m.status === "pending_approval" && (
-                            <div className="flex flex-col gap-2 min-w-[160px]">
-                              <div>
-                                <label className="text-[#a0a0b0] text-xs font-bold uppercase block mb-1">Entry Fee (৳) <span className="text-[#ff2244]">*</span></label>
-                                <input
-                                  type="number"
-                                  min="1"
-                                  step="1"
-                                  placeholder="e.g. 100"
-                                  value={matchEntryFees[m.id] ?? ""}
-                                  onChange={(e) => setMatchEntryFees((prev) => ({ ...prev, [m.id]: e.target.value }))}
-                                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-1.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
-                                />
-                              </div>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={async () => {
-                                    const fee = parseFloat(matchEntryFees[m.id] ?? "");
-                                    if (!fee || fee <= 0) {
-                                      toast({ title: "Entry Fee required", description: "Please set an Entry Fee before approving this match.", variant: "destructive" });
-                                      return;
-                                    }
-                                    const res = await apiFetch(`/admin/user-matches/${m.id}/approve`, {
-                                      method: "PATCH",
-                                      body: JSON.stringify({ entryFee: fee }),
-                                    });
-                                    if (res.ok) {
-                                      toast({ title: "Match approved!", description: `Entry Fee set to ৳${fee.toLocaleString()}` });
-                                      setMatchEntryFees((prev) => { const n = { ...prev }; delete n[m.id]; return n; });
-                                      loadUserMatches();
-                                    } else {
-                                      const d = await safeJson(res);
-                                      toast({ title: "Error", description: d.error, variant: "destructive" });
-                                    }
-                                  }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] text-xs font-bold rounded-lg hover:bg-[#00ff88]/20 transition-colors"
-                                >
-                                  <CheckCircle className="w-3.5 h-3.5" /> Approve
-                                </button>
-                                <button
-                                  onClick={() => { setRejectingMatch(m.id); setRejectNote(""); setDeletingMatch(null); }}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors"
-                                >
-                                  <XCircle className="w-3.5 h-3.5" /> Reject
-                                </button>
-                              </div>
+                      <div className="flex flex-col gap-3">
+                        {/* Top row: info + delete button */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <span className="font-black text-white text-base">{m.matchType} Match</span>
+                              <span className={statusBadge(m.status === "pending_approval" ? "pending" : m.status)}>{m.status === "pending_approval" ? "Pending" : m.status}</span>
                             </div>
-                          )}
+                            <div className="text-[#a0a0b0] text-xs space-y-0.5">
+                              <div>By: <span className="text-white font-bold">{m.creatorName ?? "Unknown"}</span></div>
+                              <div>Prize Pool: <span className="text-[#ffd700] font-bold">৳{Number(m.prizePool).toLocaleString()}</span> · Slots: <span className="text-white font-bold">{m.filledSlots}/{m.maxSlots}</span></div>
+                              {m.status !== "pending_approval" && (
+                                <div>Entry Fee: <span className="text-[#00ff88] font-bold">৳{Number(m.entryFee).toLocaleString()}</span></div>
+                              )}
+                              {m.scheduledAt && <div>Scheduled: <span className="text-white">{new Date(m.scheduledAt).toLocaleString()}</span></div>}
+                              {m.description && <div className="text-[#a0a0b0] mt-1 italic">"{m.description}"</div>}
+                              {m.adminNote && <div className="text-[#ff2244] mt-1">Note: {m.adminNote}</div>}
+                            </div>
+                          </div>
                           <button
                             onClick={() => { setDeletingMatch(m.id); setRejectingMatch(null); }}
-                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors shrink-0"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Delete
                           </button>
                         </div>
+
+                        {/* Approval controls — full width on all screens */}
+                        {m.status === "pending_approval" && (
+                          <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-[#2a2a36]">
+                            <div className="flex-1">
+                              <label className="text-[#a0a0b0] text-xs font-bold uppercase block mb-1">Entry Fee (৳) <span className="text-[#ff2244]">*</span></label>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                placeholder="e.g. 100"
+                                value={matchEntryFees[m.id] ?? ""}
+                                onChange={(e) => setMatchEntryFees((prev) => ({ ...prev, [m.id]: e.target.value }))}
+                                className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
+                              />
+                            </div>
+                            <div className="flex gap-2 sm:items-end">
+                              <button
+                                onClick={async () => {
+                                  const fee = parseFloat(matchEntryFees[m.id] ?? "");
+                                  if (!fee || fee <= 0) {
+                                    toast({ title: "Entry Fee required", description: "Please set an Entry Fee before approving this match.", variant: "destructive" });
+                                    return;
+                                  }
+                                  const res = await apiFetch(`/admin/user-matches/${m.id}/approve`, {
+                                    method: "PATCH",
+                                    body: JSON.stringify({ entryFee: fee }),
+                                  });
+                                  if (res.ok) {
+                                    toast({ title: "Match approved!", description: `Entry Fee set to ৳${fee.toLocaleString()}` });
+                                    setMatchEntryFees((prev) => { const n = { ...prev }; delete n[m.id]; return n; });
+                                    loadUserMatches();
+                                  } else {
+                                    const d = await safeJson(res);
+                                    toast({ title: "Error", description: d.error, variant: "destructive" });
+                                  }
+                                }}
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] text-xs font-bold rounded-lg hover:bg-[#00ff88]/20 transition-colors whitespace-nowrap"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" /> Approve
+                              </button>
+                              <button
+                                onClick={() => { setRejectingMatch(m.id); setRejectNote(""); setDeletingMatch(null); }}
+                                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors whitespace-nowrap"
+                              >
+                                <XCircle className="w-3.5 h-3.5" /> Reject
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Room Credentials — shown for all approved/active matches */}

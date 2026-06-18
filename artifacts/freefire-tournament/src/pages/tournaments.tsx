@@ -264,28 +264,28 @@ export default function TournamentsPage() {
                 return (
                   <div
                     key={m.id}
-                    className={`flex items-center gap-3 px-4 py-3 bg-[#12121a] hover:bg-[#151520] transition-colors ${!canJoin ? "opacity-55" : ""}`}
+                    className={`flex items-center gap-3 px-4 py-4 bg-[#12121a] hover:bg-[#151520] transition-colors ${!canJoin ? "opacity-55" : ""}`}
                   >
                     {/* Status pill */}
-                    <div className="shrink-0 w-20 flex justify-center">
+                    <div className="shrink-0 w-[78px] flex justify-center">
                       {isLive ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 px-2 py-0.5 rounded-full whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 px-2.5 py-1 rounded-full whitespace-nowrap">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse shrink-0" />
                           LIVE
                         </span>
                       ) : isEnded ? (
-                        <span className="text-[10px] font-black uppercase text-[#606070] bg-[#1a1a24] border border-[#2a2a36] px-2 py-0.5 rounded-full">ENDED</span>
+                        <span className="text-[10px] font-black uppercase text-[#606070] bg-[#1a1a24] border border-[#2a2a36] px-2.5 py-1 rounded-full">ENDED</span>
                       ) : (
-                        <span className="text-[10px] font-black uppercase text-[#a0a0b0] bg-[#1a1a24] border border-[#2a2a36] px-2 py-0.5 rounded-full">UPCOMING</span>
+                        <span className="text-[10px] font-black uppercase text-[#a0a0b0] bg-[#1a1a24] border border-[#2a2a36] px-2.5 py-1 rounded-full">UPCOMING</span>
                       )}
                     </div>
 
                     {/* Name + badges */}
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-white text-sm truncate leading-tight">
+                      <div className="font-bold text-white text-sm truncate leading-tight mb-1">
                         {m.matchName || `${m.matchType} Match`}
                       </div>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`inline-flex items-center gap-0.5 text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${MATCH_TYPE_COLOR[m.matchType] ?? "text-white border-white/20"}`}>
                           <Swords className="w-2 h-2" /> {m.matchType}
                         </span>
@@ -306,13 +306,13 @@ export default function TournamentsPage() {
 
                     {/* Prize */}
                     <div className="text-right shrink-0 hidden sm:block">
-                      <div className="text-[#ffd700] font-black text-xs">৳{Number(m.prizePool).toLocaleString()}</div>
+                      <div className="text-[#ffd700] font-black text-sm">৳{Number(m.prizePool).toLocaleString()}</div>
                       <div className="text-[#606070] text-[9px] uppercase">prize</div>
                     </div>
 
                     {/* Slots */}
                     <div className="text-center shrink-0 hidden md:block w-12">
-                      <div className={`font-black text-xs ${isFull ? "text-[#ff2244]" : "text-[#00ff88]"}`}>
+                      <div className={`font-black text-sm ${isFull ? "text-[#ff2244]" : "text-[#00ff88]"}`}>
                         {m.filledSlots}/{m.maxSlots}
                       </div>
                       <div className="text-[9px] text-[#606070] uppercase">slots</div>
@@ -327,7 +327,7 @@ export default function TournamentsPage() {
                       ) : (
                         <button
                           onClick={() => openJoin(m)}
-                          className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition-colors whitespace-nowrap ${
+                          className={`px-3 py-2 text-xs font-black uppercase rounded-lg transition-colors whitespace-nowrap ${
                             isLive
                               ? "bg-[#00ff88] hover:bg-[#00cc66] text-black"
                               : "bg-[#ff6b00] hover:bg-[#e66000] text-white"
