@@ -230,7 +230,7 @@ export default function TournamentsPage() {
               return (
                 <button
                   key={cat.slug}
-                  onClick={() => navigate(`/matches/${cat.slug}`)}
+                  onClick={() => navigate(`/matches`)}
                   className="group relative w-full text-left bg-[#0e0e18] border border-[#1e1e2e] hover:border-[#2a2a3e] rounded-2xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-[#ff6b00]/40"
                 >
                   {/* Left accent bar */}
