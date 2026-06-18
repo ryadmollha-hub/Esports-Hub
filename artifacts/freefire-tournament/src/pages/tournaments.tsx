@@ -264,50 +264,50 @@ export default function TournamentsPage() {
                 return (
                   <div
                     key={m.id}
-                    className={`flex items-center gap-3 px-4 py-4 bg-[#12121a] hover:bg-[#151520] transition-colors ${!canJoin ? "opacity-55" : ""}`}
+                    className={`flex items-center gap-4 py-5 px-4 bg-[#12121a] hover:bg-[#151520] transition-colors ${!canJoin ? "opacity-55" : ""}`}
                   >
                     {/* Status pill */}
-                    <div className="shrink-0 w-[78px] flex justify-center">
+                    <div className="shrink-0 w-[80px] flex justify-center">
                       {isLive ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 px-2.5 py-1 rounded-full whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 px-2.5 py-1.5 rounded-full whitespace-nowrap">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse shrink-0" />
                           LIVE
                         </span>
                       ) : isEnded ? (
-                        <span className="text-[10px] font-black uppercase text-[#606070] bg-[#1a1a24] border border-[#2a2a36] px-2.5 py-1 rounded-full">ENDED</span>
+                        <span className="text-[10px] font-black uppercase text-[#606070] bg-[#1a1a24] border border-[#2a2a36] px-2.5 py-1.5 rounded-full">ENDED</span>
                       ) : (
-                        <span className="text-[10px] font-black uppercase text-[#a0a0b0] bg-[#1a1a24] border border-[#2a2a36] px-2.5 py-1 rounded-full">UPCOMING</span>
+                        <span className="text-[10px] font-black uppercase text-[#a0a0b0] bg-[#1a1a24] border border-[#2a2a36] px-2.5 py-1.5 rounded-full">UPCOMING</span>
                       )}
                     </div>
 
                     {/* Name + badges */}
                     <div className="flex-1 min-w-0">
-                      <div className="font-bold text-white text-sm truncate leading-tight mb-1">
+                      <div className="font-bold text-white text-sm truncate leading-tight mb-2">
                         {m.matchName || `${m.matchType} Match`}
                       </div>
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`inline-flex items-center gap-0.5 text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${MATCH_TYPE_COLOR[m.matchType] ?? "text-white border-white/20"}`}>
-                          <Swords className="w-2 h-2" /> {m.matchType}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`inline-flex items-center gap-0.5 text-[10px] font-black uppercase px-2 py-0.5 rounded border ${MATCH_TYPE_COLOR[m.matchType] ?? "text-white border-white/20"}`}>
+                          <Swords className="w-2.5 h-2.5" /> {m.matchType}
                         </span>
                         {m.isPasswordProtected && (
-                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
-                            <Lock className="w-2 h-2" /> Private
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
+                            <Lock className="w-2.5 h-2.5" /> Private
                           </span>
                         )}
                         {isTimerRunning && startsAt && (
-                          <span className="flex items-center gap-1 text-[9px] text-[#ff6b00]">
-                            <Timer className="w-2.5 h-2.5" />
-                            <CountdownTimer targetDate={startsAt} className="text-[9px]" />
+                          <span className="flex items-center gap-1 text-[10px] text-[#ff6b00]">
+                            <Timer className="w-3 h-3" />
+                            <CountdownTimer targetDate={startsAt} className="text-[10px]" />
                           </span>
                         )}
-                        <span className="text-[9px] text-[#606070]">by {m.creatorName || "Player"}</span>
+                        <span className="text-[10px] text-[#606070]">by {m.creatorName || "Player"}</span>
                       </div>
                     </div>
 
                     {/* Prize */}
                     <div className="text-right shrink-0 hidden sm:block">
                       <div className="text-[#ffd700] font-black text-sm">৳{Number(m.prizePool).toLocaleString()}</div>
-                      <div className="text-[#606070] text-[9px] uppercase">prize</div>
+                      <div className="text-[#606070] text-[10px] uppercase">prize</div>
                     </div>
 
                     {/* Slots */}
@@ -315,7 +315,7 @@ export default function TournamentsPage() {
                       <div className={`font-black text-sm ${isFull ? "text-[#ff2244]" : "text-[#00ff88]"}`}>
                         {m.filledSlots}/{m.maxSlots}
                       </div>
-                      <div className="text-[9px] text-[#606070] uppercase">slots</div>
+                      <div className="text-[10px] text-[#606070] uppercase">slots</div>
                     </div>
 
                     {/* Join button */}
@@ -327,7 +327,7 @@ export default function TournamentsPage() {
                       ) : (
                         <button
                           onClick={() => openJoin(m)}
-                          className={`px-3 py-2 text-xs font-black uppercase rounded-lg transition-colors whitespace-nowrap ${
+                          className={`px-4 py-2.5 text-xs font-black uppercase rounded-lg transition-colors whitespace-nowrap ${
                             isLive
                               ? "bg-[#00ff88] hover:bg-[#00cc66] text-black"
                               : "bg-[#ff6b00] hover:bg-[#e66000] text-white"

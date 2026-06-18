@@ -1999,20 +1999,20 @@ export default function AdminPage() {
                           )}
 
                           {/* Input fields + Release button */}
-                          <div className="flex gap-2">
+                          <div className="flex flex-col gap-3 w-full md:flex-row">
                             <input
                               type="text"
                               placeholder="Room ID *"
                               value={roomCredentials[m.id]?.roomId ?? ""}
                               onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: e.target.value, password: prev[m.id]?.password ?? "" } }))}
-                              className="flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-1.5 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
+                              className="w-full md:flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
                             />
                             <input
                               type="text"
                               placeholder="Room Password"
                               value={roomCredentials[m.id]?.password ?? ""}
                               onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: prev[m.id]?.roomId ?? "", password: e.target.value } }))}
-                              className="flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-1.5 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
+                              className="w-full md:flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
                             />
                             <button
                               disabled={submittingCredentials === m.id || !roomCredentials[m.id]?.roomId?.trim()}
@@ -2036,7 +2036,7 @@ export default function AdminPage() {
                                 } catch { toast({ title: "Connection error", variant: "destructive" }); }
                                 finally { setSubmittingCredentials(null); }
                               }}
-                              className="px-3 py-1.5 bg-[#00cc66] hover:bg-[#00aa55] text-white text-xs font-black rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap flex items-center gap-1"
+                              className="w-full md:w-auto px-4 py-2 bg-[#00cc66] hover:bg-[#00aa55] text-white text-xs font-black rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap flex items-center justify-center gap-1"
                             >
                               <Key className="w-3 h-3" />
                               {submittingCredentials === m.id ? "Releasing..." : "Release Password"}
