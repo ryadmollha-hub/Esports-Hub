@@ -15,6 +15,7 @@ const router: IRouter = Router();
 
 const SLOTS_FOR_TYPE: Record<string, number> = {
   "1v1": 2, "2v2": 4, "3v3": 6, "4v4": 8,
+  "BR": 48, "CS": 8, "SOLO": 12, "LONE_WOLF": 12, "FREE": 20,
 };
 
 async function getUserBalance(userId: string): Promise<number> {
@@ -56,14 +57,15 @@ router.post("/user-matches", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
   try {
-    const { matchName, matchType, scheduledAt, description, password, roomId, isPrivate, prizePool: prizePoolInput, entryFee: entryFeeInput } = req.body;
+    const { matchName, matchType, scheduledAt, description, password, roomId, isPrivate, prizePool: prizePoolInput, entryFee: entryFeeInput, perKill: perKillInput, mapName, version } = req.body;
     if (!matchType) return res.status(400).json({ error: "matchType is required." });
 
     const maxSlots = SLOTS_FOR_TYPE[matchType];
-    if (!maxSlots) return res.status(400).json({ error: "Invalid matchType. Must be 1v1, 2v2, 3v3, or 4v4." });
+    if (!maxSlots) return res.status(400).json({ error: "Invalid matchType. Must be one of: 1v1, 2v2, 3v3, 4v4, BR, CS, SOLO, LONE_WOLF, FREE." });
 
     const prize = prizePoolInput !== undefined ? Math.max(0, parseFloat(prizePoolInput) || 0) : 0;
     const fee = entryFeeInput !== undefined ? Math.max(0, parseFloat(entryFeeInput) || 0) : 0;
+    const perKill = perKillInput !== undefined ? Math.max(0, parseFloat(perKillInput) || 0) : 0;
 
     const [user] = await db.select({ username: usersTable.username, displayName: usersTable.displayName })
       .from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
@@ -80,6 +82,9 @@ router.post("/user-matches", async (req, res) => {
       matchType,
       prizePool: prize.toFixed(2),
       entryFee: fee.toFixed(2),
+      perKill: perKill > 0 ? perKill.toFixed(2) : null,
+      mapName: mapName?.trim() || null,
+      version: version?.trim() || null,
       maxSlots,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       description: description ?? null,

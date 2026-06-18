@@ -37,6 +37,7 @@ import ReferralPage from "@/pages/referral";
 import SupportPage from "@/pages/support";
 import MyTicketsPage from "@/pages/my-tickets";
 import MyMatchesPage from "@/pages/my-matches";
+import MatchCategoryPage from "@/pages/match-category";
 import NotFound from "@/pages/not-found";
 import MaintenancePage from "@/pages/maintenance";
 
@@ -107,6 +108,7 @@ function App() {
                   <Route path="/my-matches">
                     {() => <UserRoute component={MyMatchesPage} />}
                   </Route>
+                  <Route path="/matches/:category" component={MatchCategoryPage} />
 
                   {/* Admin-only route */}
                   <Route path="/admin">

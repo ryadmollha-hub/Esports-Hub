@@ -1,12 +1,20 @@
 import { useState, useEffect } from "react";
-import { X, Swords, CheckCircle, Lock, Globe, Clock, BookOpen, AlertCircle } from "lucide-react";
+import { X, Swords, CheckCircle, Lock, Globe, Clock, BookOpen, AlertCircle, Target, Map, Globe2 } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateMatch } from "@/lib/CreateMatchContext";
 import { useLocation } from "wouter";
 
-const MATCH_TYPES = ["1v1", "2v2", "3v3", "4v4"];
-const SLOTS_FOR_TYPE: Record<string, number> = { "1v1": 2, "2v2": 4, "3v3": 6, "4v4": 8 };
+const MATCH_TYPES: { key: string; label: string; sub: string; icon: string; slots: number }[] = [
+  { key: "BR",        label: "BR Match",      sub: "Battle Royale",    icon: "🔥", slots: 48 },
+  { key: "CS",        label: "Clash Squad",   sub: "CS Mode · 4v4",    icon: "⚔️",  slots: 8 },
+  { key: "SOLO",      label: "Solo",          sub: "Solo Survival",    icon: "🎯", slots: 12 },
+  { key: "LONE_WOLF", label: "Lone Wolf",     sub: "1v1 Elimination",  icon: "🐺", slots: 12 },
+  { key: "FREE",      label: "Free Match",    sub: "Giveaway / Open",  icon: "🎁", slots: 20 },
+];
+
+const MAP_OPTIONS = ["Bermuda", "Kalahari", "Alpine", "Purgatory", "Nexterra", "Other"];
+const VERSION_OPTIONS = ["Global", "India (OB)", "BD Server", "Custom"];
 
 export default function CreateMatchModal() {
   const { authFetch, user } = useAuthContext();
@@ -16,12 +24,16 @@ export default function CreateMatchModal() {
 
   const [form, setForm] = useState({
     matchName: "",
-    matchType: "1v1",
+    matchType: "BR",
     scheduledAt: "",
     description: "",
     isPrivate: false,
     password: "",
     prizePool: "",
+    entryFee: "",
+    perKill: "",
+    mapName: "",
+    version: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<any>(null);
@@ -42,11 +54,11 @@ export default function CreateMatchModal() {
 
   if (!open) return null;
 
-  const slots = SLOTS_FOR_TYPE[form.matchType] ?? 2;
+  const selectedType = MATCH_TYPES.find((t) => t.key === form.matchType) ?? MATCH_TYPES[0];
 
   const handleClose = () => {
     closeCreateMatch();
-    setForm({ matchName: "", matchType: "1v1", scheduledAt: "", description: "", isPrivate: false, password: "", prizePool: "" });
+    setForm({ matchName: "", matchType: "BR", scheduledAt: "", description: "", isPrivate: false, password: "", prizePool: "", entryFee: "", perKill: "", mapName: "", version: "" });
     setCreated(null);
     setShowRules(false);
   };
@@ -77,6 +89,10 @@ export default function CreateMatchModal() {
           password: form.password.trim() || undefined,
           isPrivate: form.isPrivate,
           prizePool: form.prizePool ? parseFloat(form.prizePool) : undefined,
+          entryFee: form.entryFee ? parseFloat(form.entryFee) : undefined,
+          perKill: form.perKill ? parseFloat(form.perKill) : undefined,
+          mapName: form.mapName || undefined,
+          version: form.version || undefined,
         }),
       });
       const data = await res.json();
@@ -122,9 +138,9 @@ export default function CreateMatchModal() {
                 </div>
                 <h3 className="font-black text-white text-lg mb-1">Match Submitted!</h3>
                 <p className="text-[#a0a0b0] text-sm mb-2">
-                  <span className="font-bold text-white">{created.matchName || `${created.matchType} Match`}</span> is pending admin approval.
+                  <span className="font-bold text-white">{created.matchName || `${selectedType.label} Match`}</span> is pending admin approval.
                 </p>
-                <p className="text-[#606070] text-xs mb-6">Once approved, your match will go live. Go to <strong className="text-[#ff6b00]">My Matches</strong> to track its status and manage it.</p>
+                <p className="text-[#606070] text-xs mb-6">Once approved, your match will appear in the <strong className="text-[#ff6b00]">{selectedType.label}</strong> category. Go to <strong className="text-white">My Matches</strong> to manage it.</p>
                 <div className="flex gap-3 justify-center">
                   <button onClick={handleClose} className="px-4 py-2.5 bg-[#1a1a24] border border-[#2a2a36] text-white font-bold uppercase rounded-xl text-sm hover:bg-[#2a2a36] transition-colors">
                     Done
@@ -136,6 +152,29 @@ export default function CreateMatchModal() {
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-4">
+
+                {/* Match Type Grid */}
+                <div>
+                  <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold">Match Format</label>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {MATCH_TYPES.map((t) => (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => setForm({ ...form, matchType: t.key })}
+                        className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl border text-center transition-all ${
+                          form.matchType === t.key
+                            ? "bg-[#ff6b00]/15 border-[#ff6b00] text-[#ff6b00]"
+                            : "bg-[#12121a] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"
+                        }`}
+                      >
+                        <span className="text-xl leading-none">{t.icon}</span>
+                        <span className="text-[10px] font-black uppercase leading-tight">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[#4a4a5a] text-xs mt-1.5">{selectedType.sub} · {selectedType.slots} slots max</p>
+                </div>
 
                 {/* Match Name */}
                 <div>
@@ -152,18 +191,61 @@ export default function CreateMatchModal() {
                   />
                 </div>
 
-                {/* Match Type */}
-                <div>
-                  <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold">Match Type</label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {MATCH_TYPES.map((t) => (
-                      <button key={t} type="button" onClick={() => setForm({ ...form, matchType: t })}
-                        className={`py-2.5 rounded-xl border text-sm font-black uppercase transition-all ${form.matchType === t ? "bg-[#ff6b00]/15 border-[#ff6b00] text-[#ff6b00]" : "bg-[#12121a] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"}`}>
-                        {t}
-                      </button>
-                    ))}
+                {/* Prize + Entry Fee row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Prize Pool (৳)</label>
+                    <input
+                      type="number" placeholder="e.g. 10000" value={form.prizePool}
+                      onChange={(e) => setForm({ ...form, prizePool: e.target.value })}
+                      min="0" step="1"
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    />
                   </div>
-                  <p className="text-[#4a4a5a] text-xs mt-1.5">{slots} players total · {slots} slots</p>
+                  <div>
+                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Entry Fee (৳)</label>
+                    <input
+                      type="number" placeholder="0 = Free" value={form.entryFee}
+                      onChange={(e) => setForm({ ...form, entryFee: e.target.value })}
+                      min="0" step="1"
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    />
+                  </div>
+                </div>
+
+                {/* Per Kill + Map + Version */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1">
+                      <Target className="w-3 h-3" /> Per Kill (৳)
+                    </label>
+                    <input
+                      type="number" placeholder="0" value={form.perKill}
+                      onChange={(e) => setForm({ ...form, perKill: e.target.value })}
+                      min="0" step="1"
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1">
+                      <Map className="w-3 h-3" /> Map
+                    </label>
+                    <select value={form.mapName} onChange={(e) => setForm({ ...form, mapName: e.target.value })}
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00] transition-colors">
+                      <option value="">Any</option>
+                      {MAP_OPTIONS.map((m) => <option key={m} value={m}>{m}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1">
+                      <Globe2 className="w-3 h-3" /> Version
+                    </label>
+                    <select value={form.version} onChange={(e) => setForm({ ...form, version: e.target.value })}
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00] transition-colors">
+                      <option value="">Any</option>
+                      {VERSION_OPTIONS.map((v) => <option key={v} value={v}>{v}</option>)}
+                    </select>
+                  </div>
                 </div>
 
                 {/* Match Start Time */}
@@ -196,7 +278,7 @@ export default function CreateMatchModal() {
                     </button>
                   </div>
                   <p className="text-[#4a4a5a] text-xs mt-1.5">
-                    {form.isPrivate ? "Only visible in your My Match Requests — invite only." : "Visible in the public community match feed."}
+                    {form.isPrivate ? "Only visible in your My Matches — invite only." : "Visible in the public community match category."}
                   </p>
                   {form.isPrivate && (
                     <div className="mt-2">
@@ -209,39 +291,22 @@ export default function CreateMatchModal() {
                   )}
                 </div>
 
-                {/* Prize Pool */}
-                <div>
-                  <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
-                    Prize Pool (৳) <span className="normal-case text-[#4a4a5a]">(optional)</span>
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 10,000"
-                    value={form.prizePool}
-                    onChange={(e) => setForm({ ...form, prizePool: e.target.value })}
-                    min="0"
-                    step="1"
-                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                  />
-                  <p className="text-[#4a4a5a] text-xs mt-1.5">Entry fee is set by the system after admin review.</p>
-                </div>
-
                 {/* Description */}
                 <div>
                   <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
                     Description <span className="normal-case text-[#4a4a5a]">(optional)</span>
                   </label>
                   <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    maxLength={500} rows={2} placeholder="Notes, requirements..."
+                    maxLength={500} rows={2} placeholder="Notes, requirements, rules..."
                     className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors resize-none"
                   />
                 </div>
 
-                {/* Rules link + info bar */}
+                {/* Info bar */}
                 <div className="bg-[#ff6b00]/5 border border-[#ff6b00]/15 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
                   <div className="flex items-start gap-2 flex-1 min-w-0">
                     <AlertCircle className="w-3.5 h-3.5 text-[#ff6b00] mt-0.5 shrink-0" />
-                    <span className="text-xs text-[#a0a0b0]">Set Room ID and start the countdown from <strong className="text-white">My Matches</strong>. Room details auto-reveal 10 min before start.</span>
+                    <span className="text-xs text-[#a0a0b0]">Set Room ID and start countdown from <strong className="text-white">My Matches</strong>. Room details auto-reveal 10 min before start.</span>
                   </div>
                   <button
                     type="button"

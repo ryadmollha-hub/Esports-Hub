@@ -1,0 +1,27 @@
+Please redesign the Tournaments / Community Matches user journey and UI to match a professional gaming application layout based on the newly provided reference screenshots:
+
+1. Create a Category Dashboard (Like Image 2):
+   - Replace the flat list on the main Tournaments/Home screen with a clean Category Grid/List layout.
+   - Display attractive category cards/banners with sub-text (e.g., "17 matches found") for different match formats:
+     * BR MATCH (Battle Royale)
+     * CLASH SQUAD (CS Mode)
+     * SOLO SURVIVAL
+     * LONE WOLF
+     * FREE MATCH / GIVEAWAYS
+   - When a user clicks on any of these categories, navigate them to a dedicated sub-page showing ONLY the matches belonging to that specific category.
+
+2. Redesign Match List View (Like Image 3):
+   - In the sub-category match list page, format the match cards cleanly with precise information blocks:
+     * Left side: Small game mode image icon with Match Title and Schedule Time.
+     * Grid Details: Display fields clearly: WIN PRIZE (৳), ENTRY TYPE (Solo/Duo/Squad), ENTRY FEE (৳), PER KILL (৳), MAP, and VERSION.
+     * Progress Bar: Add a smooth horizontal green/gray slot progress bar (e.g., "33/48 slots filled") with a "Join" or "Match Full" button aligned properly on the right.
+
+3. Implement Secure "Room Details" Dropdown Accordion:
+   - Below the slot progress bar on each match card, add a clean dropdown button labeled "🔑 Room Details" with a down arrow (🔽).
+   - When clicked, it should toggle open a collapsible area showing the Custom Room ID and Password.
+   - Strict Security Rule: This toggle section must ONLY open and reveal credentials if the logged-in user has successfully joined and PAID for this specific match. If they haven't paid, show a locked status text inside: "Room credentials will unlock 10 mins before the match for joined players only."
+
+4. Admin Login Fallback Fix:
+   - Make sure the Admin credentials (Username: "BLACKCODE", Password: "USER505") work properly so I can access the admin dashboard to create and test these categorized matches.
+
+Please overhaul the UI layout, styling (Tailwind CSS), routing, and state logic to reflect this sleek, modern esports hub appearance.
