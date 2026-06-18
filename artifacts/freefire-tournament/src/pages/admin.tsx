@@ -85,9 +85,14 @@ export default function AdminPage() {
   const [showAnnForm, setShowAnnForm] = useState(false);
   const [editingAnn, setEditingAnn] = useState<any>(null);
 
-  // Match form
+  // Match form (tournament matches)
   const [matchForm, setMatchForm] = useState({ matchNumber: "", scheduledAt: "", mapName: "", roomId: "", roomPassword: "", roomReleaseMinutes: "10" });
   const [showMatchForm, setShowMatchForm] = useState(false);
+
+  // Admin community match creation form
+  const [showAdminMatchForm, setShowAdminMatchForm] = useState(false);
+  const [adminMatchForm, setAdminMatchForm] = useState({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "" });
+  const [adminMatchCreating, setAdminMatchCreating] = useState(false);
   const [matchRoomForm, setMatchRoomForm] = useState<Record<number, { roomId: string; roomPassword: string; releaseMinutes: string }>>({});
   const [settingMatchRoom, setSettingMatchRoom] = useState<Record<number, boolean>>({});
   const [updatingMatchStatus, setUpdatingMatchStatus] = useState<Record<number, boolean>>({});
@@ -510,7 +515,43 @@ export default function AdminPage() {
     }
   };
 
-  // Match actions
+  // Admin: create a community match directly
+  const createAdminMatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminMatchForm.matchType) return toast({ title: "Select a Match Category", variant: "destructive" });
+    setAdminMatchCreating(true);
+    try {
+      const res = await apiFetch("/admin/user-matches", {
+        method: "POST",
+        body: JSON.stringify({
+          matchType: adminMatchForm.matchType,
+          matchName: adminMatchForm.matchName || undefined,
+          prizePool: adminMatchForm.prizePool || "0",
+          entryFee: adminMatchForm.entryFee || "0",
+          perKill: adminMatchForm.perKill || "0",
+          mapName: adminMatchForm.mapName || undefined,
+          scheduledAt: adminMatchForm.scheduledAt || undefined,
+          description: adminMatchForm.description || undefined,
+          isPrivate: false,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: "✅ Community match created!", description: "Match is now live in the frontend category view." });
+        setAdminMatchForm({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "" });
+        setShowAdminMatchForm(false);
+        loadUserMatches();
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error ?? "Failed to create match", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    } finally {
+      setAdminMatchCreating(false);
+    }
+  };
+
+  // Match actions (tournament matches)
   const createMatch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTournament) return;
@@ -1799,13 +1840,151 @@ export default function AdminPage() {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-2xl font-black uppercase">User <span className="text-[#ff6b00]">Matches</span></h1>
-                  <p className="text-[#a0a0b0] text-sm mt-1">Review and approve user-submitted matches</p>
+                  <h1 className="text-2xl font-black uppercase">Community <span className="text-[#ff6b00]">Matches</span></h1>
+                  <p className="text-[#a0a0b0] text-sm mt-1">Create matches directly or review user-submitted matches</p>
                 </div>
-                <button onClick={() => { loadUserMatches(); loadCommunityRules(); }} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
-                  <RefreshCw className="w-4 h-4" /> Refresh
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setShowAdminMatchForm((v) => !v)}
+                    className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors"
+                  >
+                    <Plus className="w-4 h-4" /> Create Match
+                  </button>
+                  <button onClick={() => { loadUserMatches(); loadCommunityRules(); }} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                    <RefreshCw className="w-4 h-4" /> Refresh
+                  </button>
+                </div>
               </div>
+
+              {/* Admin: Create Community Match Form */}
+              {showAdminMatchForm && (
+                <div className="bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-6 mb-6">
+                  <div className="flex items-center gap-2 mb-5">
+                    <div className="w-8 h-8 bg-[#ff6b00]/15 rounded-xl flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-[#ff6b00]" />
+                    </div>
+                    <div>
+                      <h2 className="font-black text-white text-sm uppercase">Create Community Match</h2>
+                      <p className="text-[#606070] text-xs">Match goes live immediately in the selected category view</p>
+                    </div>
+                  </div>
+                  <form onSubmit={createAdminMatch} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Match Category */}
+                    <div className="sm:col-span-2 lg:col-span-1">
+                      <label className="label-sm">MATCH CATEGORY <span className="text-[#ff2244]">*</span></label>
+                      <select
+                        value={adminMatchForm.matchType}
+                        onChange={(e) => setAdminMatchForm({ ...adminMatchForm, matchType: e.target.value })}
+                        required
+                        className="admin-input"
+                      >
+                        <option value="">— Select Category —</option>
+                        <option value="BR">BR MATCH (Battle Royale · 48 slots)</option>
+                        <option value="CS">CLASH SQUAD (CS Mode · 8 slots)</option>
+                        <option value="LONE_WOLF">LONE WOLF (1v1 Elimination · 12 slots)</option>
+                        <option value="FREE">FREE MATCH (Giveaway · 20 slots)</option>
+                        <option value="SOLO">SOLO SURVIVAL (Solo · 12 slots)</option>
+                      </select>
+                    </div>
+                    {/* Match Name */}
+                    <div>
+                      <label className="label-sm">Match Name</label>
+                      <input
+                        value={adminMatchForm.matchName}
+                        onChange={(e) => setAdminMatchForm({ ...adminMatchForm, matchName: e.target.value })}
+                        placeholder="e.g. Weekend BR Cup"
+                        className="admin-input"
+                      />
+                    </div>
+                    {/* Scheduled At */}
+                    <div>
+                      <label className="label-sm">Scheduled At</label>
+                      <input
+                        type="datetime-local"
+                        value={adminMatchForm.scheduledAt}
+                        onChange={(e) => setAdminMatchForm({ ...adminMatchForm, scheduledAt: e.target.value })}
+                        className="admin-input"
+                      />
+                    </div>
+                    {/* Prize Pool */}
+                    <div>
+                      <label className="label-sm">Prize Pool (৳)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={adminMatchForm.prizePool}
+                        onChange={(e) => setAdminMatchForm({ ...adminMatchForm, prizePool: e.target.value })}
+                        placeholder="0"
+                        className="admin-input"
+                      />
+                    </div>
+                    {/* Entry Fee */}
+                    <div>
+                      <label className="label-sm">Entry Fee (৳)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={adminMatchForm.entryFee}
+                        onChange={(e) => setAdminMatchForm({ ...adminMatchForm, entryFee: e.target.value })}
+                        placeholder="0"
+                        className="admin-input"
+                      />
+                    </div>
+                    {/* Per Kill */}
+                    <div>
+                      <label className="label-sm">Per Kill (৳)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={adminMatchForm.perKill}
+                        onChange={(e) => setAdminMatchForm({ ...adminMatchForm, perKill: e.target.value })}
+                        placeholder="0"
+                        className="admin-input"
+                      />
+                    </div>
+                    {/* Map Name */}
+                    <div>
+                      <label className="label-sm">Map Name</label>
+                      <input
+                        value={adminMatchForm.mapName}
+                        onChange={(e) => setAdminMatchForm({ ...adminMatchForm, mapName: e.target.value })}
+                        placeholder="Bermuda, Purgatory…"
+                        className="admin-input"
+                      />
+                    </div>
+                    {/* Description */}
+                    <div className="sm:col-span-2">
+                      <label className="label-sm">Description</label>
+                      <input
+                        value={adminMatchForm.description}
+                        onChange={(e) => setAdminMatchForm({ ...adminMatchForm, description: e.target.value })}
+                        placeholder="Optional match description shown to players"
+                        className="admin-input"
+                      />
+                    </div>
+                    {/* Actions */}
+                    <div className="sm:col-span-2 lg:col-span-3 flex gap-3 pt-1">
+                      <button
+                        type="submit"
+                        disabled={adminMatchCreating || !adminMatchForm.matchType}
+                        className="px-6 py-2.5 bg-[#ff6b00] text-white font-black text-sm uppercase rounded-xl hover:bg-[#e66000] disabled:opacity-50 transition-colors"
+                      >
+                        {adminMatchCreating ? "Creating…" : "Create & Publish Match"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowAdminMatchForm(false); setAdminMatchForm({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "" }); }}
+                        className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
 
               {/* Community Match Rules Editor */}
               <div className="bg-[#0d0d16] border border-[#ff6b00]/20 rounded-2xl p-5 mb-6">

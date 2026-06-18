@@ -581,6 +581,44 @@ router.patch("/admin/user-matches/:id/room-credentials", async (req, res) => {
   }
 });
 
+// ─── Admin: create a match directly (auto-approved) ──────────────────────────
+
+router.post("/admin/user-matches", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const { matchName, matchType, scheduledAt, description, prizePool: prizePoolInput, entryFee: entryFeeInput, perKill: perKillInput, mapName, isPrivate } = req.body;
+    if (!matchType) return res.status(400).json({ error: "matchType is required." });
+
+    const maxSlots = SLOTS_FOR_TYPE[matchType];
+    if (!maxSlots) return res.status(400).json({ error: "Invalid matchType. Must be one of: BR, CS, SOLO, LONE_WOLF, FREE." });
+
+    const prize = prizePoolInput !== undefined ? Math.max(0, parseFloat(prizePoolInput) || 0) : 0;
+    const fee = entryFeeInput !== undefined ? Math.max(0, parseFloat(entryFeeInput) || 0) : 0;
+    const perKill = perKillInput !== undefined ? Math.max(0, parseFloat(perKillInput) || 0) : 0;
+
+    const [match] = await db.insert(userMatchesTable).values({
+      creatorId: "admin",
+      creatorName: "Admin",
+      matchName: matchName?.trim() || null,
+      matchType,
+      prizePool: prize.toFixed(2),
+      entryFee: fee.toFixed(2),
+      perKill: perKill > 0 ? perKill.toFixed(2) : null,
+      mapName: mapName?.trim() || null,
+      maxSlots,
+      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      description: description?.trim() || null,
+      isPrivate: !!isPrivate,
+      status: "waiting",
+    }).returning();
+
+    res.status(201).json(stripMatch(match, true));
+  } catch (err) {
+    logger.error({ err }, "Admin failed to create match");
+    res.status(500).json({ error: "Failed to create match." });
+  }
+});
+
 // ─── Admin: list all matches ──────────────────────────────────────────────────
 
 router.get("/admin/user-matches", async (req, res) => {
