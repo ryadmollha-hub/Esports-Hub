@@ -45,6 +45,7 @@ function stripMatch(m: typeof userMatchesTable.$inferSelect, includeRoom = false
     ...rest,
     isPasswordProtected: !!passwordHash,
     effectiveStatus: effectiveStatus(m),
+    credentialsReleased: !!adminRoomId,
     ...(includeRoom ? { roomId: roomId ?? null, adminRoomId: adminRoomId ?? null, adminRoomPassword: adminRoomPassword ?? null } : {}),
   };
 }

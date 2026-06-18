@@ -191,11 +191,11 @@ export default function TournamentsPage() {
           </div>
         </div>
 
-        {/* Official Tournaments */}
+        {/* Official Tournaments — large featured cards */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1,2,3,4,5,6].map((i) => (
-              <div key={i} className="h-48 bg-[#12121a] rounded-xl animate-pulse" data-testid={`skeleton-card-${i}`} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {[1,2,3,4].map((i) => (
+              <div key={i} className="h-64 bg-[#12121a] rounded-2xl animate-pulse" data-testid={`skeleton-card-${i}`} />
             ))}
           </div>
         ) : tournaments.length === 0 ? (
@@ -205,8 +205,8 @@ export default function TournamentsPage() {
             <p className="text-[#a0a0b0] text-sm">Try adjusting your filters or check back later</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {tournaments.map((t: any) => <TournamentCard key={t.id} t={t} />)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            {tournaments.map((t: any) => <TournamentCard key={t.id} t={t} featured />)}
           </div>
         )}
 
@@ -235,8 +235,8 @@ export default function TournamentsPage() {
           </div>
 
           {communityLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1,2,3].map((i) => <div key={i} className="h-44 bg-[#12121a] rounded-2xl animate-pulse" />)}
+            <div className="border border-[#2a2a36] rounded-2xl overflow-hidden divide-y divide-[#1a1a24]">
+              {[1,2,3,4].map((i) => <div key={i} className="h-14 bg-[#12121a] animate-pulse" />)}
             </div>
           ) : communityMatches.length === 0 ? (
             <div className="bg-[#12121a] border border-[#ff6b00]/10 rounded-2xl p-10 text-center">
@@ -251,72 +251,75 @@ export default function TournamentsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="border border-[#2a2a36] rounded-2xl overflow-hidden divide-y divide-[#1a1a24]">
               {communityMatches.map((m: any) => {
                 const effStatus = getEffectiveStatus(m);
-                const isActive = effStatus === "active";
+                const isLive = !!m.credentialsReleased;
                 const isFull = m.filledSlots >= m.maxSlots;
                 const startsAt = getStartsAt(m);
-                const isTimerRunning = !!m.timerStartedAt && !isActive;
+                const isTimerRunning = !!m.timerStartedAt && !isLive;
                 const isEnded = effStatus === "ended" || effStatus === "cancelled";
                 const canJoin = !isFull && !isEnded;
 
                 return (
-                  <div key={m.id} className={`bg-[#12121a] rounded-2xl border p-4 transition-colors ${!canJoin ? "border-[#2a2a36] opacity-60" : isActive ? "border-[#00ff88]/20 hover:border-[#00ff88]/40" : "border-[#ff6b00]/10 hover:border-[#ff6b00]/30"}`}>
-                    {/* Status bar for active matches */}
-                    {isActive && (
-                      <div className="flex items-center gap-1.5 text-[10px] font-black uppercase text-[#00ff88] mb-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" />
-                        LIVE NOW
-                        <Zap className="w-3 h-3 ml-auto" />
-                      </div>
-                    )}
-                    {isTimerRunning && startsAt && (
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#ff6b00] mb-2">
-                        <Timer className="w-3 h-3" />
-                        Starts in: <CountdownTimer targetDate={startsAt} className="text-[10px]" />
-                      </div>
-                    )}
-
-                    {/* Title row */}
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-black text-white text-sm truncate">{m.matchName || `${m.matchType} Match`}</div>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${MATCH_TYPE_COLOR[m.matchType] ?? "text-white border-white/20"}`}>
-                            <Swords className="w-2.5 h-2.5" /> {m.matchType}
-                          </span>
-                          {m.isPasswordProtected && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
-                              <Lock className="w-2.5 h-2.5" /> Password
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-[#ffd700] font-black text-sm">৳{Number(m.prizePool).toLocaleString()}</div>
-                        <div className="text-[#606070] text-[10px]">prize pool</div>
-                      </div>
-                    </div>
-
-                    {/* Info row */}
-                    <div className="flex items-center justify-between text-xs text-[#606070] mb-3">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {m.creatorName ? `by ${m.creatorName}` : "Community"}
-                      </div>
-                      <div>
-                        <span className={`font-bold ${isFull ? "text-[#ff2244]" : "text-[#00ff88]"}`}>{m.filledSlots}/{m.maxSlots}</span> slots
-                      </div>
-                    </div>
-
-                    {/* Footer row */}
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs">
-                        Fee: <span className={`font-black ${Number(m.entryFee) > 0 ? "text-[#ff6b00]" : "text-[#00ff88]"}`}>
-                          {Number(m.entryFee) > 0 ? `৳${Number(m.entryFee).toLocaleString()}` : "Free"}
+                  <div
+                    key={m.id}
+                    className={`flex items-center gap-3 px-4 py-3 bg-[#12121a] hover:bg-[#151520] transition-colors ${!canJoin ? "opacity-55" : ""}`}
+                  >
+                    {/* Status pill */}
+                    <div className="shrink-0 w-20 flex justify-center">
+                      {isLive ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 px-2 py-0.5 rounded-full whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse shrink-0" />
+                          LIVE
                         </span>
+                      ) : isEnded ? (
+                        <span className="text-[10px] font-black uppercase text-[#606070] bg-[#1a1a24] border border-[#2a2a36] px-2 py-0.5 rounded-full">ENDED</span>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase text-[#a0a0b0] bg-[#1a1a24] border border-[#2a2a36] px-2 py-0.5 rounded-full">UPCOMING</span>
+                      )}
+                    </div>
+
+                    {/* Name + badges */}
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-white text-sm truncate leading-tight">
+                        {m.matchName || `${m.matchType} Match`}
                       </div>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        <span className={`inline-flex items-center gap-0.5 text-[9px] font-black uppercase px-1.5 py-0.5 rounded border ${MATCH_TYPE_COLOR[m.matchType] ?? "text-white border-white/20"}`}>
+                          <Swords className="w-2 h-2" /> {m.matchType}
+                        </span>
+                        {m.isPasswordProtected && (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
+                            <Lock className="w-2 h-2" /> Private
+                          </span>
+                        )}
+                        {isTimerRunning && startsAt && (
+                          <span className="flex items-center gap-1 text-[9px] text-[#ff6b00]">
+                            <Timer className="w-2.5 h-2.5" />
+                            <CountdownTimer targetDate={startsAt} className="text-[9px]" />
+                          </span>
+                        )}
+                        <span className="text-[9px] text-[#606070]">by {m.creatorName || "Player"}</span>
+                      </div>
+                    </div>
+
+                    {/* Prize */}
+                    <div className="text-right shrink-0 hidden sm:block">
+                      <div className="text-[#ffd700] font-black text-xs">৳{Number(m.prizePool).toLocaleString()}</div>
+                      <div className="text-[#606070] text-[9px] uppercase">prize</div>
+                    </div>
+
+                    {/* Slots */}
+                    <div className="text-center shrink-0 hidden md:block w-12">
+                      <div className={`font-black text-xs ${isFull ? "text-[#ff2244]" : "text-[#00ff88]"}`}>
+                        {m.filledSlots}/{m.maxSlots}
+                      </div>
+                      <div className="text-[9px] text-[#606070] uppercase">slots</div>
+                    </div>
+
+                    {/* Join button */}
+                    <div className="shrink-0">
                       {isEnded ? (
                         <span className="text-[#606070] text-xs font-bold uppercase">Ended</span>
                       ) : isFull ? (
@@ -324,12 +327,16 @@ export default function TournamentsPage() {
                       ) : (
                         <button
                           onClick={() => openJoin(m)}
-                          className={`px-3 py-1.5 text-white text-xs font-black uppercase rounded-lg transition-colors ${isActive ? "bg-[#00ff88] hover:bg-[#00cc66] text-black" : "bg-[#ff6b00] hover:bg-[#e66000]"}`}
+                          className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition-colors whitespace-nowrap ${
+                            isLive
+                              ? "bg-[#00ff88] hover:bg-[#00cc66] text-black"
+                              : "bg-[#ff6b00] hover:bg-[#e66000] text-white"
+                          }`}
                         >
-                          {m.isPasswordProtected ? (
-                            <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> Join</span>
-                          ) : isActive ? (
+                          {isLive ? (
                             <span className="flex items-center gap-1"><Zap className="w-3 h-3" /> Join Live</span>
+                          ) : m.isPasswordProtected ? (
+                            <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> Join</span>
                           ) : "Join"}
                         </button>
                       )}

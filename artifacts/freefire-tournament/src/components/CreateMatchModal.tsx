@@ -22,7 +22,6 @@ export default function CreateMatchModal() {
     isPrivate: false,
     password: "",
     prizePool: "",
-    entryFee: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<any>(null);
@@ -47,7 +46,7 @@ export default function CreateMatchModal() {
 
   const handleClose = () => {
     closeCreateMatch();
-    setForm({ matchName: "", matchType: "1v1", scheduledAt: "", description: "", isPrivate: false, password: "", prizePool: "", entryFee: "" });
+    setForm({ matchName: "", matchType: "1v1", scheduledAt: "", description: "", isPrivate: false, password: "", prizePool: "" });
     setCreated(null);
     setShowRules(false);
   };
@@ -78,7 +77,6 @@ export default function CreateMatchModal() {
           password: form.password.trim() || undefined,
           isPrivate: form.isPrivate,
           prizePool: form.prizePool ? parseFloat(form.prizePool) : undefined,
-          entryFee: form.entryFee ? parseFloat(form.entryFee) : undefined,
         }),
       });
       const data = await res.json();
@@ -211,36 +209,21 @@ export default function CreateMatchModal() {
                   )}
                 </div>
 
-                {/* Prize Pool & Entry Fee */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
-                      Prize Pool (৳) <span className="normal-case text-[#4a4a5a]">(optional)</span>
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 500"
-                      value={form.prizePool}
-                      onChange={(e) => setForm({ ...form, prizePool: e.target.value })}
-                      min="0"
-                      step="1"
-                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
-                      Entry Fee (৳) <span className="normal-case text-[#4a4a5a]">(optional)</span>
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="e.g. 50"
-                      value={form.entryFee}
-                      onChange={(e) => setForm({ ...form, entryFee: e.target.value })}
-                      min="0"
-                      step="1"
-                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                    />
-                  </div>
+                {/* Prize Pool */}
+                <div>
+                  <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
+                    Prize Pool (৳) <span className="normal-case text-[#4a4a5a]">(optional)</span>
+                  </label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 10,000"
+                    value={form.prizePool}
+                    onChange={(e) => setForm({ ...form, prizePool: e.target.value })}
+                    min="0"
+                    step="1"
+                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                  />
+                  <p className="text-[#4a4a5a] text-xs mt-1.5">Entry fee is set by the system after admin review.</p>
                 </div>
 
                 {/* Description */}

@@ -61,6 +61,7 @@ export default function AdminPage() {
   const [communityRulesSaving, setCommunityRulesSaving] = useState(false);
   const [roomCredentials, setRoomCredentials] = useState<Record<number, { roomId: string; password: string }>>({});
   const [submittingCredentials, setSubmittingCredentials] = useState<number | null>(null);
+  const [releaseMode, setReleaseMode] = useState<Record<number, "now" | "scheduled">>({});
   const [deletingMatch, setDeletingMatch] = useState<number | null>(null);
   const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -1939,28 +1940,66 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* Room Credentials — shown for full matches that are approved/waiting/active */}
-                      {(m.filledSlots >= m.maxSlots || m.status === "approved") && m.status !== "pending_approval" && m.status !== "rejected" && (
+                      {/* Room Credentials — shown for all approved/active matches */}
+                      {m.status !== "pending_approval" && m.status !== "rejected" && (
                         <div className="mt-3 pt-3 border-t border-[#ff6b00]/10">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Key className="w-3.5 h-3.5 text-[#ff6b00]" />
-                            <span className="text-[#a0a0b0] text-xs font-black uppercase">
-                              {m.filledSlots >= m.maxSlots ? "Match Full — Set Room Credentials" : "Room Credentials"}
-                            </span>
-                            {m.adminRoomId && (
-                              <span className="text-[10px] font-bold text-[#00ff88] border border-[#00ff88]/30 px-1.5 py-0.5 rounded-full">Set ✓</span>
+                          {/* Section header */}
+                          <div className="flex items-center justify-between mb-2.5">
+                            <div className="flex items-center gap-2">
+                              <Key className="w-3.5 h-3.5 text-[#ff6b00]" />
+                              <span className="text-[#a0a0b0] text-xs font-black uppercase">Room Password Release</span>
+                            </div>
+                            {m.adminRoomId ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 px-2 py-0.5 rounded-full">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" />
+                                RELEASED
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold text-[#ff6b00]/70 bg-[#ff6b00]/8 border border-[#ff6b00]/20 px-2 py-0.5 rounded-full uppercase">Pending</span>
                             )}
                           </div>
+
+                          {/* Currently set credentials */}
                           {m.adminRoomId && (
-                            <div className="bg-[#0a0a0f] rounded-lg px-3 py-2 mb-2 flex flex-wrap gap-3 text-xs">
+                            <div className="bg-[#0a0a0f] border border-[#00ff88]/15 rounded-lg px-3 py-2 mb-2.5 flex flex-wrap gap-3 text-xs">
                               <span className="text-[#606070]">Room ID: <span className="text-[#00ff88] font-mono font-bold">{m.adminRoomId}</span></span>
-                              {m.adminRoomPassword && <span className="text-[#606070]">Password: <span className="text-yellow-400 font-mono font-bold">{m.adminRoomPassword}</span></span>}
+                              {m.adminRoomPassword && (
+                                <span className="text-[#606070]">Password: <span className="text-yellow-400 font-mono font-bold">{m.adminRoomPassword}</span></span>
+                              )}
                             </div>
                           )}
+
+                          {/* Release mode toggle */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[#606070] text-[10px] uppercase font-bold tracking-wider shrink-0">Release:</span>
+                            <button
+                              type="button"
+                              onClick={() => setReleaseMode((prev) => ({ ...prev, [m.id]: "now" }))}
+                              className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold transition-colors ${(releaseMode[m.id] ?? "now") === "now" ? "bg-[#ff6b00]/20 border-[#ff6b00]/50 text-[#ff6b00]" : "bg-transparent border-[#2a2a36] text-[#606070] hover:text-[#a0a0b0]"}`}
+                            >
+                              Manually (now)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setReleaseMode((prev) => ({ ...prev, [m.id]: "scheduled" }))}
+                              className={`text-[10px] px-2.5 py-0.5 rounded-full border font-bold transition-colors ${releaseMode[m.id] === "scheduled" ? "bg-[#ff6b00]/20 border-[#ff6b00]/50 text-[#ff6b00]" : "bg-transparent border-[#2a2a36] text-[#606070] hover:text-[#a0a0b0]"}`}
+                            >
+                              10 min before
+                            </button>
+                          </div>
+                          {releaseMode[m.id] === "scheduled" && (
+                            <div className="text-[10px] text-[#ff6b00]/70 mb-2 pl-1">
+                              {m.scheduledAt
+                                ? `Players see credentials at: ${new Date(new Date(m.scheduledAt).getTime() - 10 * 60 * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} on ${new Date(m.scheduledAt).toLocaleDateString()}`
+                                : "No scheduled time set — credentials reveal immediately upon release."}
+                            </div>
+                          )}
+
+                          {/* Input fields + Release button */}
                           <div className="flex gap-2">
                             <input
                               type="text"
-                              placeholder="Custom Room ID *"
+                              placeholder="Room ID *"
                               value={roomCredentials[m.id]?.roomId ?? ""}
                               onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: e.target.value, password: prev[m.id]?.password ?? "" } }))}
                               className="flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-1.5 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
@@ -1984,7 +2023,7 @@ export default function AdminPage() {
                                     body: JSON.stringify({ adminRoomId: creds.roomId.trim(), adminRoomPassword: creds.password?.trim() || undefined }),
                                   });
                                   if (res.ok) {
-                                    toast({ title: "Room credentials set!", description: "Participants can now see the Room ID and password." });
+                                    toast({ title: "🔓 Password Released!", description: "Registered players can now see the room credentials." });
                                     setRoomCredentials((prev) => { const n = { ...prev }; delete n[m.id]; return n; });
                                     loadUserMatches();
                                   } else {
@@ -1994,9 +2033,10 @@ export default function AdminPage() {
                                 } catch { toast({ title: "Connection error", variant: "destructive" }); }
                                 finally { setSubmittingCredentials(null); }
                               }}
-                              className="px-3 py-1.5 bg-[#ff6b00] text-white text-xs font-black rounded-lg hover:bg-[#e66000] disabled:opacity-50 transition-colors whitespace-nowrap"
+                              className="px-3 py-1.5 bg-[#00cc66] hover:bg-[#00aa55] text-white text-xs font-black rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap flex items-center gap-1"
                             >
-                              {submittingCredentials === m.id ? "..." : "Submit Credentials"}
+                              <Key className="w-3 h-3" />
+                              {submittingCredentials === m.id ? "Releasing..." : "Release Password"}
                             </button>
                           </div>
                         </div>
