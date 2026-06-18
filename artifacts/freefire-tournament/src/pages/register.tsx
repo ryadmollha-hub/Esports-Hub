@@ -54,7 +54,7 @@ export default function RegisterPage() {
         onSuccess: () => {
           toast({ title: "Registration submitted!", description: "Your registration is pending approval." });
           qc.invalidateQueries({ queryKey: getGetMyRegistrationsQueryKey() });
-          setLocation("/dashboard");
+          setLocation("/tournaments");
         },
         onError: (err: any) => {
           toast({ title: "Registration failed", description: err?.response?.data?.error ?? "Please try again.", variant: "destructive" });

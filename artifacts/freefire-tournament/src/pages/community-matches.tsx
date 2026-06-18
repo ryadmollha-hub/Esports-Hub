@@ -102,6 +102,97 @@ function playersForType(t: string): number {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+function CommunityFeedCard({
+  m, myJoin, onJoin,
+}: {
+  m: any; myJoin: any; onJoin: () => void;
+}) {
+  const cat = CATEGORIES.find((c) => c.typeKey === m.matchType);
+  const color = cat?.color ?? "#ff6b00";
+  const effStatus = getEffectiveStatus(m);
+  const isLive = !!m.credentialsReleased;
+  const isFull = m.filledSlots >= m.maxSlots;
+  const isEnded = effStatus === "ended" || effStatus === "cancelled";
+  const slotPct = Math.round((m.filledSlots / m.maxSlots) * 100);
+
+  return (
+    <div
+      className={`bg-[#0e0e18] border rounded-xl overflow-hidden transition-all hover:border-opacity-50 ${isEnded ? "opacity-50" : ""}`}
+      style={{ borderColor: `${color}20` }}
+    >
+      <div className="h-[2px]" style={{ background: isLive ? "#00ff88" : isEnded ? "#1e1e2e" : color }} />
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-3">
+          {/* Type badge */}
+          <span
+            className="text-[10px] font-black uppercase px-2 py-1 rounded-lg shrink-0 tracking-wide"
+            style={{ background: `${color}15`, color }}
+          >
+            {TYPE_LABEL[m.matchType] ?? m.matchType}
+          </span>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+              <h3 className="text-sm font-black text-white truncate leading-tight">
+                {m.matchName || `${TYPE_LABEL[m.matchType] ?? m.matchType} Match`}
+              </h3>
+              {isLive && (
+                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/25 px-1.5 py-0.5 rounded-full shrink-0">
+                  <span className="w-1 h-1 rounded-full bg-[#00ff88] animate-pulse" /> LIVE
+                </span>
+              )}
+            </div>
+            <p className="text-[#606070] text-[11px]">
+              by <span className="text-[#a0a0b0] font-bold">{m.creatorName || "Player"}</span>
+              {" · "}
+              {Number(m.entryFee) > 0 ? <span className="text-[#ff6b00]">৳{Number(m.entryFee)} entry</span> : <span className="text-[#00ff88]">Free</span>}
+              {Number(m.prizePool) > 0 && <> · <span className="text-[#ffd700]">৳{Number(m.prizePool).toLocaleString()} prize</span></>}
+              {" · "}{m.filledSlots}/{m.maxSlots} slots
+            </p>
+          </div>
+
+          {/* Slot bar (desktop) */}
+          <div className="hidden sm:block w-28 shrink-0">
+            <div className="h-1.5 bg-[#1a1a24] rounded-full overflow-hidden mb-1">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${slotPct}%`,
+                  background: isFull ? "#ff2244" : slotPct > 75 ? "linear-gradient(90deg,#ff9500,#ff2244)" : "linear-gradient(90deg,#00ff88,#00b4ff)",
+                }}
+              />
+            </div>
+            <span className="text-[9px] text-[#606070] font-bold">
+              {isFull ? "FULL" : `${m.maxSlots - m.filledSlots} slots left`}
+            </span>
+          </div>
+
+          {/* Join button */}
+          {isEnded ? (
+            <div className="px-3 py-1.5 rounded-lg bg-[#1a1a24] text-[#606070] text-[10px] font-black uppercase shrink-0">Ended</div>
+          ) : isFull ? (
+            <div className="px-3 py-1.5 rounded-lg bg-[#ff2244]/10 border border-[#ff2244]/20 text-[#ff2244] text-[10px] font-black uppercase shrink-0">Full</div>
+          ) : myJoin ? (
+            <div className="px-3 py-1.5 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 text-[#00ff88] text-[10px] font-black uppercase shrink-0">✓ Joined</div>
+          ) : (
+            <button
+              onClick={onJoin}
+              className="px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all hover:brightness-110 active:scale-95 shrink-0"
+              style={{
+                background: isLive ? "#00ff88" : color,
+                color: isLive || color === "#ffd700" || color === "#00ff88" ? "#000" : "#fff",
+              }}
+            >
+              {isLive ? "⚡ Join" : "Join →"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StatCell({ label, value, valueClass = "text-white" }: { label: string; value: string; valueClass?: string }) {
   return (
     <div className="flex flex-col items-center min-w-[60px]">
@@ -234,8 +325,8 @@ export default function CommunityMatchesPage() {
         const cm: Record<string, number> = {};
         const lm: Record<string, number> = {};
         for (const cat of CATEGORIES) {
-          cm[cat.typeKey] = all.filter((m) => m.matchType === cat.typeKey).length;
-          lm[cat.typeKey] = all.filter((m) => m.matchType === cat.typeKey && !!m.credentialsReleased).length;
+          cm[cat.typeKey] = all.filter((m) => m.matchType === cat.typeKey && m.creatorId === "admin").length;
+          lm[cat.typeKey] = all.filter((m) => m.matchType === cat.typeKey && m.creatorId === "admin" && !!m.credentialsReleased).length;
         }
         setCountMap(cm);
         setLiveMap(lm);
@@ -281,10 +372,15 @@ export default function CommunityMatchesPage() {
     }
   }, [user, joinMatch]);
 
-  // Filtered matches for active category
+  // Admin-only matches for category view (premium format pages)
   const matches = activeMeta
-    ? allMatches.filter((m) => m.matchType === activeMeta.typeKey)
+    ? allMatches.filter((m) => m.matchType === activeMeta.typeKey && m.creatorId === "admin")
     : [];
+
+  // User-created matches for the community feed (shown below the category grid)
+  const communityFeedMatches = allMatches.filter(
+    (m) => m.creatorId !== "admin" && m.status !== "cancelled"
+  );
 
   const openJoin = (m: any) => {
     if (!user) {
@@ -476,6 +572,69 @@ export default function CommunityMatchesPage() {
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh Counts
               </button>
             </div>
+
+            {/* ── Community Feed ── */}
+            <div className="mt-12">
+              {/* Section header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] text-[10px] font-black uppercase tracking-widest mb-2">
+                    <Swords className="w-3 h-3" /> Player Created
+                  </div>
+                  <h2 className="text-xl font-black uppercase tracking-tight text-white">
+                    Community <span className="text-[#a0a0b0]">Feed</span>
+                  </h2>
+                  <p className="text-[#606070] text-xs mt-1">Rooms created by fellow players — join or create your own</p>
+                </div>
+                {user ? (
+                  <button
+                    onClick={openCreateMatch}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-[#141420] hover:bg-[#1e1e2e] border border-[#ff6b00]/30 hover:border-[#ff6b00]/60 text-[#ff6b00] font-black uppercase text-xs rounded-xl transition-all shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Create a Match
+                  </button>
+                ) : (
+                  <Link href="/sign-in">
+                    <button className="flex items-center gap-2 px-4 py-2.5 bg-[#141420] border border-[#ff6b00]/30 text-[#ff6b00] font-black uppercase text-xs rounded-xl shrink-0">
+                      <Plus className="w-3.5 h-3.5" /> Sign in to Create
+                    </button>
+                  </Link>
+                )}
+              </div>
+
+              <div className="h-px bg-gradient-to-r from-transparent via-[#2a2a36] to-transparent mb-5" />
+
+              {loading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => <div key={i} className="h-14 bg-[#12121a] rounded-xl animate-pulse" />)}
+                </div>
+              ) : communityFeedMatches.length === 0 ? (
+                <div className="text-center py-10 border border-dashed border-[#1e1e2e] rounded-2xl">
+                  <Swords className="w-8 h-8 mx-auto mb-3 text-[#2a2a36]" />
+                  <p className="text-[#606070] text-sm font-bold">No player-created matches yet</p>
+                  <p className="text-[#3a3a46] text-xs mt-1">Be the first — create a room and invite friends!</p>
+                  {user && (
+                    <button
+                      onClick={openCreateMatch}
+                      className="inline-flex items-center gap-2 px-4 py-2 mt-4 bg-[#ff6b00] text-white text-xs font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Create First Match
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {communityFeedMatches.map((m: any) => (
+                    <CommunityFeedCard
+                      key={m.id}
+                      m={m}
+                      myJoin={myJoinMap[m.id]}
+                      onJoin={() => openJoin(m)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -560,20 +719,8 @@ export default function CommunityMatchesPage() {
             ) : matches.length === 0 ? (
               <div className="text-center py-20 border border-dashed border-[#1e1e2e] rounded-2xl">
                 <div className="text-6xl mb-4 opacity-40">{activeMeta.icon}</div>
-                <h3 className="text-lg font-bold text-white mb-2">No {activeMeta.label} matches yet</h3>
-                <p className="text-[#606070] text-sm mb-6">Check back soon — or be the first to create one!</p>
-                {user && (
-                  <button
-                    onClick={openCreateMatch}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-black uppercase text-sm transition-all"
-                    style={{
-                      background: activeMeta.color,
-                      color: activeMeta.color === "#ffd700" || activeMeta.color === "#00ff88" ? "#000" : "#fff",
-                    }}
-                  >
-                    <Plus className="w-4 h-4" /> Create the first match
-                  </button>
-                )}
+                <h3 className="text-lg font-bold text-white mb-2">No {activeMeta.label} matches scheduled yet</h3>
+                <p className="text-[#606070] text-sm">Check back soon — admin-curated matches will appear here.</p>
               </div>
             ) : (
               <div className="space-y-2">
