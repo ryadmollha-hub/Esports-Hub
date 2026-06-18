@@ -21,6 +21,8 @@ export default function CreateMatchModal() {
     description: "",
     isPrivate: false,
     password: "",
+    prizePool: "",
+    entryFee: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [created, setCreated] = useState<any>(null);
@@ -45,7 +47,7 @@ export default function CreateMatchModal() {
 
   const handleClose = () => {
     closeCreateMatch();
-    setForm({ matchName: "", matchType: "1v1", scheduledAt: "", description: "", isPrivate: false, password: "" });
+    setForm({ matchName: "", matchType: "1v1", scheduledAt: "", description: "", isPrivate: false, password: "", prizePool: "", entryFee: "" });
     setCreated(null);
     setShowRules(false);
   };
@@ -75,6 +77,8 @@ export default function CreateMatchModal() {
           description: form.description || undefined,
           password: form.password.trim() || undefined,
           isPrivate: form.isPrivate,
+          prizePool: form.prizePool ? parseFloat(form.prizePool) : undefined,
+          entryFee: form.entryFee ? parseFloat(form.entryFee) : undefined,
         }),
       });
       const data = await res.json();
@@ -207,6 +211,38 @@ export default function CreateMatchModal() {
                   )}
                 </div>
 
+                {/* Prize Pool & Entry Fee */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
+                      Prize Pool (৳) <span className="normal-case text-[#4a4a5a]">(optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 500"
+                      value={form.prizePool}
+                      onChange={(e) => setForm({ ...form, prizePool: e.target.value })}
+                      min="0"
+                      step="1"
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
+                      Entry Fee (৳) <span className="normal-case text-[#4a4a5a]">(optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="e.g. 50"
+                      value={form.entryFee}
+                      onChange={(e) => setForm({ ...form, entryFee: e.target.value })}
+                      min="0"
+                      step="1"
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    />
+                  </div>
+                </div>
+
                 {/* Description */}
                 <div>
                   <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
@@ -222,7 +258,7 @@ export default function CreateMatchModal() {
                 <div className="bg-[#ff6b00]/5 border border-[#ff6b00]/15 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
                   <div className="flex items-start gap-2 flex-1 min-w-0">
                     <AlertCircle className="w-3.5 h-3.5 text-[#ff6b00] mt-0.5 shrink-0" />
-                    <span className="text-xs text-[#a0a0b0]">Prize pool &amp; entry fee are set by admins after review. Set Room ID and start countdown from <strong className="text-white">My Matches</strong>.</span>
+                    <span className="text-xs text-[#a0a0b0]">Set Room ID and start the countdown from <strong className="text-white">My Matches</strong>. Room details auto-reveal 10 min before start.</span>
                   </div>
                   <button
                     type="button"

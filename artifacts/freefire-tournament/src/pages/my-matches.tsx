@@ -561,46 +561,73 @@ function MyRequestCard({ req }: { req: any }) {
         </div>
       )}
 
-      {/* Accepted but waiting — no admin credentials yet */}
-      {req.status === "accepted" && !req.adminRoomId && (
-        <div className="bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-xl px-3 py-2 text-xs text-[#00ff88] flex items-center gap-1.5">
-          <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-          You're in! Room details will appear here once the admin sets the Room ID.
-        </div>
-      )}
+      {/* Accepted — room credentials section */}
+      {req.status === "accepted" && (() => {
+        const now = Date.now();
+        const isActive = effStatus === "active";
+        const msToStart = startsAt ? startsAt.getTime() - now : Infinity;
+        const tenMinMs = 10 * 60 * 1000;
+        const shouldReveal = isActive || (req.adminRoomId && msToStart <= tenMinMs);
+        const minutesLeft = startsAt ? Math.ceil(msToStart / 60000) : null;
 
-      {/* Accepted + Admin set room credentials → show them */}
-      {req.status === "accepted" && req.adminRoomId && (
-        <div className="mt-3">
-          <div className="bg-[#0a0a0f] border border-[#00ff88]/30 rounded-xl p-3 space-y-2">
-            <div className="text-xs font-bold text-[#00ff88] uppercase flex items-center gap-1.5">
-              <Shield className="w-3.5 h-3.5" /> Room Details — You're Registered &amp; Paid
+        if (!req.adminRoomId) {
+          return (
+            <div className="bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-xl px-3 py-2 text-xs text-[#00ff88] flex items-center gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+              You're in! Room details will appear here once the admin sets the Room ID.
             </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[#a0a0b0] text-xs shrink-0">Room ID</span>
-              <div className="flex items-center gap-2">
-                <code className="text-[#00ff88] font-mono text-sm font-bold">{req.adminRoomId}</code>
-                <button onClick={() => copyToClipboard(req.adminRoomId, toast)}
-                  className="text-[#606070] hover:text-[#00ff88] transition-colors">
-                  <Copy className="w-3 h-3" />
-                </button>
+          );
+        }
+
+        if (!shouldReveal) {
+          return (
+            <div className="bg-[#0a0a0f] border border-[#2a2a36] rounded-xl p-3">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Lock className="w-3.5 h-3.5 text-[#ff6b00] shrink-0" />
+                <span className="text-xs font-black text-[#ff6b00] uppercase">Room ID Locked</span>
               </div>
+              <p className="text-[#606070] text-xs">
+                Room details will be revealed <strong className="text-white">10 minutes before match start</strong>.
+                {minutesLeft !== null && minutesLeft > 0 && (
+                  <span className="block mt-0.5 text-[#a0a0b0]">Unlocks in ~{minutesLeft} min.</span>
+                )}
+              </p>
             </div>
-            {req.adminRoomPassword && (
+          );
+        }
+
+        return (
+          <div className="mt-3">
+            <div className="bg-[#0a0a0f] border border-[#00ff88]/30 rounded-xl p-3 space-y-2">
+              <div className="text-xs font-bold text-[#00ff88] uppercase flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5" /> Room Details — You're Registered &amp; Paid
+              </div>
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[#a0a0b0] text-xs shrink-0">Password</span>
+                <span className="text-[#a0a0b0] text-xs shrink-0">Room ID</span>
                 <div className="flex items-center gap-2">
-                  <code className="text-yellow-400 font-mono text-sm font-bold">{req.adminRoomPassword}</code>
-                  <button onClick={() => copyToClipboard(req.adminRoomPassword, toast)}
-                    className="text-[#606070] hover:text-yellow-400 transition-colors">
+                  <code className="text-[#00ff88] font-mono text-sm font-bold">{req.adminRoomId}</code>
+                  <button onClick={() => copyToClipboard(req.adminRoomId, toast)}
+                    className="text-[#606070] hover:text-[#00ff88] transition-colors">
                     <Copy className="w-3 h-3" />
                   </button>
                 </div>
               </div>
-            )}
+              {req.adminRoomPassword && (
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[#a0a0b0] text-xs shrink-0">Password</span>
+                  <div className="flex items-center gap-2">
+                    <code className="text-yellow-400 font-mono text-sm font-bold">{req.adminRoomPassword}</code>
+                    <button onClick={() => copyToClipboard(req.adminRoomPassword, toast)}
+                      className="text-[#606070] hover:text-yellow-400 transition-colors">
+                      <Copy className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Not accepted — hide room details */}
       {req.status !== "accepted" && req.status !== "rejected" && (

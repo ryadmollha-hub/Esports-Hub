@@ -55,14 +55,14 @@ router.post("/user-matches", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
   try {
-    const { matchName, matchType, scheduledAt, description, password, roomId, isPrivate } = req.body;
+    const { matchName, matchType, scheduledAt, description, password, roomId, isPrivate, prizePool: prizePoolInput, entryFee: entryFeeInput } = req.body;
     if (!matchType) return res.status(400).json({ error: "matchType is required." });
 
     const maxSlots = SLOTS_FOR_TYPE[matchType];
     if (!maxSlots) return res.status(400).json({ error: "Invalid matchType. Must be 1v1, 2v2, 3v3, or 4v4." });
 
-    const prize = 0;
-    const fee = 0;
+    const prize = prizePoolInput !== undefined ? Math.max(0, parseFloat(prizePoolInput) || 0) : 0;
+    const fee = entryFeeInput !== undefined ? Math.max(0, parseFloat(entryFeeInput) || 0) : 0;
 
     const [user] = await db.select({ username: usersTable.username, displayName: usersTable.displayName })
       .from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);

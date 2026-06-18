@@ -107,8 +107,8 @@ export default function Home() {
             <p className="text-sm mt-1">The admin will post upcoming tournaments soon. Check back later.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {featured.map((t) => <TournamentCard key={t.id} t={t as any} />)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {featured.map((t) => <TournamentCard key={t.id} t={t as any} featured />)}
           </div>
         )}
       </section>

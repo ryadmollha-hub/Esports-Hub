@@ -75,7 +75,7 @@ export default function AdminPage() {
   const [resultMode, setResultMode] = useState<Record<number, "winner" | "results">>({}); // toggle between winner-select and results-entry
 
   // Tournament form
-  const [tForm, setTForm] = useState({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Pct: "50", prize2Pct: "30", prize3Pct: "20" });
+  const [tForm, setTForm] = useState({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" });
   const [editingTournament, setEditingTournament] = useState<any>(null);
   const [showTForm, setShowTForm] = useState(false);
 
@@ -272,11 +272,11 @@ export default function AdminPage() {
       const url = editingTournament ? `/tournaments/${editingTournament.id}` : "/tournaments";
       const method = editingTournament ? "PUT" : "POST";
       const prizePool = parseFloat(tForm.prizePool);
-      const prizes = prizePool > 0 ? [
-        { rank: "1st Place", amount: prizePool * (parseFloat(tForm.prize1Pct) / 100), percentage: parseFloat(tForm.prize1Pct), description: `${tForm.prize1Pct}% of prize pool` },
-        { rank: "2nd Place", amount: prizePool * (parseFloat(tForm.prize2Pct) / 100), percentage: parseFloat(tForm.prize2Pct), description: `${tForm.prize2Pct}% of prize pool` },
-        { rank: "3rd Place", amount: prizePool * (parseFloat(tForm.prize3Pct) / 100), percentage: parseFloat(tForm.prize3Pct), description: `${tForm.prize3Pct}% of prize pool` },
-      ] : [];
+      const prizes = prizePool > 0 && (tForm.prize1Amt || tForm.prize2Amt || tForm.prize3Amt) ? [
+        tForm.prize1Amt ? { rank: "1st Place", amount: parseFloat(tForm.prize1Amt), description: "1st Place Prize" } : null,
+        tForm.prize2Amt ? { rank: "2nd Place", amount: parseFloat(tForm.prize2Amt), description: "2nd Place Prize" } : null,
+        tForm.prize3Amt ? { rank: "3rd Place", amount: parseFloat(tForm.prize3Amt), description: "3rd Place Prize" } : null,
+      ].filter(Boolean) : [];
       const res = await apiFetch(url, {
         method,
         body: JSON.stringify({
@@ -293,7 +293,7 @@ export default function AdminPage() {
       if (res.ok) {
         toast({ title: editingTournament ? "Tournament updated!" : "Tournament created!" });
         setShowTForm(false); setEditingTournament(null);
-        setTForm({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Pct: "50", prize2Pct: "30", prize3Pct: "20" });
+        setTForm({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" });
         loadTournaments(); loadStats();
       } else {
         const d = await safeJson(res);
@@ -316,7 +316,7 @@ export default function AdminPage() {
       maxSlots: String(t.maxSlots), prizePool: String(t.prizePool),
       entryFee: String(t.entryFee), perKillReward: String(t.perKillReward ?? "0"),
       status: t.status, bannerUrl: t.bannerUrl ?? "",
-      prize1Pct: "50", prize2Pct: "30", prize3Pct: "20",
+      prize1Amt: "", prize2Amt: "", prize3Amt: "",
     });
     setShowTForm(true);
   };
@@ -841,7 +841,7 @@ export default function AdminPage() {
               <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-black uppercase">Manage <span className="text-[#ff6b00]">Tournaments</span></h1>
                 <button
-                  onClick={() => { setShowTForm(true); setEditingTournament(null); setTForm({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Pct: "50", prize2Pct: "30", prize3Pct: "20" }); }}
+                  onClick={() => { setShowTForm(true); setEditingTournament(null); setTForm({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" }); }}
                   className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors"
                 >
                   <Plus className="w-4 h-4" /> Create Tournament
@@ -909,27 +909,21 @@ export default function AdminPage() {
                     </div>
                     {!editingTournament && parseFloat(tForm.prizePool) > 0 && (
                       <div className="md:col-span-2 bg-[#0d0d16] border border-[#ff6b00]/10 rounded-xl p-4">
-                        <p className="text-[#ff6b00] text-xs font-black uppercase mb-3">Prize Distribution (%)</p>
+                        <p className="text-[#ff6b00] text-xs font-black uppercase mb-3">Prize Distribution (৳ Fixed Amount)</p>
                         <div className="grid grid-cols-3 gap-3">
                           <div>
-                            <label className="label-sm">🥇 1st Place %</label>
-                            <input type="number" value={tForm.prize1Pct} onChange={(e) => setTForm({ ...tForm, prize1Pct: e.target.value })} min="0" max="100" className="admin-input" />
-                            <p className="text-[#a0a0b0] text-xs mt-1">৳{(parseFloat(tForm.prizePool) * parseFloat(tForm.prize1Pct || "0") / 100).toFixed(0)}</p>
+                            <label className="label-sm">🥇 1st Place (৳)</label>
+                            <input type="number" value={tForm.prize1Amt} onChange={(e) => setTForm({ ...tForm, prize1Amt: e.target.value })} min="0" step="1" placeholder="0" className="admin-input" />
                           </div>
                           <div>
-                            <label className="label-sm">🥈 2nd Place %</label>
-                            <input type="number" value={tForm.prize2Pct} onChange={(e) => setTForm({ ...tForm, prize2Pct: e.target.value })} min="0" max="100" className="admin-input" />
-                            <p className="text-[#a0a0b0] text-xs mt-1">৳{(parseFloat(tForm.prizePool) * parseFloat(tForm.prize2Pct || "0") / 100).toFixed(0)}</p>
+                            <label className="label-sm">🥈 2nd Place (৳)</label>
+                            <input type="number" value={tForm.prize2Amt} onChange={(e) => setTForm({ ...tForm, prize2Amt: e.target.value })} min="0" step="1" placeholder="0" className="admin-input" />
                           </div>
                           <div>
-                            <label className="label-sm">🥉 3rd Place %</label>
-                            <input type="number" value={tForm.prize3Pct} onChange={(e) => setTForm({ ...tForm, prize3Pct: e.target.value })} min="0" max="100" className="admin-input" />
-                            <p className="text-[#a0a0b0] text-xs mt-1">৳{(parseFloat(tForm.prizePool) * parseFloat(tForm.prize3Pct || "0") / 100).toFixed(0)}</p>
+                            <label className="label-sm">🥉 3rd Place (৳)</label>
+                            <input type="number" value={tForm.prize3Amt} onChange={(e) => setTForm({ ...tForm, prize3Amt: e.target.value })} min="0" step="1" placeholder="0" className="admin-input" />
                           </div>
                         </div>
-                        {(parseFloat(tForm.prize1Pct || "0") + parseFloat(tForm.prize2Pct || "0") + parseFloat(tForm.prize3Pct || "0")) !== 100 && (
-                          <p className="text-yellow-400 text-xs mt-2">⚠ Percentages should add up to 100% (currently: {parseFloat(tForm.prize1Pct || "0") + parseFloat(tForm.prize2Pct || "0") + parseFloat(tForm.prize3Pct || "0")}%)</p>
-                        )}
                       </div>
                     )}
                     <div className="md:col-span-2 flex gap-3">
@@ -1867,7 +1861,7 @@ export default function AdminPage() {
                   <p className="font-bold">No user matches submitted yet</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-3 max-h-[720px] overflow-y-auto pr-1">
                   {userMatches.map((m: any) => (
                     <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
