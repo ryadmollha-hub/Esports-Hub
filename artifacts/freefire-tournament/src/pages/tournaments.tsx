@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Trophy, Swords, Clock, Lock, X, Timer, Zap } from "lucide-react";
+import { Search, Trophy, Swords, Clock, Lock, X, Timer, Zap, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import TournamentCard from "@/components/TournamentCard";
@@ -51,6 +51,7 @@ export default function TournamentsPage() {
   const [communityMatches, setCommunityMatches] = useState<any[]>([]);
   const [communityLoading, setCommunityLoading] = useState(true);
   const [myJoinMap, setMyJoinMap] = useState<Record<number, { adminRoomId: string | null; adminRoomPassword: string | null; status: string }>>({});
+  const [expandedCredentials, setExpandedCredentials] = useState<Record<number, boolean>>({});
   const [joinMatch, setJoinMatch] = useState<any>(null);
   const [joinPlayers, setJoinPlayers] = useState<{ name: string; uid: string }[]>([{ name: "", uid: "" }]);
   const [joinPassword, setJoinPassword] = useState("");
@@ -279,7 +280,7 @@ export default function TournamentsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {communityMatches.map((m: any) => {
                 const effStatus = getEffectiveStatus(m);
                 const isLive = !!m.credentialsReleased;
@@ -289,138 +290,154 @@ export default function TournamentsPage() {
                 const isEnded = effStatus === "ended" || effStatus === "cancelled";
                 const canJoin = !isFull && !isEnded;
                 const myJoin = myJoinMap[m.id];
-                const hasCredentials = !!myJoin && (!!myJoin.adminRoomId);
+                const hasCredentials = !!myJoin && !!myJoin.adminRoomId;
+                const credsExpanded = !!expandedCredentials[m.id];
 
                 return (
                   <div
                     key={m.id}
                     className={`relative flex flex-col bg-[#12121a] border rounded-2xl overflow-hidden transition-all ${
                       isLive
-                        ? "border-[#00ff88]/30 shadow-[0_0_20px_rgba(0,255,136,0.06)]"
+                        ? "border-[#00ff88]/30 shadow-[0_0_16px_rgba(0,255,136,0.05)]"
                         : "border-[#2a2a36] hover:border-[#3a3a46]"
                     } ${!canJoin ? "opacity-60" : ""}`}
                   >
                     {/* Top accent bar */}
-                    <div className={`h-1 w-full ${isLive ? "bg-[#00ff88]" : isEnded ? "bg-[#2a2a36]" : "bg-[#ff6b00]"}`} />
+                    <div className={`h-[3px] w-full ${isLive ? "bg-[#00ff88]" : isEnded ? "bg-[#2a2a36]" : "bg-[#ff6b00]"}`} />
 
-                    <div className="p-5 flex flex-col flex-1 gap-4">
+                    <div className="p-4 flex flex-col gap-3">
                       {/* Header row: status + type badge */}
                       <div className="flex items-center justify-between gap-2">
                         {isLive ? (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 px-3 py-1.5 rounded-full">
-                            <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse shrink-0" />
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/30 px-2.5 py-1 rounded-full">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse shrink-0" />
                             LIVE
                           </span>
                         ) : isEnded ? (
-                          <span className="text-[11px] font-black uppercase text-[#606070] bg-[#1a1a24] border border-[#2a2a36] px-3 py-1.5 rounded-full">ENDED</span>
+                          <span className="text-[10px] font-black uppercase text-[#606070] bg-[#1a1a24] border border-[#2a2a36] px-2.5 py-1 rounded-full">ENDED</span>
                         ) : (
-                          <span className="text-[11px] font-black uppercase text-[#a0a0b0] bg-[#1a1a24] border border-[#2a2a36] px-3 py-1.5 rounded-full">UPCOMING</span>
+                          <span className="text-[10px] font-black uppercase text-[#a0a0b0] bg-[#1a1a24] border border-[#2a2a36] px-2.5 py-1 rounded-full">UPCOMING</span>
                         )}
-                        <span className={`inline-flex items-center gap-1 text-[11px] font-black uppercase px-2.5 py-1.5 rounded-lg border ${MATCH_TYPE_COLOR[m.matchType] ?? "text-white border-white/20"}`}>
-                          <Swords className="w-3 h-3" /> {m.matchType}
+                        <span className={`inline-flex items-center gap-0.5 text-[10px] font-black uppercase px-2 py-1 rounded-lg border ${MATCH_TYPE_COLOR[m.matchType] ?? "text-white border-white/20"}`}>
+                          <Swords className="w-2.5 h-2.5" /> {m.matchType}
                         </span>
                       </div>
 
-                      {/* Match title */}
+                      {/* Match title + creator */}
                       <div>
-                        <h3 className="text-lg font-black text-white leading-tight truncate">
+                        <h3 className="text-base font-black text-white leading-tight truncate">
                           {m.matchName || `${m.matchType} Match`}
                         </h3>
-                        <p className="text-[#606070] text-xs mt-0.5">by {m.creatorName || "Player"}</p>
+                        <p className="text-[#606070] text-[11px] mt-0.5">by {m.creatorName || "Player"}</p>
                       </div>
 
                       {/* Stats row */}
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="bg-[#0a0a0f] rounded-xl p-2.5 text-center">
-                          <div className="text-[#ffd700] font-black text-base">৳{Number(m.prizePool).toLocaleString()}</div>
-                          <div className="text-[#606070] text-[10px] uppercase mt-0.5">Prize</div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        <div className="bg-[#0a0a0f] rounded-lg p-2 text-center">
+                          <div className="text-[#ffd700] font-black text-sm">৳{Number(m.prizePool).toLocaleString()}</div>
+                          <div className="text-[#606070] text-[9px] uppercase mt-0.5">Prize</div>
                         </div>
-                        <div className="bg-[#0a0a0f] rounded-xl p-2.5 text-center">
-                          <div className={`font-black text-base ${Number(m.entryFee) > 0 ? "text-[#ff6b00]" : "text-[#00ff88]"}`}>
+                        <div className="bg-[#0a0a0f] rounded-lg p-2 text-center">
+                          <div className={`font-black text-sm ${Number(m.entryFee) > 0 ? "text-[#ff6b00]" : "text-[#00ff88]"}`}>
                             {Number(m.entryFee) > 0 ? `৳${Number(m.entryFee)}` : "Free"}
                           </div>
-                          <div className="text-[#606070] text-[10px] uppercase mt-0.5">Entry</div>
+                          <div className="text-[#606070] text-[9px] uppercase mt-0.5">Entry</div>
                         </div>
-                        <div className="bg-[#0a0a0f] rounded-xl p-2.5 text-center">
-                          <div className={`font-black text-base ${isFull ? "text-[#ff2244]" : "text-[#00ff88]"}`}>
+                        <div className="bg-[#0a0a0f] rounded-lg p-2 text-center">
+                          <div className={`font-black text-sm ${isFull ? "text-[#ff2244]" : "text-[#00ff88]"}`}>
                             {m.filledSlots}/{m.maxSlots}
                           </div>
-                          <div className="text-[#606070] text-[10px] uppercase mt-0.5">Slots</div>
+                          <div className="text-[#606070] text-[9px] uppercase mt-0.5">Slots</div>
                         </div>
                       </div>
 
                       {/* Countdown timer */}
                       {isTimerRunning && startsAt && (
-                        <div className="flex items-center gap-2 text-[#ff6b00] bg-[#ff6b00]/5 border border-[#ff6b00]/15 rounded-xl px-3 py-2">
-                          <Timer className="w-3.5 h-3.5 shrink-0" />
-                          <span className="text-xs font-bold">Starts in </span>
-                          <CountdownTimer targetDate={startsAt} className="text-xs font-black" />
+                        <div className="flex items-center gap-1.5 text-[#ff6b00] bg-[#ff6b00]/5 border border-[#ff6b00]/15 rounded-lg px-2.5 py-1.5">
+                          <Timer className="w-3 h-3 shrink-0" />
+                          <span className="text-[11px] font-bold">Starts in </span>
+                          <CountdownTimer targetDate={startsAt} className="text-[11px] font-black" />
                         </div>
                       )}
 
-                      {/* Room credentials (for accepted joined users) */}
-                      {hasCredentials && myJoin && (
-                        <div className="bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-xl p-3 space-y-2">
-                          <div className="flex items-center gap-1.5 text-[#00ff88] text-xs font-black uppercase mb-1">
-                            <Zap className="w-3 h-3" /> Room Credentials
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-[#a0a0b0] text-xs">Room ID</span>
-                            <span className="text-white font-black text-sm font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-lg">
-                              {myJoin.adminRoomId}
+                      {/* ── Room Credentials (secure accordion) ── */}
+                      {hasCredentials && myJoin ? (
+                        <div className="border border-[#00ff88]/20 rounded-xl overflow-hidden">
+                          <button
+                            onClick={() => setExpandedCredentials((prev) => ({ ...prev, [m.id]: !prev[m.id] }))}
+                            className="w-full flex items-center justify-between gap-2 px-3 py-2.5 bg-[#00ff88]/5 hover:bg-[#00ff88]/10 transition-colors text-left"
+                          >
+                            <span className="flex items-center gap-1.5 text-[#00ff88] text-xs font-black uppercase">
+                              <Eye className="w-3.5 h-3.5" /> View Room Details
                             </span>
-                          </div>
-                          {myJoin.adminRoomPassword && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-[#a0a0b0] text-xs">Password</span>
-                              <span className="text-white font-black text-sm font-mono bg-[#0a0a0f] px-2.5 py-0.5 rounded-lg">
-                                {myJoin.adminRoomPassword}
-                              </span>
+                            {credsExpanded ? (
+                              <ChevronUp className="w-3.5 h-3.5 text-[#00ff88] shrink-0" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5 text-[#00ff88] shrink-0" />
+                            )}
+                          </button>
+                          {credsExpanded && (
+                            <div className="px-3 py-2.5 bg-[#0a0a0f] space-y-2 border-t border-[#00ff88]/10">
+                              <div className="flex justify-between items-center gap-2">
+                                <span className="text-[#a0a0b0] text-xs shrink-0">Room ID</span>
+                                <span className="text-white font-black text-sm font-mono bg-[#12121a] px-2.5 py-0.5 rounded-lg border border-[#2a2a36]">
+                                  {myJoin.adminRoomId}
+                                </span>
+                              </div>
+                              {myJoin.adminRoomPassword && (
+                                <div className="flex justify-between items-center gap-2">
+                                  <span className="text-[#a0a0b0] text-xs shrink-0">Password</span>
+                                  <span className="text-white font-black text-sm font-mono bg-[#12121a] px-2.5 py-0.5 rounded-lg border border-[#2a2a36]">
+                                    {myJoin.adminRoomPassword}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
+                      ) : myJoin ? (
+                        /* Joined but credentials not yet released */
+                        <div className="flex items-center gap-2 px-3 py-2.5 bg-[#1a1a24] border border-[#2a2a36] rounded-xl">
+                          <Clock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                          <span className="text-blue-400 text-xs font-bold">Joined — Room details pending release</span>
+                        </div>
+                      ) : (
+                        /* Not joined — locked button */
+                        <button
+                          disabled
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-[#606070] text-xs font-bold cursor-not-allowed"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
+                          Room details unlock after joining
+                        </button>
                       )}
 
-                      {/* Badges row */}
-                      <div className="flex items-center gap-2 flex-wrap mt-auto">
-                        {m.isPasswordProtected && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
-                            <Lock className="w-2.5 h-2.5" /> Protected
-                          </span>
-                        )}
-                        {myJoin && !hasCredentials && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                            <Clock className="w-2.5 h-2.5" /> Joined — Awaiting Room
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Join button */}
+                      {/* Join / status button */}
                       {isEnded ? (
-                        <div className="w-full py-3.5 rounded-xl bg-[#1a1a24] text-[#606070] text-sm font-black uppercase text-center">
+                        <div className="w-full py-3 rounded-xl bg-[#1a1a24] text-[#606070] text-xs font-black uppercase text-center">
                           Match Ended
                         </div>
                       ) : isFull ? (
-                        <div className="w-full py-3.5 rounded-xl bg-[#ff2244]/10 border border-[#ff2244]/20 text-[#ff2244] text-sm font-black uppercase text-center">
+                        <div className="w-full py-3 rounded-xl bg-[#ff2244]/10 border border-[#ff2244]/20 text-[#ff2244] text-xs font-black uppercase text-center">
                           Match Full
                         </div>
                       ) : myJoin ? (
-                        <div className="w-full py-3.5 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 text-[#00ff88] text-sm font-black uppercase text-center">
+                        <div className="w-full py-3 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 text-[#00ff88] text-xs font-black uppercase text-center">
                           ✓ You've Joined
                         </div>
                       ) : (
                         <button
                           onClick={() => openJoin(m)}
-                          className={`w-full py-3.5 text-sm font-black uppercase rounded-xl transition-all flex items-center justify-center gap-2 ${
+                          className={`w-full py-3 text-xs font-black uppercase rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                             isLive
-                              ? "bg-[#00ff88] hover:bg-[#00dd77] text-black shadow-[0_4px_20px_rgba(0,255,136,0.25)] hover:shadow-[0_4px_24px_rgba(0,255,136,0.4)]"
-                              : "bg-[#ff6b00] hover:bg-[#e66000] text-white shadow-[0_4px_20px_rgba(255,107,0,0.25)] hover:shadow-[0_4px_24px_rgba(255,107,0,0.4)]"
+                              ? "bg-[#00ff88] hover:bg-[#00dd77] text-black shadow-[0_4px_16px_rgba(0,255,136,0.2)]"
+                              : "bg-[#ff6b00] hover:bg-[#e66000] text-white shadow-[0_4px_16px_rgba(255,107,0,0.2)]"
                           }`}
                         >
                           {isLive ? (
-                            <><Zap className="w-4 h-4" /> Join Live</>
+                            <><Zap className="w-3.5 h-3.5" /> Join Live</>
                           ) : m.isPasswordProtected ? (
-                            <><Lock className="w-4 h-4" /> Join Match</>
+                            <><Lock className="w-3.5 h-3.5" /> Join Match</>
                           ) : (
                             "Join Match"
                           )}

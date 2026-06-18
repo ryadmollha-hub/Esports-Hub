@@ -21,10 +21,11 @@ export const registerLimiter = rateLimit({
 
 export const adminLoginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 10,
   message: json("Too many admin login attempts. Try again in 15 minutes."),
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true,
 });
 
 export const apiLimiter = rateLimit({

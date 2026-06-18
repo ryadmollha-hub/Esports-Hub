@@ -25,7 +25,7 @@ export default function AdminLoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Invalid credentials");
+        setError(data.error ?? data.message ?? "Invalid credentials");
         return;
       }
       setAdminSession(data.token, username);
