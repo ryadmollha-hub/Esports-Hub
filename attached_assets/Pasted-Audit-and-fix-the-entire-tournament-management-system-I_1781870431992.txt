@@ -1,0 +1,82 @@
+Audit and fix the entire tournament management system.
+
+ISSUE 1: Tournament Category System
+
+Problem:
+Admin can select a category when creating a tournament (BR Tournament, Clash Squad Tournament, Solo Tournament, Lone Wolf Tournament, Free Match Tournament), but tournaments only appear in All Tournaments and do not appear in their selected category.
+
+Requirements:
+
+- Verify category is correctly saved in the database.
+- Verify category counts are calculated correctly.
+- Verify category filtering works correctly.
+- Tournaments must appear in All Tournaments and also in their selected category.
+- Category cards must show the correct number of tournaments.
+- Fix any mismatch between stored category values and frontend filter values.
+- Audit database schema, API routes, admin panel, and frontend pages.
+
+ISSUE 2: Room ID & Password Release System
+
+Problem:
+Admin can set Room ID and Password, but there is no proper automatic release and hide system.
+
+Requirements:
+
+- Admin can enter Room ID and Password.
+- Admin can edit Room ID and Password at any time.
+- Admin can delete Room ID and Password at any time.
+- Add a "Release Before Match Start" option:
+  - 5 minutes before
+  - 10 minutes before
+  - 15 minutes before
+  - 20 minutes before
+- Room ID and Password must remain hidden before the release time.
+- Room ID and Password automatically become visible at the selected release time.
+- No manual action should be required.
+
+Auto Hide Logic:
+
+- Room ID and Password must automatically hide exactly at Match Start Time.
+
+- Example:
+  
+  - Match Start = 8:00 PM
+  - Release = 10 minutes before
+  - Visible from 7:50 PM to 7:59 PM
+  - Automatically hidden at 8:00 PM
+
+- The frontend must always calculate visibility using current time, match start time, and release settings.
+
+- Prevent users from viewing room details after match start.
+
+ISSUE 3: Automatic Match Numbering System
+
+Problem:
+Admin creates many matches every day and needs unique numbering.
+
+Requirements:
+
+- Every match inside a tournament gets an automatic sequential number.
+- Example:
+  - Match #1
+  - Match #2
+  - Match #3
+  - Match #4
+- Numbers must be generated automatically.
+- Numbers must never duplicate inside the same tournament.
+- Match numbers must remain stable even after page refresh.
+- Match number should be visible in admin panel and user panel.
+
+Registration Tracking:
+
+- Every registration must be linked to a specific match number.
+- Admin must be able to see:
+  - Match #1 → Registered Players
+  - Match #2 → Registered Players
+  - Match #3 → Registered Players
+- Registrations should be grouped by match number.
+- Make it easy for admin to identify which players joined which match.
+
+Final Task:
+Perform a complete audit of database tables, backend APIs, frontend pages, admin panel logic, category logic, room release logic, and match numbering logic.
+Fix all bugs and ensure the system works correctly on both desktop and mobile devices.

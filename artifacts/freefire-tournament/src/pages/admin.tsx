@@ -2312,7 +2312,7 @@ export default function AdminPage() {
                   { key: "LONE_WOLF", label: "Lone Wolf", icon: "🐺" },
                   { key: "FREE", label: "Free Match", icon: "🎁" },
                 ].map(({ key, label, icon }) => {
-                  const count = key === "all" ? userMatches.length : userMatches.filter((m) => m.matchType === key).length;
+                  const count = key === "all" ? userMatches.length : userMatches.filter((m) => (m?.matchType ?? "").toUpperCase() === key).length;
                   const isActive = umTypeFilter === key;
                   return (
                     <button
@@ -2329,7 +2329,7 @@ export default function AdminPage() {
               {/* Status filter tabs */}
               <div className="flex gap-2 mb-5 flex-wrap">
                 {["all", "pending_approval", "approved", "waiting", "active", "ended", "cancelled"].map((s) => {
-                  const typeFiltered = umTypeFilter === "all" ? userMatches : userMatches.filter((m) => m.matchType === umTypeFilter);
+                  const typeFiltered = umTypeFilter === "all" ? userMatches : userMatches.filter((m) => (m?.matchType ?? "").toUpperCase() === umTypeFilter);
                   const count = s === "all" ? typeFiltered.length : typeFiltered.filter((m) => m.status === s).length;
                   const labels: Record<string, string> = { all: "All", pending_approval: "Pending", approved: "Approved", waiting: "Waiting", active: "Active", ended: "Ended", cancelled: "Cancelled" };
                   const colors: Record<string, string> = {
@@ -2356,14 +2356,14 @@ export default function AdminPage() {
 
               {userMatchesLoading ? (
                 <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-28 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
-              ) : userMatches.filter((m) => (umTypeFilter === "all" || m.matchType === umTypeFilter) && (umStatusFilter === "all" || m.status === umStatusFilter)).length === 0 ? (
+              ) : userMatches.filter((m) => (umTypeFilter === "all" || (m?.matchType ?? "").toUpperCase() === umTypeFilter) && (umStatusFilter === "all" || m.status === umStatusFilter)).length === 0 ? (
                 <div className="text-center py-16 text-[#a0a0b0]">
                   <Swords className="w-12 h-12 mx-auto mb-3 opacity-20" />
                   <p className="font-bold">No matches in this category</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[720px] overflow-y-auto pr-1">
-                  {userMatches.filter((m) => (umTypeFilter === "all" || m.matchType === umTypeFilter) && (umStatusFilter === "all" || m.status === umStatusFilter)).map((m: any) => (
+                  {userMatches.filter((m) => (umTypeFilter === "all" || (m?.matchType ?? "").toUpperCase() === umTypeFilter) && (umStatusFilter === "all" || m.status === umStatusFilter)).map((m: any) => (
                     <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4">
                       <div className="flex flex-col gap-3">
                         {/* Top row: info + delete button */}

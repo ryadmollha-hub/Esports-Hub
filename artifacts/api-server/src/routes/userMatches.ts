@@ -71,6 +71,7 @@ function stripMatch(m: typeof userMatchesTable.$inferSelect, includeRoom = false
   const roomVisible = isRoomVisible(m);
   return {
     ...rest,
+    category: (m as any).category ?? "COMMUNITY",
     isPasswordProtected: !!passwordHash,
     effectiveStatus: effectiveStatus(m),
     credentialsReleased: !!adminRoomId && roomVisible,

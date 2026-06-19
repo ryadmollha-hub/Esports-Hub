@@ -102,7 +102,7 @@ export default function MatchCategoryPage() {
       .then((r) => r.json())
       .then((d) => {
         const all = Array.isArray(d) ? d : [];
-        setMatches(all.filter((m: any) => m.matchType === meta.typeKey));
+        setMatches(all.filter((m: any) => (m?.matchType ?? "").toUpperCase() === meta.typeKey));
       })
       .catch(() => setMatches([]))
       .finally(() => setLoading(false));
