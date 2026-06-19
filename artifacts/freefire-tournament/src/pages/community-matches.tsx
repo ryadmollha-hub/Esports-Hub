@@ -184,23 +184,6 @@ function MatchCard({
         </div>
 
         {/* Row 3: schedule + countdown + join */}
-        {/* Room timing indicators */}
-        {(m.roomReleaseTime || m.roomHideTime) && !isEnded && (
-          <div className="flex flex-col gap-0.5 mb-2.5 text-[9px] font-bold">
-            {m.roomReleaseTime && Date.now() < new Date(m.roomReleaseTime).getTime() && (
-              <div className="flex items-center gap-1.5 text-[#00b4ff]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#00b4ff] animate-pulse" />
-                Room opens: {new Date(m.roomReleaseTime).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })}
-              </div>
-            )}
-            {m.roomHideTime && (
-              <div className="flex items-center gap-1.5 text-[#ff6b00]/70">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00]" />
-                Closes: {new Date(m.roomHideTime).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })}
-              </div>
-            )}
-          </div>
-        )}
         <div className="flex items-center justify-between gap-3">
           <div className="text-[10px] text-[#606070]">
             {startsAt && !isLive ? (
@@ -223,7 +206,9 @@ function MatchCard({
               </div>
             </div>
           ) : hasJoined ? (
-            <span className="text-[10px] text-[#a0a0b0] font-bold uppercase">Joined ✓</span>
+            myJoin?.status === "pending"
+              ? <span className="text-[10px] text-yellow-400 font-bold uppercase">Request Sent</span>
+              : <span className="text-[10px] text-[#00ff88] font-bold uppercase">Joined ✓</span>
           ) : m.credentialsReleased ? (
             <span className="text-[10px] text-[#ff2244]/70 font-bold uppercase">🔒 Locked</span>
           ) : (
@@ -299,7 +284,8 @@ export default function CommunityMatchesPage() {
       setMyJoinedMatches(data);
       const map: Record<number, any> = {};
       for (const j of data) {
-        if (j.status === "accepted") {
+        // Track accepted AND pending — both prevent re-joining; rejected allows retry
+        if (j.status === "accepted" || j.status === "pending") {
           map[j.matchId] = {
             adminRoomId: j.adminRoomId ?? null,
             adminRoomPassword: j.adminRoomPassword ?? null,
@@ -538,30 +524,7 @@ export default function CommunityMatchesPage() {
                         </div>
                       )}
 
-                      {/* Leave match — hidden once credentials are live */}
-                      {req.status !== "rejected" && !req.adminRoomId && effStatus !== "ended" && effStatus !== "cancelled" && (
-                        <div className="mt-2 pt-2 border-t border-[#1e1e2e] flex justify-end">
-                          <button
-                            onClick={async () => {
-                              if (!confirm("Leave this match? You will receive a refund if entry fee was charged.")) return;
-                              try {
-                                const r = await authFetch(`/user-matches/${req.matchId}/leave`, { method: "DELETE" });
-                                const d = await r.json();
-                                if (r.ok) {
-                                  toast({ title: d.refunded ? "✅ Left match — refund credited" : "✅ Left match" });
-                                  fetchMyJoins();
-                                  fetchMatches();
-                                } else {
-                                  toast({ title: "Cannot leave", description: d.error, variant: "destructive" });
-                                }
-                              } catch { toast({ title: "Connection error", variant: "destructive" }); }
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase text-[#ff2244] bg-[#ff2244]/5 border border-[#ff2244]/20 rounded-lg hover:bg-[#ff2244]/15 transition-colors"
-                          >
-                            <XCircle className="w-3 h-3" /> Leave Match
-                          </button>
-                        </div>
-                      )}
+                      {/* No leave / no refund — entry is final once joined */}
                     </div>
                   );
                 })}

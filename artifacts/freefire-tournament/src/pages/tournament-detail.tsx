@@ -187,8 +187,7 @@ export default function TournamentDetailPage() {
   const isJoined = !!user && participants.some((p) => p.userId === user.userId);
   const isFull = t ? t.filledSlots >= t.maxSlots : false;
   const entryFee = t ? Number(t.entryFee) : 0;
-  const canLeave = !!user && isJoined &&
-    t?.status !== "live" && t?.status !== "ongoing" && t?.status !== "ended" && t?.status !== "completed";
+  const canLeave = false; // No leave / no refund policy — entry is final
   const isEnded = t?.status === "ended" || t?.status === "completed";
   const isLive = t?.status === "live" || t?.status === "ongoing";
   const isRegistrationClosed = isLive || isEnded || t?.status === "cancelled";
@@ -800,13 +799,9 @@ export default function TournamentDetailPage() {
                       <CheckCircle className="w-4 h-4 text-[#00ff88]" />
                       <span className="text-[#00ff88] font-black uppercase text-sm">You're In!</span>
                     </div>
-                    {canLeave && (
-                      <button onClick={doLeave} disabled={leaving}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-bold uppercase text-sm rounded-xl hover:bg-[#ff2244]/20 transition-all disabled:opacity-50">
-                        <UserMinus className="w-4 h-4" />
-                        {leaving ? "Leaving..." : entryFee > 0 ? `Leave (Refund ৳${entryFee})` : "Leave Tournament"}
-                      </button>
-                    )}
+                    <p className="text-center text-[10px] text-[#606070]">
+                      Entry is final — no cancellations or refunds
+                    </p>
                   </div>
                 )}
 
