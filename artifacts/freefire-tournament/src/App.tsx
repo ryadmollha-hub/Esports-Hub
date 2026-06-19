@@ -17,6 +17,7 @@ import { isAdminAuthenticated } from "@/lib/adminAuth";
 import Home from "@/pages/home";
 import TournamentsPage from "@/pages/tournaments";
 import TournamentDetailPage from "@/pages/tournament-detail";
+import TournamentCategoryPage from "@/pages/tournament-category";
 import RegisterPage from "@/pages/register";
 import LeaderboardPage from "@/pages/leaderboard";
 import SchedulePage from "@/pages/schedule";
@@ -71,6 +72,25 @@ function App() {
                   {/* Public routes */}
                   <Route path="/" component={Home} />
                   <Route path="/tournaments" component={TournamentsPage} />
+                  {/* Category pages — must come BEFORE the :id catch-all */}
+                  <Route path="/tournaments/all">
+                    {() => <TournamentCategoryPage gameMode={null} slug="all" />}
+                  </Route>
+                  <Route path="/tournaments/br">
+                    {() => <TournamentCategoryPage gameMode="BR" slug="br" />}
+                  </Route>
+                  <Route path="/tournaments/cs">
+                    {() => <TournamentCategoryPage gameMode="CS" slug="cs" />}
+                  </Route>
+                  <Route path="/tournaments/solo">
+                    {() => <TournamentCategoryPage gameMode="SOLO" slug="solo" />}
+                  </Route>
+                  <Route path="/tournaments/lonewolf">
+                    {() => <TournamentCategoryPage gameMode="LONE_WOLF" slug="lonewolf" />}
+                  </Route>
+                  <Route path="/tournaments/free">
+                    {() => <TournamentCategoryPage gameMode="FREE" slug="free" />}
+                  </Route>
                   <Route path="/tournaments/:id" component={TournamentDetailPage} />
                   <Route path="/leaderboard" component={LeaderboardPage} />
                   <Route path="/schedule" component={SchedulePage} />
