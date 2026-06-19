@@ -276,6 +276,7 @@ router.get("/admin/registrations", async (req, res) => {
         tournamentId: registrationsTable.tournamentId,
         userId: registrationsTable.userId,
         teamId: registrationsTable.teamId,
+        matchNumber: registrationsTable.matchNumber,
         status: registrationsTable.status,
         freefireUid: registrationsTable.freefireUid,
         playerName: registrationsTable.playerName,

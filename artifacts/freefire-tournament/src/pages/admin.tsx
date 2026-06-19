@@ -118,6 +118,9 @@ export default function AdminPage() {
   const [adminMatchCreating, setAdminMatchCreating] = useState(false);
   const [matchRoomForm, setMatchRoomForm] = useState<Record<number, { roomId: string; roomPassword: string; releaseMinutes: string }>>({});
   const [settingMatchRoom, setSettingMatchRoom] = useState<Record<number, boolean>>({});
+  const [deletingMatchRoom, setDeletingMatchRoom] = useState<Record<number, boolean>>({});
+  const [matchNumberInputs, setMatchNumberInputs] = useState<Record<number, string>>({});
+  const [settingMatchNumber, setSettingMatchNumber] = useState<Record<number, boolean>>({});
   const [updatingMatchStatus, setUpdatingMatchStatus] = useState<Record<number, boolean>>({});
 
   // Match result entry state
@@ -549,6 +552,46 @@ export default function AdminPage() {
       toast({ title: "Connection error", variant: "destructive" });
     } finally {
       setSubmittingMatchResult((prev) => ({ ...prev, [matchId]: false }));
+    }
+  };
+
+  const deleteMatchRoom = async (matchId: number) => {
+    setDeletingMatchRoom((prev) => ({ ...prev, [matchId]: true }));
+    try {
+      const res = await apiFetch(`/matches/${matchId}/room`, { method: "DELETE" });
+      if (res.ok) {
+        toast({ title: "Room credentials cleared" });
+        loadMatches();
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    } finally {
+      setDeletingMatchRoom((prev) => ({ ...prev, [matchId]: false }));
+    }
+  };
+
+  const setRegMatchNumber = async (regId: number) => {
+    const value = matchNumberInputs[regId];
+    setSettingMatchNumber((prev) => ({ ...prev, [regId]: true }));
+    try {
+      const res = await apiFetch(`/registrations/${regId}/match-number`, {
+        method: "PATCH",
+        body: JSON.stringify({ matchNumber: value === "" || value == null ? null : parseInt(value) }),
+      });
+      if (res.ok) {
+        toast({ title: value ? `Assigned to Match #${value}` : "Match number cleared" });
+        loadRegistrations();
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    } finally {
+      setSettingMatchNumber((prev) => ({ ...prev, [regId]: false }));
     }
   };
 
@@ -1555,8 +1598,18 @@ export default function AdminPage() {
                                   disabled={settingMatchRoom[m.id]}
                                   className="px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-xs uppercase rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50"
                                 >
-                                  {settingMatchRoom[m.id] ? "Setting..." : "Set Room & Go Live"}
+                                  {settingMatchRoom[m.id] ? "Saving..." : "Save Room Credentials"}
                                 </button>
+                                {m.roomId && (
+                                  <button
+                                    onClick={() => deleteMatchRoom(m.id)}
+                                    disabled={deletingMatchRoom[m.id]}
+                                    className="px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-bold text-xs uppercase rounded-lg hover:bg-[#ff2244]/20 transition-colors disabled:opacity-50"
+                                    title="Clear room credentials"
+                                  >
+                                    {deletingMatchRoom[m.id] ? "Clearing..." : "Clear Room"}
+                                  </button>
+                                )}
                               </div>
                             </div>
                           )}
@@ -1718,7 +1771,7 @@ export default function AdminPage() {
                           <div className="flex items-center justify-between px-4 py-3 bg-[#ff6b00]/5 border-b border-[#ff6b00]/10">
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-black text-white text-sm">Match #{tid}</span>
+                                <span className="font-black text-white text-sm">Tournament #{tid}</span>
                                 <span className="text-[10px] font-bold text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/20 px-1.5 py-0.5 rounded uppercase">{tGM || tMode}</span>
                                 <span className="text-[10px] text-[#606070] font-mono uppercase">{tMode}</span>
                               </div>
@@ -1745,6 +1798,7 @@ export default function AdminPage() {
                                           <span className="font-bold text-white text-sm truncate">{r.playerName}</span>
                                           {r.username && <span className="text-[#606070] text-xs">@{r.username}</span>}
                                           {extraMembers.length > 0 && <span className="text-[10px] text-[#a0a0b0] bg-[#1a1a28] border border-[#2a2a36] px-1.5 py-0.5 rounded">+{extraMembers.length} member{extraMembers.length !== 1 ? "s" : ""}</span>}
+                                          {r.matchNumber != null && <span className="text-[10px] font-bold text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/20 px-1.5 py-0.5 rounded">Match #{r.matchNumber}</span>}
                                         </div>
                                         <div className="text-[#606070] text-[10px] font-mono">{r.freefireUid}</div>
                                         <div className="text-[#4a4a5a] text-[10px]">{new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })}</div>
@@ -1788,6 +1842,33 @@ export default function AdminPage() {
                                           📸 View Payment Screenshot
                                         </a>
                                       )}
+                                      <div className="flex items-center gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+                                        <span className="text-[#606070] text-[10px] uppercase font-bold">Assign Match #</span>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          placeholder={r.matchNumber != null ? String(r.matchNumber) : "—"}
+                                          value={matchNumberInputs[r.id] ?? ""}
+                                          onChange={(e) => setMatchNumberInputs((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                                          className="w-16 px-2 py-1 bg-[#0e0e18] border border-[#2a2a36] rounded text-white text-xs font-mono text-center focus:border-[#ff6b00]/50 outline-none"
+                                        />
+                                        <button
+                                          onClick={() => setRegMatchNumber(r.id)}
+                                          disabled={settingMatchNumber[r.id]}
+                                          className="px-2 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/30 rounded text-[#ff6b00] text-[10px] font-bold uppercase hover:bg-[#ff6b00]/20 transition-colors disabled:opacity-50"
+                                        >
+                                          {settingMatchNumber[r.id] ? "…" : "Set"}
+                                        </button>
+                                        {r.matchNumber != null && (
+                                          <button
+                                            onClick={() => { setMatchNumberInputs((prev) => ({ ...prev, [r.id]: "" })); setRegMatchNumber(r.id); }}
+                                            disabled={settingMatchNumber[r.id]}
+                                            className="px-2 py-1 bg-[#1a1a24] border border-[#2a2a36] rounded text-[#606070] text-[10px] font-bold uppercase hover:text-[#a0a0b0] transition-colors disabled:opacity-50"
+                                          >
+                                            Clear
+                                          </button>
+                                        )}
+                                      </div>
                                     </div>
                                   )}
                                 </div>

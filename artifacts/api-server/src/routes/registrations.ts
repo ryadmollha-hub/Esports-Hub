@@ -151,6 +151,26 @@ router.post("/registrations/:id/reject", async (req, res) => {
   }
 });
 
+router.patch("/registrations/:id/match-number", async (req, res) => {
+  try {
+    const userId = safeGetUserId(req);
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const user = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
+    if (!user[0]?.isAdmin) return res.status(403).json({ error: "Forbidden" });
+
+    const id = parseInt(req.params.id);
+    const { matchNumber } = req.body;
+    const [reg] = await db.select().from(registrationsTable).where(eq(registrationsTable.id, id));
+    if (!reg) return res.status(404).json({ error: "Registration not found" });
+
+    const parsed = matchNumber != null && matchNumber !== "" ? parseInt(String(matchNumber)) : null;
+    await db.update(registrationsTable).set({ matchNumber: parsed }).where(eq(registrationsTable.id, id));
+    res.json({ success: true, matchNumber: parsed });
+  } catch {
+    res.status(500).json({ error: "Failed to update match number." });
+  }
+});
+
 router.get("/registrations/me", async (req, res) => {
   try {
     const userId = safeGetUserId(req);

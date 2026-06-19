@@ -7,6 +7,7 @@ export const registrationsTable = pgTable("registrations", {
   tournamentId: integer("tournament_id").notNull(),
   userId: text("user_id").notNull(),
   teamId: integer("team_id"),
+  matchNumber: integer("match_number"), // Which match within the tournament this registration is assigned to
   status: text("status").notNull().default("pending"), // pending | approved | rejected
   freefireUid: text("freefire_uid").notNull(),
   playerName: text("player_name").notNull(),

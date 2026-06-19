@@ -11,24 +11,27 @@ const router: IRouter = Router();
 function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
   const now = new Date();
   const isCompleted = match.status === "completed";
+  const startTime = new Date(match.scheduledAt);
 
-  // Room details are visible if:
-  // 1. roomReleaseAt is set AND current time >= roomReleaseAt
-  // 2. OR match is live
-  // 3. But NOT if completed (room hidden after results)
+  // Room details are visible only within the release window:
+  //   from roomReleaseAt  →  until scheduledAt (auto-hidden at match start)
   let roomVisible = false;
   let effectiveStatus = match.status;
 
   if (!isCompleted && match.roomId) {
-    if (match.roomReleaseAt && now >= new Date(match.roomReleaseAt)) {
-      roomVisible = true;
-      // Auto-promote to live if was scheduled
-      if (effectiveStatus === "scheduled") {
-        effectiveStatus = "live";
+    // After match start time: room is always hidden (auto-hide)
+    if (now < startTime) {
+      if (match.roomReleaseAt && now >= new Date(match.roomReleaseAt)) {
+        roomVisible = true;
+        if (effectiveStatus === "scheduled") {
+          effectiveStatus = "live";
+        }
+      } else if (match.status === "live") {
+        // Admin manually marked live but release window not open yet — still show room
+        roomVisible = true;
       }
-    } else if (match.status === "live") {
-      roomVisible = true;
     }
+    // now >= startTime: roomVisible stays false (auto-hidden at match start)
   }
 
   return { roomVisible, effectiveStatus };
@@ -227,14 +230,31 @@ router.patch("/matches/:id/room", async (req, res) => {
         roomId: roomId ?? null,
         roomPassword: roomPassword ?? null,
         roomReleaseAt: releaseAt,
-        // If setting room details manually, also mark as live
-        status: "live",
+        // Status NOT changed here — time-based visibility controls when room appears
       })
       .where(eq(matchesTable.id, id))
       .returning();
     res.json({ success: true, match: updated });
   } catch {
     res.status(500).json({ error: "Failed to update room details." });
+  }
+});
+
+// ─── Clear room credentials for a match (admin) ──────────────────────────────
+
+router.delete("/matches/:id/room", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
+    if (!existing) return res.status(404).json({ error: "Match not found." });
+    await db
+      .update(matchesTable)
+      .set({ roomId: null, roomPassword: null, roomReleaseAt: null })
+      .where(eq(matchesTable.id, id));
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: "Failed to clear room details." });
   }
 });
 
