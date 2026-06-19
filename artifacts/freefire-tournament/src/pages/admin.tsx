@@ -72,6 +72,9 @@ export default function AdminPage() {
   const userSearchTimeout = useRef<any>(null);
   // Community match status filter
   const [umStatusFilter, setUmStatusFilter] = useState<string>("all");
+  const [umTypeFilter, setUmTypeFilter] = useState<string>("all");
+  const [expandedReg, setExpandedReg] = useState<Record<number, boolean>>({});
+  const [regStatusFilter, setRegStatusFilter] = useState<string>("all");
   // Reports
   const [reports, setReports] = useState<any[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
@@ -1656,50 +1659,135 @@ export default function AdminPage() {
           )}
 
           {/* REGISTRATIONS */}
-          {activeTab === "registrations" && (
-            <div>
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-2xl font-black uppercase">Tournament <span className="text-[#ff6b00]">Registrations</span></h1>
-                <button onClick={loadRegistrations} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
-                  <RefreshCw className="w-4 h-4" /> Refresh
-                </button>
-              </div>
-              <div className="space-y-3">
-                {registrations.length === 0 ? (
+          {activeTab === "registrations" && (() => {
+            const filteredRegs = regStatusFilter === "all" ? registrations : registrations.filter((r: any) => r.status === regStatusFilter);
+            const grouped: Record<number, any[]> = {};
+            for (const r of filteredRegs) {
+              if (!grouped[r.tournamentId]) grouped[r.tournamentId] = [];
+              grouped[r.tournamentId].push(r);
+            }
+            const tournamentIds = Object.keys(grouped).map(Number).sort((a, b) => a - b);
+            const modeLabel: Record<string, string> = { solo: "Solo", duo: "Duo", squad: "Squad (4v4)" };
+            const gameModeLabel: Record<string, string> = { BR: "Battle Royale", CS: "Clash Squad", SOLO: "Solo", LONE_WOLF: "Lone Wolf", FREE: "Free Match" };
+            return (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h1 className="text-2xl font-black uppercase">Tournament <span className="text-[#ff6b00]">Registrations</span></h1>
+                  <button onClick={loadRegistrations} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                    <RefreshCw className="w-4 h-4" /> Refresh
+                  </button>
+                </div>
+                <div className="flex gap-2 mb-5 flex-wrap">
+                  {(["all", "pending", "approved", "rejected"] as const).map((s) => {
+                    const count = s === "all" ? registrations.length : registrations.filter((r: any) => r.status === s).length;
+                    const colors: Record<string, string> = { all: "text-[#ff6b00] border-[#ff6b00]/30 bg-[#ff6b00]/5", pending: "text-yellow-400 border-yellow-400/30", approved: "text-[#00ff88] border-[#00ff88]/30", rejected: "text-[#ff2244] border-[#ff2244]/30" };
+                    return (
+                      <button key={s} onClick={() => setRegStatusFilter(s)} className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase transition-colors ${colors[s]} ${regStatusFilter === s ? "opacity-100" : "opacity-50 hover:opacity-75"}`}>
+                        {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+                {filteredRegs.length === 0 ? (
                   <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
                     <CheckCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
                     <p>No registrations yet.</p>
                   </div>
-                ) : registrations.map((r: any) => (
-                  <div key={r.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex-1">
-                      <div className="font-bold text-white">{r.playerName}</div>
-                      <div className="text-[#a0a0b0] text-sm font-mono">{r.freefireUid}</div>
-                      <div className="text-[#a0a0b0] text-xs mt-1">Tournament #{r.tournamentId} · {new Date(r.createdAt).toLocaleDateString()}</div>
-                      {r.paymentScreenshot && (
-                        <a href={r.paymentScreenshot} target="_blank" rel="noopener noreferrer" className="text-[#ff6b00] text-xs hover:underline mt-1 inline-block">
-                          View Payment Screenshot
-                        </a>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={statusBadge(r.status)}>{r.status}</span>
-                      {r.status === "pending" && (
-                        <>
-                          <button onClick={() => approveReg(r.id)} className="p-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors">
-                            <CheckCircle className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => rejectReg(r.id)} className="p-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors">
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                        </>
-                      )}
-                    </div>
+                ) : (
+                  <div className="space-y-5">
+                    {tournamentIds.map((tid) => {
+                      const rows = grouped[tid];
+                      const sample = rows[0];
+                      const tName = sample.tournamentName ?? `Tournament #${tid}`;
+                      const tMode = modeLabel[sample.tournamentMode] ?? sample.tournamentMode ?? "—";
+                      const tGM = gameModeLabel[sample.tournamentGameMode] ?? sample.tournamentGameMode ?? "";
+                      const pendingCount = rows.filter((r: any) => r.status === "pending").length;
+                      return (
+                        <div key={tid} className="bg-[#0e0e18] rounded-xl border border-[#ff6b00]/15 overflow-hidden">
+                          <div className="flex items-center justify-between px-4 py-3 bg-[#ff6b00]/5 border-b border-[#ff6b00]/10">
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-black text-white text-sm">Match #{tid}</span>
+                                <span className="text-[10px] font-bold text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/20 px-1.5 py-0.5 rounded uppercase">{tGM || tMode}</span>
+                                <span className="text-[10px] text-[#606070] font-mono uppercase">{tMode}</span>
+                              </div>
+                              <div className="text-[#a0a0b0] text-xs mt-0.5 truncate max-w-[260px]">{tName}</div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {pendingCount > 0 && <span className="text-[10px] font-bold text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-1.5 py-0.5 rounded">{pendingCount} pending</span>}
+                              <span className="text-[10px] text-[#606070] font-bold">{rows.length} team{rows.length !== 1 ? "s" : ""}</span>
+                            </div>
+                          </div>
+                          <div className="divide-y divide-[#1a1a24]">
+                            {rows.map((r: any) => {
+                              const isExpanded = !!expandedReg[r.id];
+                              let extraMembers: Array<{ uid: string; name: string }> = [];
+                              try { extraMembers = r.teamMembers ? JSON.parse(r.teamMembers) : []; } catch {}
+                              const allMembers = [{ uid: r.freefireUid, name: r.playerName, username: r.username ?? r.displayName ?? null, isLeader: true }, ...extraMembers.map((m) => ({ uid: m.uid, name: m.name, username: null, isLeader: false }))];
+                              return (
+                                <div key={r.id} className="px-4 py-3">
+                                  <div className="flex items-center justify-between gap-2 cursor-pointer" onClick={() => setExpandedReg((prev) => ({ ...prev, [r.id]: !prev[r.id] }))}>
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${r.status === "approved" ? "bg-[#00ff88]" : r.status === "rejected" ? "bg-[#ff2244]" : "bg-yellow-400"}`} />
+                                      <div className="min-w-0">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="font-bold text-white text-sm truncate">{r.playerName}</span>
+                                          {r.username && <span className="text-[#606070] text-xs">@{r.username}</span>}
+                                          {extraMembers.length > 0 && <span className="text-[10px] text-[#a0a0b0] bg-[#1a1a28] border border-[#2a2a36] px-1.5 py-0.5 rounded">+{extraMembers.length} member{extraMembers.length !== 1 ? "s" : ""}</span>}
+                                        </div>
+                                        <div className="text-[#606070] text-[10px] font-mono">{r.freefireUid}</div>
+                                        <div className="text-[#4a4a5a] text-[10px]">{new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })}</div>
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      <span className={statusBadge(r.status)}>{r.status}</span>
+                                      {r.status === "pending" && (
+                                        <>
+                                          <button onClick={(e) => { e.stopPropagation(); approveReg(r.id); }} className="p-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-lg text-[#00ff88] hover:bg-[#00ff88]/20 transition-colors" title="Approve">
+                                            <CheckCircle className="w-3.5 h-3.5" />
+                                          </button>
+                                          <button onClick={(e) => { e.stopPropagation(); rejectReg(r.id); }} className="p-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors" title="Reject">
+                                            <XCircle className="w-3.5 h-3.5" />
+                                          </button>
+                                        </>
+                                      )}
+                                      <span className="text-[#4a4a5a] text-xs">{isExpanded ? "▲" : "▼"}</span>
+                                    </div>
+                                  </div>
+                                  {isExpanded && (
+                                    <div className="mt-3 ml-4 pl-3 border-l-2 border-[#ff6b00]/20 space-y-2">
+                                      {allMembers.map((mem, idx) => (
+                                        <div key={idx} className="flex items-start gap-3 bg-[#0a0a12] rounded-lg px-3 py-2">
+                                          <div className="w-6 h-6 rounded-full bg-[#ff6b00]/10 border border-[#ff6b00]/20 flex items-center justify-center text-[10px] font-black text-[#ff6b00] shrink-0">{idx + 1}</div>
+                                          <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <span className="text-white font-bold text-xs">{mem.name}</span>
+                                              {mem.isLeader && <span className="text-[9px] font-bold text-[#ffd700] bg-[#ffd700]/10 border border-[#ffd700]/20 px-1 rounded">Leader</span>}
+                                              {mem.username && <span className="text-[#606070] text-[10px]">@{mem.username}</span>}
+                                            </div>
+                                            <div className="text-[#a0a0b0] text-[10px] font-mono mt-0.5">UID: {mem.uid}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                      {r.paymentScreenshot && (
+                                        <a href={r.paymentScreenshot} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[#ff6b00] text-xs hover:underline">
+                                          📸 View Payment Screenshot
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* USERS */}
           {activeTab === "users" && (
@@ -2200,10 +2288,35 @@ export default function AdminPage() {
                 </button>
               </div>
 
+              {/* Category (match type) filter tabs */}
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {[
+                  { key: "all", label: "All Types", icon: "⚡" },
+                  { key: "BR", label: "BR Match", icon: "🔥" },
+                  { key: "CS", label: "Clash Squad", icon: "⚔️" },
+                  { key: "SOLO", label: "Solo", icon: "🎯" },
+                  { key: "LONE_WOLF", label: "Lone Wolf", icon: "🐺" },
+                  { key: "FREE", label: "Free Match", icon: "🎁" },
+                ].map(({ key, label, icon }) => {
+                  const count = key === "all" ? userMatches.length : userMatches.filter((m) => m.matchType === key).length;
+                  const isActive = umTypeFilter === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setUmTypeFilter(key)}
+                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border text-xs font-bold uppercase transition-colors ${isActive ? "border-[#ff6b00]/60 text-[#ff6b00] bg-[#ff6b00]/10" : "border-[#2a2a36] text-[#a0a0b0] hover:border-[#3a3a46] hover:text-white"}`}
+                    >
+                      <span>{icon}</span> {label} <span className="text-[10px] opacity-70">({count})</span>
+                    </button>
+                  );
+                })}
+              </div>
+
               {/* Status filter tabs */}
               <div className="flex gap-2 mb-5 flex-wrap">
                 {["all", "pending_approval", "approved", "waiting", "active", "ended", "cancelled"].map((s) => {
-                  const count = s === "all" ? userMatches.length : userMatches.filter((m) => m.status === s).length;
+                  const typeFiltered = umTypeFilter === "all" ? userMatches : userMatches.filter((m) => m.matchType === umTypeFilter);
+                  const count = s === "all" ? typeFiltered.length : typeFiltered.filter((m) => m.status === s).length;
                   const labels: Record<string, string> = { all: "All", pending_approval: "Pending", approved: "Approved", waiting: "Waiting", active: "Active", ended: "Ended", cancelled: "Cancelled" };
                   const colors: Record<string, string> = {
                     all: "border-[#ff6b00]/30 text-[#ff6b00] bg-[#ff6b00]/5",
@@ -2229,14 +2342,14 @@ export default function AdminPage() {
 
               {userMatchesLoading ? (
                 <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-28 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
-              ) : userMatches.filter((m) => umStatusFilter === "all" || m.status === umStatusFilter).length === 0 ? (
+              ) : userMatches.filter((m) => (umTypeFilter === "all" || m.matchType === umTypeFilter) && (umStatusFilter === "all" || m.status === umStatusFilter)).length === 0 ? (
                 <div className="text-center py-16 text-[#a0a0b0]">
                   <Swords className="w-12 h-12 mx-auto mb-3 opacity-20" />
                   <p className="font-bold">No matches in this category</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[720px] overflow-y-auto pr-1">
-                  {userMatches.filter((m) => umStatusFilter === "all" || m.status === umStatusFilter).map((m: any) => (
+                  {userMatches.filter((m) => (umTypeFilter === "all" || m.matchType === umTypeFilter) && (umStatusFilter === "all" || m.status === umStatusFilter)).map((m: any) => (
                     <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4">
                       <div className="flex flex-col gap-3">
                         {/* Top row: info + delete button */}

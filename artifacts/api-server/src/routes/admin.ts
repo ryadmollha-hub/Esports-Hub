@@ -271,10 +271,31 @@ router.get("/admin/registrations", async (req, res) => {
     if (!await requireAdmin(req, res)) return;
     const { status } = req.query as Record<string, string>;
     const rows = await db
-      .select()
+      .select({
+        id: registrationsTable.id,
+        tournamentId: registrationsTable.tournamentId,
+        userId: registrationsTable.userId,
+        teamId: registrationsTable.teamId,
+        status: registrationsTable.status,
+        freefireUid: registrationsTable.freefireUid,
+        playerName: registrationsTable.playerName,
+        teamMembers: registrationsTable.teamMembers,
+        paymentScreenshot: registrationsTable.paymentScreenshot,
+        kills: registrationsTable.kills,
+        earnedAmount: registrationsTable.earnedAmount,
+        resultRank: registrationsTable.resultRank,
+        createdAt: registrationsTable.createdAt,
+        tournamentName: tournamentsTable.name,
+        tournamentMode: tournamentsTable.mode,
+        tournamentGameMode: tournamentsTable.gameMode,
+        username: usersTable.username,
+        displayName: usersTable.displayName,
+      })
       .from(registrationsTable)
+      .leftJoin(tournamentsTable, eq(registrationsTable.tournamentId, tournamentsTable.id))
+      .leftJoin(usersTable, eq(registrationsTable.userId, usersTable.clerkId))
       .orderBy(desc(registrationsTable.createdAt))
-      .limit(100);
+      .limit(300);
     const filtered = status ? rows.filter((r) => r.status === status) : rows;
     res.json(filtered);
   } catch {

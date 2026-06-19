@@ -326,9 +326,9 @@ export default function CommunityMatchesPage() {
     }
   }, [user, joinMatch]);
 
-  // Community matches = user-created only (never admin)
+  // Community matches = all (including admin-created), excluding cancelled
   const communityMatches = allMatches.filter(
-    (m) => m.creatorId !== "admin" && m.status !== "cancelled"
+    (m) => m.status !== "cancelled"
   );
 
   // Apply tab filter
