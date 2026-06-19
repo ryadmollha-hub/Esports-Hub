@@ -27,6 +27,9 @@ export const userMatchesTable = pgTable("user_matches", {
   adminNote: text("admin_note"),
   adminRoomId: text("admin_room_id"),
   adminRoomPassword: text("admin_room_password"),
+  startTime: timestamp("start_time"),
+  roomReleaseTime: timestamp("room_release_time"),
+  roomHideTime: timestamp("room_hide_time"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

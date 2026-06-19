@@ -30,23 +30,52 @@ async function getUserBalance(userId: string): Promise<number> {
 }
 
 function effectiveStatus(match: typeof userMatchesTable.$inferSelect): string {
+  if (match.status === "cancelled") return "cancelled";
+  if (match.status === "ended") return "ended";
   if (match.status === "pending_approval") return "pending_approval";
-  if (match.status === "active" || match.status === "ended" || match.status === "cancelled") return match.status;
+
+  const now = Date.now();
+
+  // Timing-based: roomHideTime has passed → match auto-ended
+  if (match.roomHideTime && now >= new Date(match.roomHideTime).getTime()) {
+    return "ended";
+  }
+
+  // Timing-based: roomReleaseTime has passed → match is active (room visible)
+  if (match.roomReleaseTime && now >= new Date(match.roomReleaseTime).getTime()) {
+    return "active";
+  }
+
+  // Legacy timer system
   if (match.timerStartedAt && match.startDelayMinutes) {
     const startMs = new Date(match.timerStartedAt).getTime() + match.startDelayMinutes * 60 * 1000;
-    if (Date.now() >= startMs) return "active";
+    if (now >= startMs) return "active";
   }
+
+  if (match.status === "active") return "active";
   if (match.status === "approved") return "waiting";
   return match.status;
 }
 
+function isRoomVisible(match: typeof userMatchesTable.$inferSelect): boolean {
+  const now = Date.now();
+  // After roomHideTime → hidden
+  if (match.roomHideTime && now >= new Date(match.roomHideTime).getTime()) return false;
+  // Before roomReleaseTime → not yet visible
+  if (match.roomReleaseTime && now < new Date(match.roomReleaseTime).getTime()) return false;
+  return true;
+}
+
 function stripMatch(m: typeof userMatchesTable.$inferSelect, includeRoom = false) {
   const { passwordHash, roomId, adminRoomId, adminRoomPassword, ...rest } = m as any;
+  const roomVisible = isRoomVisible(m);
   return {
     ...rest,
     isPasswordProtected: !!passwordHash,
     effectiveStatus: effectiveStatus(m),
-    credentialsReleased: !!adminRoomId,
+    credentialsReleased: !!adminRoomId && roomVisible,
+    roomReleaseTime: m.roomReleaseTime ?? null,
+    roomHideTime: m.roomHideTime ?? null,
     ...(includeRoom ? { roomId: roomId ?? null, adminRoomId: adminRoomId ?? null, adminRoomPassword: adminRoomPassword ?? null } : {}),
   };
 }
@@ -182,6 +211,7 @@ router.get("/user-matches/my-requests", async (req, res) => {
       const effStatus = effectiveStatus(match);
       const isActive = effStatus === "active";
       const isPaidMember = j.status === "accepted";
+      const roomVis = isRoomVisible(match);
       return {
         joinId: j.id,
         matchId: j.matchId,
@@ -198,9 +228,11 @@ router.get("/user-matches/my-requests", async (req, res) => {
         effectiveStatus: effStatus,
         timerStartedAt: match.timerStartedAt,
         startDelayMinutes: match.startDelayMinutes,
+        roomReleaseTime: match.roomReleaseTime ?? null,
+        roomHideTime: match.roomHideTime ?? null,
         roomId: (isPaidMember && isActive) ? match.roomId : null,
-        adminRoomId: isPaidMember ? (match.adminRoomId ?? null) : null,
-        adminRoomPassword: isPaidMember ? (match.adminRoomPassword ?? null) : null,
+        adminRoomId: (isPaidMember && roomVis) ? (match.adminRoomId ?? null) : null,
+        adminRoomPassword: (isPaidMember && roomVis) ? (match.adminRoomPassword ?? null) : null,
       };
     }).filter(Boolean);
 
@@ -551,7 +583,7 @@ router.patch("/admin/user-matches/:id/room-credentials", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
   try {
     const id = parseInt(req.params.id);
-    const { adminRoomId, adminRoomPassword } = req.body;
+    const { adminRoomId, adminRoomPassword, roomReleaseTime, roomHideTime } = req.body;
 
     if (!adminRoomId || !String(adminRoomId).trim()) {
       return res.status(400).json({ error: "adminRoomId is required." });
@@ -560,15 +592,25 @@ router.patch("/admin/user-matches/:id/room-credentials", async (req, res) => {
     const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
     if (!match) return res.status(404).json({ error: "Match not found." });
 
+    const updateData: Partial<typeof userMatchesTable.$inferInsert> = {
+      adminRoomId: String(adminRoomId).trim(),
+      adminRoomPassword: adminRoomPassword ? String(adminRoomPassword).trim() : null,
+    };
+    if (roomReleaseTime) updateData.roomReleaseTime = new Date(roomReleaseTime);
+    if (roomHideTime) updateData.roomHideTime = new Date(roomHideTime);
+
     const [updated] = await db.update(userMatchesTable)
-      .set({
-        adminRoomId: String(adminRoomId).trim(),
-        adminRoomPassword: adminRoomPassword ? String(adminRoomPassword).trim() : null,
-      })
+      .set(updateData)
       .where(eq(userMatchesTable.id, id))
       .returning();
 
-    res.json({ success: true, adminRoomId: updated.adminRoomId, adminRoomPassword: updated.adminRoomPassword });
+    res.json({
+      success: true,
+      adminRoomId: updated.adminRoomId,
+      adminRoomPassword: updated.adminRoomPassword,
+      roomReleaseTime: updated.roomReleaseTime,
+      roomHideTime: updated.roomHideTime,
+    });
   } catch (err) {
     logger.error({ err }, "Failed to set room credentials");
     res.status(500).json({ error: "Failed to set room credentials." });
@@ -580,7 +622,7 @@ router.patch("/admin/user-matches/:id/room-credentials", async (req, res) => {
 router.post("/admin/user-matches", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
   try {
-    const { matchName, matchType, scheduledAt, description, prizePool: prizePoolInput, entryFee: entryFeeInput, perKill: perKillInput, mapName, isPrivate } = req.body;
+    const { matchName, matchType, scheduledAt, description, prizePool: prizePoolInput, entryFee: entryFeeInput, perKill: perKillInput, mapName, isPrivate, roomReleaseTime, roomHideTime, startTime } = req.body;
     if (!matchType) return res.status(400).json({ error: "matchType is required." });
 
     const maxSlots = SLOTS_FOR_TYPE[matchType];
@@ -604,6 +646,9 @@ router.post("/admin/user-matches", async (req, res) => {
       description: description?.trim() || null,
       isPrivate: !!isPrivate,
       status: "waiting",
+      startTime: startTime ? new Date(startTime) : null,
+      roomReleaseTime: roomReleaseTime ? new Date(roomReleaseTime) : null,
+      roomHideTime: roomHideTime ? new Date(roomHideTime) : null,
     }).returning();
 
     res.status(201).json(stripMatch(match, true));

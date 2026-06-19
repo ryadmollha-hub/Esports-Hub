@@ -36,10 +36,15 @@ const TYPE_COLOR: Record<string, string> = {
 
 function getEffectiveStatus(m: any): string {
   if (m.effectiveStatus) return m.effectiveStatus;
+  const now = Date.now();
+  if (m.status === "cancelled") return "cancelled";
+  if (m.status === "ended") return "ended";
+  if (m.roomHideTime && now >= new Date(m.roomHideTime).getTime()) return "ended";
+  if (m.roomReleaseTime && now >= new Date(m.roomReleaseTime).getTime()) return "active";
   if (m.status === "active" || m.status === "ended" || m.status === "cancelled") return m.status;
   if (m.timerStartedAt && m.startDelayMinutes) {
     const startMs = new Date(m.timerStartedAt).getTime() + m.startDelayMinutes * 60 * 1000;
-    if (Date.now() >= startMs) return "active";
+    if (now >= startMs) return "active";
   }
   return "waiting";
 }
@@ -179,10 +184,29 @@ function MatchCard({
         </div>
 
         {/* Row 3: schedule + countdown + join */}
+        {/* Room timing indicators */}
+        {(m.roomReleaseTime || m.roomHideTime) && !isEnded && (
+          <div className="flex flex-col gap-0.5 mb-2.5 text-[9px] font-bold">
+            {m.roomReleaseTime && Date.now() < new Date(m.roomReleaseTime).getTime() && (
+              <div className="flex items-center gap-1.5 text-[#00b4ff]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#00b4ff] animate-pulse" />
+                Room opens: {new Date(m.roomReleaseTime).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })}
+              </div>
+            )}
+            {m.roomHideTime && (
+              <div className="flex items-center gap-1.5 text-[#ff6b00]/70">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00]" />
+                Closes: {new Date(m.roomHideTime).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })}
+              </div>
+            )}
+          </div>
+        )}
         <div className="flex items-center justify-between gap-3">
           <div className="text-[10px] text-[#606070]">
             {startsAt && !isLive ? (
               <CountdownTimer targetDate={startsAt} />
+            ) : m.roomReleaseTime && Date.now() < new Date(m.roomReleaseTime).getTime() ? (
+              <CountdownTimer targetDate={new Date(m.roomReleaseTime)} />
             ) : (
               <span>{fmtSchedule(m.scheduledAt)}</span>
             )}

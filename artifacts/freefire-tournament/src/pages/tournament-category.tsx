@@ -28,6 +28,7 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
   const params = {
     ...(search && { search }),
     ...(status && { status: status as "upcoming" | "ongoing" | "completed" }),
+    ...(gameMode && { gameMode }),
   };
   const { data, isLoading, refetch } = useListTournaments(params, {
     query: { queryKey: getListTournamentsQueryKey(params) },

@@ -79,7 +79,7 @@ export default function AdminPage() {
   const [communityRules, setCommunityRules] = useState("");
   const [communityRulesLoading, setCommunityRulesLoading] = useState(false);
   const [communityRulesSaving, setCommunityRulesSaving] = useState(false);
-  const [roomCredentials, setRoomCredentials] = useState<Record<number, { roomId: string; password: string }>>({});
+  const [roomCredentials, setRoomCredentials] = useState<Record<number, { roomId: string; password: string; roomReleaseTime: string; roomHideTime: string }>>({});
   const [submittingCredentials, setSubmittingCredentials] = useState<number | null>(null);
   const [releaseMode, setReleaseMode] = useState<Record<number, "now" | "scheduled">>({});
   const [deletingMatch, setDeletingMatch] = useState<number | null>(null);
@@ -111,7 +111,7 @@ export default function AdminPage() {
 
   // Admin community match creation form
   const [showAdminMatchForm, setShowAdminMatchForm] = useState(false);
-  const [adminMatchForm, setAdminMatchForm] = useState({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "" });
+  const [adminMatchForm, setAdminMatchForm] = useState({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "", roomReleaseTime: "", roomHideTime: "" });
   const [adminMatchCreating, setAdminMatchCreating] = useState(false);
   const [matchRoomForm, setMatchRoomForm] = useState<Record<number, { roomId: string; roomPassword: string; releaseMinutes: string }>>({});
   const [settingMatchRoom, setSettingMatchRoom] = useState<Record<number, boolean>>({});
@@ -119,7 +119,7 @@ export default function AdminPage() {
 
   // Match result entry state
   const [expandedMatchResult, setExpandedMatchResult] = useState<Record<number, boolean>>({});
-  const [matchResultRows, setMatchResultRows] = useState<Record<number, Array<{ playerName: string; rank: string; kills: string; points: string }>>>({});
+  const [matchResultRows, setMatchResultRows] = useState<Record<number, Array<{ playerName: string; rank: string; kills: string; prizeMoney: string }>>>({});
   const [submittingMatchResult, setSubmittingMatchResult] = useState<Record<number, boolean>>({});
 
   // Room form
@@ -489,7 +489,7 @@ export default function AdminPage() {
   const addMatchResultRow = (matchId: number) => {
     setMatchResultRows((prev) => ({
       ...prev,
-      [matchId]: [...(prev[matchId] ?? []), { playerName: "", rank: "", kills: "", points: "" }],
+      [matchId]: [...(prev[matchId] ?? []), { playerName: "", rank: "", kills: "", prizeMoney: "" }],
     }));
   };
 
@@ -516,7 +516,7 @@ export default function AdminPage() {
       playerName: r.playerName,
       rank: parseInt(r.rank) || i + 1,
       kills: parseInt(r.kills) || 0,
-      points: parseInt(r.points) || 0,
+      prizeMoney: parseFloat((r as any).prizeMoney) || 0,
     }));
     setSubmittingMatchResult((prev) => ({ ...prev, [matchId]: true }));
     try {
@@ -609,11 +609,13 @@ export default function AdminPage() {
           scheduledAt: adminMatchForm.scheduledAt || undefined,
           description: adminMatchForm.description || undefined,
           isPrivate: false,
+          roomReleaseTime: adminMatchForm.roomReleaseTime || undefined,
+          roomHideTime: adminMatchForm.roomHideTime || undefined,
         }),
       });
       if (res.ok) {
         toast({ title: "✅ Community match created!", description: "Match is now live in the frontend category view." });
-        setAdminMatchForm({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "" });
+        setAdminMatchForm({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "", roomReleaseTime: "", roomHideTime: "" });
         setShowAdminMatchForm(false);
         loadUserMatches();
       } else {
@@ -1471,7 +1473,7 @@ export default function AdminPage() {
                                           playerName: r.playerName,
                                           rank: String(r.rank),
                                           kills: String(r.kills),
-                                          points: String(r.points),
+                                          prizeMoney: String(r.prizeMoney ?? r.points ?? ""),
                                         })),
                                       }));
                                     } else {
@@ -1569,7 +1571,7 @@ export default function AdminPage() {
                                     <div className="col-span-4">Player Name *</div>
                                     <div className="col-span-2">Rank *</div>
                                     <div className="col-span-2">Kills</div>
-                                    <div className="col-span-2">Points</div>
+                                    <div className="col-span-2">Prize ৳</div>
                                     <div className="col-span-2" />
                                   </div>
                                   {rows.map((row, idx) => (
@@ -1605,8 +1607,8 @@ export default function AdminPage() {
                                       <div className="col-span-2">
                                         <input
                                           type="number"
-                                          value={row.points}
-                                          onChange={(e) => updateMatchResultRow(m.id, idx, "points", e.target.value)}
+                                          value={row.prizeMoney}
+                                          onChange={(e) => updateMatchResultRow(m.id, idx, "prizeMoney", e.target.value)}
                                           placeholder="0"
                                           min="0"
                                           className="w-full bg-[#12121a] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff6b00] transition-colors"
@@ -2124,6 +2126,26 @@ export default function AdminPage() {
                         className="admin-input"
                       />
                     </div>
+                    {/* Room Release Time */}
+                    <div>
+                      <label className="label-sm">Room Opens At <span className="font-normal normal-case text-[#a0a0b0]">(room visible from)</span></label>
+                      <input
+                        type="datetime-local"
+                        value={adminMatchForm.roomReleaseTime}
+                        onChange={(e) => setAdminMatchForm({ ...adminMatchForm, roomReleaseTime: e.target.value })}
+                        className="admin-input"
+                      />
+                    </div>
+                    {/* Room Hide Time */}
+                    <div>
+                      <label className="label-sm">Room Closes At <span className="font-normal normal-case text-[#a0a0b0]">(auto-expire)</span></label>
+                      <input
+                        type="datetime-local"
+                        value={adminMatchForm.roomHideTime}
+                        onChange={(e) => setAdminMatchForm({ ...adminMatchForm, roomHideTime: e.target.value })}
+                        className="admin-input"
+                      />
+                    </div>
                     {/* Actions */}
                     <div className="sm:col-span-2 lg:col-span-3 flex gap-3 pt-1">
                       <button
@@ -2135,7 +2157,7 @@ export default function AdminPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => { setShowAdminMatchForm(false); setAdminMatchForm({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "" }); }}
+                        onClick={() => { setShowAdminMatchForm(false); setAdminMatchForm({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "", roomReleaseTime: "", roomHideTime: "" }); }}
                         className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors"
                       >
                         Cancel
@@ -2359,21 +2381,49 @@ export default function AdminPage() {
                           )}
 
                           {/* Input fields + Release button */}
-                          <div className="flex flex-col gap-3 w-full md:flex-row">
-                            <input
-                              type="text"
-                              placeholder="Room ID *"
-                              value={roomCredentials[m.id]?.roomId ?? ""}
-                              onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: e.target.value, password: prev[m.id]?.password ?? "" } }))}
-                              className="w-full md:flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
-                            />
-                            <input
-                              type="text"
-                              placeholder="Room Password"
-                              value={roomCredentials[m.id]?.password ?? ""}
-                              onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: prev[m.id]?.roomId ?? "", password: e.target.value } }))}
-                              className="w-full md:flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
-                            />
+                          <div className="flex flex-col gap-3 w-full">
+                            <div className="flex flex-col gap-3 md:flex-row">
+                              <input
+                                type="text"
+                                placeholder="Room ID *"
+                                value={roomCredentials[m.id]?.roomId ?? ""}
+                                onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: e.target.value, password: prev[m.id]?.password ?? "", roomReleaseTime: prev[m.id]?.roomReleaseTime ?? "", roomHideTime: prev[m.id]?.roomHideTime ?? "" } }))}
+                                className="w-full md:flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
+                              />
+                              <input
+                                type="text"
+                                placeholder="Room Password"
+                                value={roomCredentials[m.id]?.password ?? ""}
+                                onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: prev[m.id]?.roomId ?? "", password: e.target.value, roomReleaseTime: prev[m.id]?.roomReleaseTime ?? "", roomHideTime: prev[m.id]?.roomHideTime ?? "" } }))}
+                                className="w-full md:flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00]"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                              <div className="flex-1">
+                                <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">Room Opens At <span className="normal-case font-normal">(room visible from)</span></label>
+                                <input
+                                  type="datetime-local"
+                                  value={roomCredentials[m.id]?.roomReleaseTime ?? (m.roomReleaseTime ? new Date(m.roomReleaseTime).toISOString().slice(0, 16) : "")}
+                                  onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: prev[m.id]?.roomId ?? "", password: prev[m.id]?.password ?? "", roomReleaseTime: e.target.value, roomHideTime: prev[m.id]?.roomHideTime ?? "" } }))}
+                                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#00cc66]"
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">Room Closes At <span className="normal-case font-normal">(auto-expire)</span></label>
+                                <input
+                                  type="datetime-local"
+                                  value={roomCredentials[m.id]?.roomHideTime ?? (m.roomHideTime ? new Date(m.roomHideTime).toISOString().slice(0, 16) : "")}
+                                  onChange={(e) => setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: prev[m.id]?.roomId ?? "", password: prev[m.id]?.password ?? "", roomReleaseTime: prev[m.id]?.roomReleaseTime ?? "", roomHideTime: e.target.value } }))}
+                                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff2244]"
+                                />
+                              </div>
+                            </div>
+                            {(m.roomReleaseTime || m.roomHideTime) && (
+                              <div className="text-[10px] text-[#606070] space-y-0.5 px-1">
+                                {m.roomReleaseTime && <div>🟢 Visible from: <span className="text-[#00ff88]">{new Date(m.roomReleaseTime).toLocaleString()}</span></div>}
+                                {m.roomHideTime && <div>🔴 Auto-expires: <span className="text-[#ff2244]">{new Date(m.roomHideTime).toLocaleString()}</span></div>}
+                              </div>
+                            )}
                             <button
                               disabled={submittingCredentials === m.id || !roomCredentials[m.id]?.roomId?.trim()}
                               onClick={async () => {
@@ -2383,10 +2433,15 @@ export default function AdminPage() {
                                 try {
                                   const res = await apiFetch(`/admin/user-matches/${m.id}/room-credentials`, {
                                     method: "PATCH",
-                                    body: JSON.stringify({ adminRoomId: creds.roomId.trim(), adminRoomPassword: creds.password?.trim() || undefined }),
+                                    body: JSON.stringify({
+                                      adminRoomId: creds.roomId.trim(),
+                                      adminRoomPassword: creds.password?.trim() || undefined,
+                                      roomReleaseTime: creds.roomReleaseTime || undefined,
+                                      roomHideTime: creds.roomHideTime || undefined,
+                                    }),
                                   });
                                   if (res.ok) {
-                                    toast({ title: "🔓 Password Released!", description: "Registered players can now see the room credentials." });
+                                    toast({ title: "🔓 Room Credentials Set!", description: "Room ID saved. Players see it based on the release schedule." });
                                     setRoomCredentials((prev) => { const n = { ...prev }; delete n[m.id]; return n; });
                                     loadUserMatches();
                                   } else {
@@ -2396,10 +2451,10 @@ export default function AdminPage() {
                                 } catch { toast({ title: "Connection error", variant: "destructive" }); }
                                 finally { setSubmittingCredentials(null); }
                               }}
-                              className="w-full md:w-auto px-4 py-2 bg-[#00cc66] hover:bg-[#00aa55] text-white text-xs font-black rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap flex items-center justify-center gap-1"
+                              className="w-full md:w-auto self-start px-4 py-2 bg-[#00cc66] hover:bg-[#00aa55] text-white text-xs font-black rounded-lg disabled:opacity-50 transition-colors whitespace-nowrap flex items-center justify-center gap-1"
                             >
                               <Key className="w-3 h-3" />
-                              {submittingCredentials === m.id ? "Releasing..." : "Release Password"}
+                              {submittingCredentials === m.id ? "Saving..." : "Save Credentials & Timing"}
                             </button>
                           </div>
                         </div>
