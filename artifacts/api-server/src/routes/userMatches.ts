@@ -659,6 +659,25 @@ router.delete("/admin/user-matches/:id", async (req, res) => {
   }
 });
 
+// ─── Admin: view players in a community match ─────────────────────────────────
+
+router.get("/admin/user-matches/:id/players", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+
+    const joins = await db.select().from(userMatchJoinsTable)
+      .where(eq(userMatchJoinsTable.matchId, id))
+      .orderBy(desc(userMatchJoinsTable.joinedAt));
+
+    res.json({ match: stripMatch(match, true), players: joins });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch players." });
+  }
+});
+
 // ─── Admin: approve/reject (legacy compat) ────────────────────────────────────
 
 router.patch("/admin/user-matches/:id/approve", async (req, res) => {

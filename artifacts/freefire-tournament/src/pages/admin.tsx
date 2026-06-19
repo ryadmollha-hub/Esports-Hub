@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import {
   Users, Trophy, Shield, Clock, DollarSign, CheckCircle, XCircle, Bell,
   Plus, Trash2, Edit, LogOut, BarChart3, Megaphone, Swords, CreditCard,
   ArrowDownCircle, ArrowUpCircle, Eye, EyeOff, RefreshCw, Home,
-  Crown, Shuffle, X as XIcon, Tag, BookOpen, Key, Radio, Lock, Settings, Copy, MessageCircle, Send, Headphones, ChevronRight
+  Crown, Shuffle, X as XIcon, Tag, BookOpen, Key, Radio, Lock, Settings, Copy, MessageCircle, Send, Headphones, ChevronRight,
+  Search, AlertTriangle, Activity, UserCheck, MapPin, TrendingUp, Flag, FileText
 } from "lucide-react";
 import { isAdminAuthenticated, clearAdminSession, adminFetch } from "@/lib/adminAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -21,7 +22,7 @@ async function safeJson(res: Response): Promise<any> {
   }
 }
 
-type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings" | "maintenance" | "support" | "user-matches";
+type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings" | "maintenance" | "support" | "user-matches" | "reports" | "activity" | "search";
 
 const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
@@ -38,6 +39,9 @@ const tabs: { id: Tab; label: string; icon: any }[] = [
   { id: "maintenance", label: "Maintenance", icon: Lock },
   { id: "support", label: "Support", icon: MessageCircle },
   { id: "user-matches", label: "User Matches", icon: Swords },
+  { id: "reports", label: "Reports", icon: Flag },
+  { id: "activity", label: "Activity Log", icon: Activity },
+  { id: "search", label: "Search", icon: Search },
 ];
 
 export default function AdminPage() {
@@ -56,6 +60,22 @@ export default function AdminPage() {
   const [rejectingMatch, setRejectingMatch] = useState<number | null>(null);
   const [rejectNote, setRejectNote] = useState("");
   const [matchEntryFees, setMatchEntryFees] = useState<Record<number, string>>({});
+  // User detail modal
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [selectedUserLoading, setSelectedUserLoading] = useState(false);
+  // Match players modal
+  const [matchPlayersData, setMatchPlayersData] = useState<{ match: any; players: any[] } | null>(null);
+  const [matchPlayersLoading, setMatchPlayersLoading] = useState(false);
+  // User search
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const userSearchTimeout = useRef<any>(null);
+  // Community match status filter
+  const [umStatusFilter, setUmStatusFilter] = useState<string>("all");
+  // Reports
+  const [reports, setReports] = useState<any[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportsFilter, setReportsFilter] = useState("all");
   const [communityRules, setCommunityRules] = useState("");
   const [communityRulesLoading, setCommunityRulesLoading] = useState(false);
   const [communityRulesSaving, setCommunityRulesSaving] = useState(false);
@@ -192,6 +212,58 @@ export default function AdminPage() {
     }
   }, []);
 
+  const loadReports = useCallback(async (filter = "all") => {
+    setReportsLoading(true);
+    try {
+      const res = await apiFetch(`/admin/reports${filter !== "all" ? `?status=${filter}` : ""}`);
+      if (res.ok) setReports(await res.json());
+    } catch {} finally { setReportsLoading(false); }
+  }, [apiFetch]);
+
+  const loadUserDetails = useCallback(async (userId: string) => {
+    setSelectedUserLoading(true);
+    try {
+      const res = await apiFetch(`/admin/users/${userId}/details`);
+      if (res.ok) setSelectedUser(await res.json());
+    } catch {} finally { setSelectedUserLoading(false); }
+  }, [apiFetch]);
+
+  const loadMatchPlayers = useCallback(async (matchId: number) => {
+    setMatchPlayersLoading(true);
+    try {
+      const res = await apiFetch(`/admin/user-matches/${matchId}/players`);
+      if (res.ok) setMatchPlayersData(await res.json());
+    } catch {} finally { setMatchPlayersLoading(false); }
+  }, [apiFetch]);
+
+  const searchUsers = useCallback(async (q: string) => {
+    setUserSearchLoading(true);
+    try {
+      const res = await apiFetch(`/admin/users?search=${encodeURIComponent(q)}&limit=50`);
+      if (res.ok) setUsers(await res.json());
+    } catch {} finally { setUserSearchLoading(false); }
+  }, [apiFetch]);
+
+  const resolveReport = useCallback(async (id: number, status: "resolved" | "dismissed", adminNote?: string) => {
+    try {
+      const res = await apiFetch(`/admin/reports/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status, adminNote }),
+      });
+      if (res.ok) {
+        toast({ title: status === "resolved" ? "Report resolved" : "Report dismissed" });
+        loadReports(reportsFilter);
+        loadStats();
+      }
+    } catch { toast({ title: "Connection error", variant: "destructive" }); }
+  }, [apiFetch, reportsFilter, loadStats]);
+
+  const deleteReport = useCallback(async (id: number) => {
+    if (!confirm("Delete this report?")) return;
+    const res = await apiFetch(`/admin/reports/${id}`, { method: "DELETE" });
+    if (res.ok) { toast({ title: "Report deleted" }); loadReports(reportsFilter); }
+  }, [apiFetch, reportsFilter]);
+
   const saveCommunityRules = useCallback(async () => {
     if (!communityRules.trim()) return;
     setCommunityRulesSaving(true);
@@ -252,13 +324,15 @@ export default function AdminPage() {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "users") loadUsers();
+    if (activeTab === "users") { setUserSearchQuery(""); loadUsers(); }
     if (activeTab === "registrations") loadRegistrations();
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "deposits" || activeTab === "withdrawals") loadWallet();
     if (activeTab === "matches") { loadTournaments(); if (selectedTournament) loadMatches(); }
     if (activeTab === "user-matches") { loadUserMatches(); loadCommunityRules(); }
     if (activeTab === "maintenance") loadMaintenance();
+    if (activeTab === "reports") loadReports(reportsFilter);
+    if (activeTab === "activity") { /* activity loads from stats */ loadStats(); }
   }, [activeTab]);
 
   useEffect(() => {
@@ -738,6 +812,11 @@ export default function AdminPage() {
                   !
                 </span>
               )}
+              {tab.id === "reports" && stats?.pendingReports > 0 && (
+                <span className="ml-auto bg-[#ff2244] text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  {stats.pendingReports}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -824,35 +903,54 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {/* Primary stats grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
                 {[
-                  { label: "Total Users", value: stats?.totalUsers ?? 0, icon: Users, color: "text-blue-400", border: "border-blue-400/20" },
-                  { label: "Tournaments", value: stats?.totalTournaments ?? 0, icon: Trophy, color: "text-[#ff6b00]", border: "border-[#ff6b00]/20" },
-                  { label: "Active", value: stats?.activeTournaments ?? 0, icon: Swords, color: "text-[#00ff88]", border: "border-[#00ff88]/20" },
-                  { label: "Registrations", value: stats?.totalRegistrations ?? 0, icon: Users, color: "text-purple-400", border: "border-purple-400/20" },
-                  { label: "Pending Regs", value: stats?.pendingRegistrations ?? 0, icon: Clock, color: "text-yellow-400", border: "border-yellow-400/20" },
-                  { label: "Teams", value: stats?.totalTeams ?? 0, icon: Shield, color: "text-pink-400", border: "border-pink-400/20" },
-                  { label: "Prize Pool", value: `৳${Number(stats?.totalPrizePool ?? 0).toLocaleString()}`, icon: DollarSign, color: "text-[#ffd700]", border: "border-[#ffd700]/20" },
-                  { label: "Wallet Pending", value: stats?.pendingWalletRequests ?? 0, icon: CreditCard, color: "text-orange-400", border: "border-orange-400/20" },
+                  { label: "Total Users", value: stats?.totalUsers ?? 0, sub: `+${stats?.newUsersToday ?? 0} today`, icon: Users, color: "text-blue-400", border: "border-blue-400/20", onClick: () => setActiveTab("users") },
+                  { label: "Tournaments", value: stats?.totalTournaments ?? 0, sub: `${stats?.activeTournaments ?? 0} active`, icon: Trophy, color: "text-[#ff6b00]", border: "border-[#ff6b00]/20", onClick: () => setActiveTab("tournaments") },
+                  { label: "Prize Pool", value: `৳${Number(stats?.totalPrizePool ?? 0).toLocaleString()}`, sub: "all tournaments", icon: DollarSign, color: "text-[#ffd700]", border: "border-[#ffd700]/20" },
+                  { label: "Pending Regs", value: stats?.pendingRegistrations ?? 0, sub: "awaiting approval", icon: Clock, color: "text-yellow-400", border: "border-yellow-400/20", onClick: () => setActiveTab("registrations") },
+                  { label: "Pending Reports", value: stats?.pendingReports ?? 0, sub: "need review", icon: Flag, color: stats?.pendingReports > 0 ? "text-[#ff2244]" : "text-[#a0a0b0]", border: stats?.pendingReports > 0 ? "border-[#ff2244]/30" : "border-[#2a2a36]", onClick: () => setActiveTab("reports") },
                 ].map((card) => (
-                  <div key={card.label} className={`bg-[#12121a] rounded-xl border ${card.border} p-4`}>
+                  <div key={card.label} onClick={card.onClick} className={`bg-[#12121a] rounded-xl border ${card.border} p-4 ${card.onClick ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}>
                     <card.icon className={`w-5 h-5 ${card.color} mb-2`} />
                     <div className={`text-2xl font-black ${card.color}`}>{stats === null ? "—" : card.value}</div>
-                    <div className="text-[#a0a0b0] text-xs mt-1">{card.label}</div>
+                    <div className="text-white text-xs font-bold mt-0.5">{card.label}</div>
+                    {card.sub && <div className="text-[#4a4a5a] text-[10px] mt-0.5">{card.sub}</div>}
                   </div>
                 ))}
               </div>
-              <div className="grid lg:grid-cols-2 gap-6">
+
+              {/* Community match stats row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                {[
+                  { label: "Community Matches", value: stats?.totalCommunityMatches ?? 0, icon: Swords, color: "text-[#00b4ff]", onClick: () => setActiveTab("user-matches") },
+                  { label: "Active / Waiting", value: stats?.activeCommunityMatches ?? 0, icon: Activity, color: "text-[#00ff88]", onClick: () => { setActiveTab("user-matches"); setUmStatusFilter("approved"); } },
+                  { label: "Completed", value: stats?.completedCommunityMatches ?? 0, icon: CheckCircle, color: "text-[#a0a0b0]" },
+                  { label: "Pending Withdrawals", value: stats?.pendingWithdrawals ?? 0, icon: ArrowUpCircle, color: stats?.pendingWithdrawals > 0 ? "text-orange-400" : "text-[#a0a0b0]", onClick: () => setActiveTab("withdrawals") },
+                ].map((card) => (
+                  <div key={card.label} onClick={card.onClick} className={`bg-[#12121a] rounded-xl border border-[#1e1e2e] p-3 flex items-center gap-3 ${card.onClick ? "cursor-pointer hover:border-[#2a2a36] transition-colors" : ""}`}>
+                    <card.icon className={`w-5 h-5 shrink-0 ${card.color}`} />
+                    <div>
+                      <div className={`text-xl font-black ${card.color}`}>{stats === null ? "—" : card.value}</div>
+                      <div className="text-[#606070] text-[10px] uppercase font-bold">{card.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bottom panels: upcoming + recent regs + recent activity */}
+              <div className="grid lg:grid-cols-3 gap-5">
                 <div>
-                  <h2 className="text-sm font-black uppercase text-[#ff6b00] mb-3 tracking-wider">Upcoming Tournaments</h2>
+                  <h2 className="text-xs font-black uppercase text-[#ff6b00] mb-3 tracking-wider">Upcoming Tournaments</h2>
                   <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10">
                     {!stats?.upcomingTournaments || stats.upcomingTournaments.length === 0 ? (
-                      <div className="p-6 text-center text-[#a0a0b0] text-sm">No upcoming tournaments</div>
+                      <div className="p-5 text-center text-[#a0a0b0] text-sm">No upcoming tournaments</div>
                     ) : stats.upcomingTournaments.map((t: any) => (
-                      <div key={t.id} className="p-4 border-b border-[#ff6b00]/5 last:border-0 flex items-center justify-between">
-                        <div>
-                          <div className="font-bold text-white text-sm">{t.name}</div>
-                          <div className="text-[#a0a0b0] text-xs">{new Date(t.startDate).toLocaleDateString()} · ৳{Number(t.prizePool).toLocaleString()}</div>
+                      <div key={t.id} className="p-3 border-b border-[#ff6b00]/5 last:border-0 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-bold text-white text-sm truncate">{t.name}</div>
+                          <div className="text-[#a0a0b0] text-xs">{new Date(t.startDate).toLocaleDateString()}</div>
                         </div>
                         <span className={statusBadge(t.status)}>{t.status}</span>
                       </div>
@@ -860,17 +958,30 @@ export default function AdminPage() {
                   </div>
                 </div>
                 <div>
-                  <h2 className="text-sm font-black uppercase text-[#ff6b00] mb-3 tracking-wider">Recent Registrations</h2>
+                  <h2 className="text-xs font-black uppercase text-[#ff6b00] mb-3 tracking-wider">Recent Registrations</h2>
                   <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10">
                     {!stats?.recentRegistrations || stats.recentRegistrations.length === 0 ? (
-                      <div className="p-6 text-center text-[#a0a0b0] text-sm">No registrations yet</div>
+                      <div className="p-5 text-center text-[#a0a0b0] text-sm">No registrations yet</div>
                     ) : stats.recentRegistrations.slice(0, 6).map((r: any) => (
-                      <div key={r.id} className="p-3 border-b border-[#ff6b00]/5 last:border-0 flex items-center justify-between">
-                        <div>
-                          <div className="font-bold text-white text-sm">{r.playerName}</div>
+                      <div key={r.id} className="p-3 border-b border-[#ff6b00]/5 last:border-0 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-bold text-white text-sm truncate">{r.playerName}</div>
                           <div className="text-[#a0a0b0] text-xs font-mono">{r.freefireUid}</div>
                         </div>
                         <span className={statusBadge(r.status)}>{r.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-xs font-black uppercase text-[#ff6b00] mb-3 tracking-wider">Recent Activity</h2>
+                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 max-h-[280px] overflow-y-auto">
+                    {!stats?.recentActivity || stats.recentActivity.length === 0 ? (
+                      <div className="p-5 text-center text-[#a0a0b0] text-sm">No activity yet</div>
+                    ) : stats.recentActivity.map((a: any) => (
+                      <div key={a.id} className="px-3 py-2.5 border-b border-[#ff6b00]/5 last:border-0">
+                        <div className="text-white text-xs font-bold truncate">{a.action?.replace(/\./g, " ") ?? "Event"}</div>
+                        <div className="text-[#4a4a5a] text-[10px] mt-0.5">{new Date(a.createdAt).toLocaleString()}</div>
                       </div>
                     ))}
                   </div>
@@ -1591,33 +1702,64 @@ export default function AdminPage() {
           {/* USERS */}
           {activeTab === "users" && (
             <div>
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <h1 className="text-2xl font-black uppercase">User <span className="text-[#ff6b00]">Management</span></h1>
                 <button onClick={loadUsers} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
                   <RefreshCw className="w-4 h-4" /> Refresh
                 </button>
               </div>
-              <div className="space-y-3">
+
+              {/* Search bar */}
+              <div className="relative mb-5">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#4a4a5a]" />
+                <input
+                  value={userSearchQuery}
+                  onChange={(e) => {
+                    const q = e.target.value;
+                    setUserSearchQuery(q);
+                    clearTimeout(userSearchTimeout.current);
+                    if (q.trim().length >= 2) {
+                      userSearchTimeout.current = setTimeout(() => searchUsers(q.trim()), 400);
+                    } else if (q.trim().length === 0) {
+                      loadUsers();
+                    }
+                  }}
+                  placeholder="Search by username, email, or user ID…"
+                  className="w-full bg-[#0d0d16] border border-[#1e1e2e] rounded-xl pl-10 pr-4 py-2.5 text-white text-sm placeholder-[#3a3a46] focus:outline-none focus:border-[#ff6b00]/40 transition-colors"
+                />
+                {userSearchLoading && (
+                  <RefreshCw className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a0a0b0] animate-spin" />
+                )}
+              </div>
+              <p className="text-[#4a4a5a] text-xs mb-4">Click any user row to see detailed profile — wallet balance, match history, and more.</p>
+
+              <div className="space-y-2">
                 {users.length === 0 ? (
                   <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
                     <Users className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                    <p>No users registered yet.</p>
+                    <p>{userSearchQuery ? "No users found matching your search." : "No users registered yet."}</p>
                   </div>
                 ) : users.map((u: any) => (
-                  <div key={u.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{u.displayName ?? u.username ?? "Unknown"}</span>
-                        {u.isAdmin && <span className="text-xs font-bold text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/30 px-2 py-0.5 rounded">Admin</span>}
-                        {u.isBanned && <span className="text-xs font-bold text-[#ff2244] bg-[#ff2244]/10 border border-[#ff2244]/30 px-2 py-0.5 rounded">Banned</span>}
-                      </div>
-                      <div className="text-[#a0a0b0] text-sm">{u.email ?? "No email"}</div>
-                      {u.freefireUid && <div className="text-[#a0a0b0] text-xs font-mono">FF UID: {u.freefireUid}</div>}
-                      <div className="text-[#a0a0b0] text-xs">Joined: {new Date(u.createdAt).toLocaleDateString()}</div>
+                  <div
+                    key={u.clerkId ?? u.id}
+                    onClick={() => { setSelectedUser(null); loadUserDetails(u.clerkId); }}
+                    className="bg-[#12121a] hover:bg-[#14141e] rounded-xl border border-[#1e1e2e] hover:border-[#ff6b00]/20 p-4 flex flex-col sm:flex-row sm:items-center gap-3 cursor-pointer transition-all group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-[#ff6b00]/10 border border-[#ff6b00]/20 flex items-center justify-center shrink-0 text-[#ff6b00] font-black text-sm">
+                      {(u.displayName ?? u.username ?? "?")[0]?.toUpperCase()}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-white">{u.displayName ?? u.username ?? "Unknown"}</span>
+                        {u.username && u.displayName && <span className="text-[#a0a0b0] text-xs">@{u.username}</span>}
+                        {u.isAdmin && <span className="text-[10px] font-bold text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/30 px-1.5 py-0.5 rounded">Admin</span>}
+                        {u.isBanned && <span className="text-[10px] font-bold text-[#ff2244] bg-[#ff2244]/10 border border-[#ff2244]/30 px-1.5 py-0.5 rounded">Banned</span>}
+                      </div>
+                      <div className="text-[#a0a0b0] text-xs mt-0.5">{u.email ?? "No email"} · Joined {new Date(u.createdAt).toLocaleDateString()}</div>
+                    </div>
+                    <div className="flex gap-2 items-center shrink-0">
                       <button
-                        onClick={() => toggleBan(u.clerkId, u.isBanned)}
+                        onClick={(e) => { e.stopPropagation(); toggleBan(u.clerkId, u.isBanned); }}
                         className={`px-3 py-1.5 font-bold text-xs uppercase rounded-lg transition-colors border ${
                           u.isBanned
                             ? "bg-[#00ff88]/10 border-[#00ff88]/30 text-[#00ff88] hover:bg-[#00ff88]/20"
@@ -1626,10 +1768,14 @@ export default function AdminPage() {
                       >
                         {u.isBanned ? "Unban" : "Ban"}
                       </button>
+                      <ChevronRight className="w-4 h-4 text-[#3a3a46] group-hover:text-[#ff6b00] transition-colors" />
                     </div>
                   </div>
                 ))}
               </div>
+              {users.length >= 50 && (
+                <p className="text-center text-[#4a4a5a] text-xs mt-4">Showing first 50 users. Use the search bar to find specific users.</p>
+              )}
             </div>
           )}
 
@@ -2034,28 +2180,41 @@ export default function AdminPage() {
 
               {/* Status filter tabs */}
               <div className="flex gap-2 mb-5 flex-wrap">
-                {["all", "pending_approval", "approved", "rejected"].map((s) => {
+                {["all", "pending_approval", "approved", "waiting", "active", "ended", "cancelled"].map((s) => {
                   const count = s === "all" ? userMatches.length : userMatches.filter((m) => m.status === s).length;
-                  const labels: Record<string, string> = { all: "All", pending_approval: "Pending", approved: "Approved", rejected: "Rejected" };
-                  const colors: Record<string, string> = { all: "border-[#ff6b00]/30 text-[#ff6b00]", pending_approval: "border-yellow-400/30 text-yellow-400", approved: "border-[#00ff88]/30 text-[#00ff88]", rejected: "border-[#ff2244]/30 text-[#ff2244]" };
+                  const labels: Record<string, string> = { all: "All", pending_approval: "Pending", approved: "Approved", waiting: "Waiting", active: "Active", ended: "Ended", cancelled: "Cancelled" };
+                  const colors: Record<string, string> = {
+                    all: "border-[#ff6b00]/30 text-[#ff6b00] bg-[#ff6b00]/5",
+                    pending_approval: "border-yellow-400/30 text-yellow-400",
+                    approved: "border-[#00b4ff]/30 text-[#00b4ff]",
+                    waiting: "border-[#00ff88]/30 text-[#00ff88]",
+                    active: "border-[#00ff88]/50 text-[#00ff88] bg-[#00ff88]/5",
+                    ended: "border-[#a0a0b0]/30 text-[#a0a0b0]",
+                    cancelled: "border-[#ff2244]/30 text-[#ff2244]",
+                  };
+                  if (count === 0 && s !== "all" && s !== "pending_approval") return null;
                   return (
-                    <span key={s} className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase ${colors[s]} bg-transparent`}>
+                    <button
+                      key={s}
+                      onClick={() => setUmStatusFilter(s)}
+                      className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase transition-colors ${colors[s] ?? "border-[#2a2a36] text-[#a0a0b0]"} ${umStatusFilter === s ? "opacity-100" : "opacity-50 hover:opacity-75"}`}
+                    >
                       {labels[s]} ({count})
-                    </span>
+                    </button>
                   );
                 })}
               </div>
 
               {userMatchesLoading ? (
                 <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-28 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
-              ) : userMatches.length === 0 ? (
+              ) : userMatches.filter((m) => umStatusFilter === "all" || m.status === umStatusFilter).length === 0 ? (
                 <div className="text-center py-16 text-[#a0a0b0]">
                   <Swords className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                  <p className="font-bold">No user matches submitted yet</p>
+                  <p className="font-bold">No matches in this category</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-[720px] overflow-y-auto pr-1">
-                  {userMatches.map((m: any) => (
+                  {userMatches.filter((m) => umStatusFilter === "all" || m.status === umStatusFilter).map((m: any) => (
                     <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4">
                       <div className="flex flex-col gap-3">
                         {/* Top row: info + delete button */}
@@ -2064,9 +2223,10 @@ export default function AdminPage() {
                             <div className="flex items-center gap-2 flex-wrap mb-1">
                               <span className="font-black text-white text-base">{m.matchType} Match</span>
                               <span className={statusBadge(m.status === "pending_approval" ? "pending" : m.status)}>{m.status === "pending_approval" ? "Pending" : m.status}</span>
+                              {m.isPrivate && <span className="text-[10px] font-bold text-[#a0a0b0] bg-[#1a1a28] border border-[#2a2a36] px-1.5 py-0.5 rounded">Private</span>}
                             </div>
                             <div className="text-[#a0a0b0] text-xs space-y-0.5">
-                              <div>By: <span className="text-white font-bold">{m.creatorName ?? "Unknown"}</span></div>
+                              <div className="flex items-center gap-1"><UserCheck className="w-3 h-3 text-[#ff6b00]" /> Host: <span className="text-white font-bold">{m.creatorName ?? "Unknown"}</span>{m.creatorPhone && <span className="text-[#606070] ml-1">{m.creatorPhone}</span>}</div>
                               <div>Prize Pool: <span className="text-[#ffd700] font-bold">৳{Number(m.prizePool).toLocaleString()}</span> · Slots: <span className="text-white font-bold">{m.filledSlots}/{m.maxSlots}</span></div>
                               {m.status !== "pending_approval" && (
                                 <div>Entry Fee: <span className="text-[#00ff88] font-bold">৳{Number(m.entryFee).toLocaleString()}</span></div>
@@ -2076,12 +2236,20 @@ export default function AdminPage() {
                               {m.adminNote && <div className="text-[#ff2244] mt-1">Note: {m.adminNote}</div>}
                             </div>
                           </div>
-                          <button
-                            onClick={() => { setDeletingMatch(m.id); setRejectingMatch(null); }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors shrink-0"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" /> Delete
-                          </button>
+                          <div className="flex flex-col gap-2 shrink-0">
+                            <button
+                              onClick={() => { setMatchPlayersData(null); loadMatchPlayers(m.id); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00b4ff]/10 border border-[#00b4ff]/30 text-[#00b4ff] text-xs font-bold rounded-lg hover:bg-[#00b4ff]/20 transition-colors whitespace-nowrap"
+                            >
+                              <Users className="w-3.5 h-3.5" /> Players ({m.filledSlots ?? 0})
+                            </button>
+                            <button
+                              onClick={() => { setDeletingMatch(m.id); setRejectingMatch(null); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors whitespace-nowrap"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" /> Delete
+                            </button>
+                          </div>
                         </div>
 
                         {/* Approval controls — full width on all screens */}
@@ -2364,8 +2532,284 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* REPORTS */}
+          {activeTab === "reports" && (
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h1 className="text-2xl font-black uppercase">Report <span className="text-[#ff6b00]">Management</span></h1>
+                <button onClick={() => loadReports(reportsFilter)} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              </div>
+
+              {/* Filter tabs */}
+              <div className="flex gap-2 mb-5 flex-wrap">
+                {["all", "pending", "resolved", "dismissed"].map((f) => {
+                  const labels: Record<string, string> = { all: "All", pending: "Pending", resolved: "Resolved", dismissed: "Dismissed" };
+                  const colors: Record<string, string> = {
+                    all: "text-[#ff6b00] border-[#ff6b00]/30",
+                    pending: "text-yellow-400 border-yellow-400/30",
+                    resolved: "text-[#00ff88] border-[#00ff88]/30",
+                    dismissed: "text-[#a0a0b0] border-[#a0a0b0]/30",
+                  };
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => { setReportsFilter(f); loadReports(f); }}
+                      className={`px-3 py-1 rounded-lg border text-xs font-bold uppercase transition-opacity ${colors[f]} ${reportsFilter === f ? "opacity-100" : "opacity-40 hover:opacity-70"}`}
+                    >
+                      {labels[f]}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {reportsLoading ? (
+                <div className="space-y-3">{[1,2,3].map(i => <div key={i} className="h-24 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
+              ) : reports.length === 0 ? (
+                <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
+                  <Flag className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                  <p className="font-bold">No reports in this category</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {reports.map((r: any) => (
+                    <div key={r.id} className={`bg-[#12121a] rounded-xl border p-4 ${r.status === "pending" ? "border-yellow-400/20" : "border-[#1e1e2e]"}`}>
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className={`text-xs font-black px-2 py-0.5 rounded border uppercase ${r.status === "pending" ? "text-yellow-400 border-yellow-400/30 bg-yellow-400/10" : r.status === "resolved" ? "text-[#00ff88] border-[#00ff88]/30 bg-[#00ff88]/10" : "text-[#a0a0b0] border-[#a0a0b0]/30 bg-[#a0a0b0]/10"}`}>{r.status}</span>
+                            <span className="text-xs text-[#606070] bg-[#1a1a28] border border-[#2a2a36] px-2 py-0.5 rounded uppercase font-bold">{r.targetType}</span>
+                          </div>
+                          <div className="text-white font-bold text-sm">{r.reason}</div>
+                          {r.targetName && <div className="text-[#a0a0b0] text-xs mt-0.5">Target: <span className="text-white">{r.targetName}</span></div>}
+                          {r.description && <div className="text-[#a0a0b0] text-xs mt-1 italic">"{r.description}"</div>}
+                          <div className="text-[#4a4a5a] text-[10px] mt-2">
+                            Reported by <span className="text-[#606070]">{r.reporterName ?? "Anonymous"}</span> · {new Date(r.createdAt).toLocaleDateString()}
+                          </div>
+                          {r.adminNote && <div className="text-[#ff6b00] text-xs mt-1 border-t border-[#2a2a36] pt-1">Admin note: {r.adminNote}</div>}
+                        </div>
+                        {r.status === "pending" && (
+                          <div className="flex gap-2 shrink-0">
+                            <button
+                              onClick={() => resolveReport(r.id, "resolved")}
+                              className="px-3 py-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] text-xs font-bold rounded-lg hover:bg-[#00ff88]/20 transition-colors"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5 inline mr-1" />Resolve
+                            </button>
+                            <button
+                              onClick={() => resolveReport(r.id, "dismissed")}
+                              className="px-3 py-1.5 bg-[#a0a0b0]/10 border border-[#a0a0b0]/30 text-[#a0a0b0] text-xs font-bold rounded-lg hover:bg-[#a0a0b0]/20 transition-colors"
+                            >
+                              Dismiss
+                            </button>
+                            <button
+                              onClick={() => deleteReport(r.id)}
+                              className="p-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] rounded-lg hover:bg-[#ff2244]/20 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ACTIVITY LOG */}
+          {activeTab === "activity" && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-2xl font-black uppercase">Activity <span className="text-[#ff6b00]">Log</span></h1>
+                <button onClick={loadStats} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              </div>
+              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 divide-y divide-[#ff6b00]/5">
+                {!stats?.recentActivity || stats.recentActivity.length === 0 ? (
+                  <div className="p-12 text-center text-[#a0a0b0]">
+                    <Activity className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                    <p className="font-bold">No activity recorded yet</p>
+                  </div>
+                ) : stats.recentActivity.map((a: any) => (
+                  <div key={a.id} className="px-5 py-3.5 flex items-start gap-4">
+                    <div className="w-8 h-8 rounded-lg bg-[#ff6b00]/10 border border-[#ff6b00]/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <Activity className="w-3.5 h-3.5 text-[#ff6b00]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-white text-sm font-bold">{a.action?.replace(/\./g, " ") ?? "Event"}</div>
+                      {a.details && <div className="text-[#a0a0b0] text-xs mt-0.5 truncate">{typeof a.details === "string" ? a.details : JSON.stringify(a.details)}</div>}
+                    </div>
+                    <div className="text-[#4a4a5a] text-xs shrink-0">{new Date(a.createdAt).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+              {stats?.recentActivity?.length >= 50 && (
+                <p className="text-center text-[#4a4a5a] text-xs mt-4">Showing latest 50 events. Older entries are archived in the database.</p>
+              )}
+            </div>
+          )}
+
+          {/* GLOBAL SEARCH */}
+          {activeTab === "search" && (
+            <div>
+              <div className="mb-6">
+                <h1 className="text-2xl font-black uppercase">Global <span className="text-[#ff6b00]">Search</span></h1>
+                <p className="text-[#a0a0b0] text-sm mt-1">Search across users, tournaments, and community matches.</p>
+              </div>
+              <GlobalSearchTab apiFetch={apiFetch} />
+            </div>
+          )}
+
         </div>
       </main>
+
+      {/* USER DETAIL MODAL */}
+      {(selectedUserLoading || selectedUser) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => { setSelectedUser(null); }}>
+          <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-[#ff6b00]/10">
+              <h2 className="font-black uppercase text-white flex items-center gap-2"><UserCheck className="w-5 h-5 text-[#ff6b00]" /> User Detail</h2>
+              <button onClick={() => setSelectedUser(null)} className="p-1.5 rounded-lg text-[#a0a0b0] hover:text-white hover:bg-[#1e1e2e] transition-colors"><XIcon className="w-4 h-4" /></button>
+            </div>
+            {selectedUserLoading && !selectedUser ? (
+              <div className="p-10 text-center">
+                <RefreshCw className="w-8 h-8 text-[#ff6b00] animate-spin mx-auto mb-3" />
+                <p className="text-[#a0a0b0] text-sm">Loading user details…</p>
+              </div>
+            ) : selectedUser && (
+              <div className="p-5 space-y-5">
+                {/* Basic info */}
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-[#ff6b00]/10 border border-[#ff6b00]/20 flex items-center justify-center text-[#ff6b00] font-black text-xl shrink-0">
+                    {(selectedUser.displayName ?? selectedUser.username ?? "?")[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-black text-white text-lg">{selectedUser.displayName ?? selectedUser.username}</span>
+                      {selectedUser.isAdmin && <span className="text-[10px] font-bold text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/30 px-1.5 py-0.5 rounded">Admin</span>}
+                      {selectedUser.isBanned && <span className="text-[10px] font-bold text-[#ff2244] bg-[#ff2244]/10 border border-[#ff2244]/30 px-1.5 py-0.5 rounded">Banned</span>}
+                    </div>
+                    <div className="text-[#a0a0b0] text-sm mt-0.5">{selectedUser.email}</div>
+                    <div className="text-[#4a4a5a] text-xs mt-0.5">Joined {new Date(selectedUser.createdAt).toLocaleDateString()}</div>
+                  </div>
+                </div>
+
+                {/* Wallet */}
+                <div className="bg-[#0d0d16] rounded-xl border border-[#1e1e2e] p-4">
+                  <div className="text-xs font-black uppercase text-[#ff6b00] mb-3 tracking-wider">Wallet</div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><div className="text-[#00ff88] text-xl font-black">৳{Number(selectedUser.wallet?.balance ?? 0).toLocaleString()}</div><div className="text-[#606070] text-[10px] uppercase">Balance</div></div>
+                    <div><div className="text-blue-400 text-xl font-black">৳{Number(selectedUser.wallet?.totalDeposit ?? 0).toLocaleString()}</div><div className="text-[#606070] text-[10px] uppercase">Total Deposits</div></div>
+                    <div><div className="text-orange-400 text-xl font-black">৳{Number(selectedUser.wallet?.totalWithdraw ?? 0).toLocaleString()}</div><div className="text-[#606070] text-[10px] uppercase">Total Withdrawals</div></div>
+                    <div><div className="text-[#ffd700] text-xl font-black">{selectedUser.wallet?.txCount ?? 0}</div><div className="text-[#606070] text-[10px] uppercase">Transactions</div></div>
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: "Registrations", value: selectedUser.registrationCount ?? 0, color: "text-blue-400" },
+                    { label: "Community Matches", value: selectedUser.matchCount ?? 0, color: "text-[#00b4ff]" },
+                    { label: "Teams", value: selectedUser.teamCount ?? 0, color: "text-purple-400" },
+                  ].map((s) => (
+                    <div key={s.label} className="bg-[#0d0d16] rounded-xl border border-[#1e1e2e] p-3 text-center">
+                      <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
+                      <div className="text-[#606070] text-[10px] uppercase mt-0.5">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Recent transactions */}
+                {selectedUser.recentTransactions?.length > 0 && (
+                  <div>
+                    <div className="text-xs font-black uppercase text-[#a0a0b0] mb-2 tracking-wider">Recent Transactions</div>
+                    <div className="space-y-1.5">
+                      {selectedUser.recentTransactions.slice(0, 5).map((tx: any) => (
+                        <div key={tx.id} className="flex items-center justify-between bg-[#0d0d16] rounded-lg border border-[#1e1e2e] px-3 py-2">
+                          <div>
+                            <span className={`text-xs font-bold uppercase ${tx.type === "deposit" ? "text-[#00ff88]" : "text-orange-400"}`}>{tx.type}</span>
+                            <span className="text-[#4a4a5a] text-xs ml-2">{new Date(tx.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white text-sm font-bold">৳{Number(tx.amount).toLocaleString()}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase ${tx.status === "approved" ? "text-[#00ff88] border-[#00ff88]/30" : tx.status === "pending" ? "text-yellow-400 border-yellow-400/30" : "text-[#ff2244] border-[#ff2244]/30"}`}>{tx.status}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-2 border-t border-[#1e1e2e]">
+                  <button
+                    onClick={() => { toggleBan(selectedUser.clerkId, selectedUser.isBanned); setSelectedUser(null); }}
+                    className={`flex-1 py-2.5 font-bold text-sm uppercase rounded-xl transition-colors border ${selectedUser.isBanned ? "bg-[#00ff88]/10 border-[#00ff88]/30 text-[#00ff88] hover:bg-[#00ff88]/20" : "bg-[#ff2244]/10 border-[#ff2244]/30 text-[#ff2244] hover:bg-[#ff2244]/20"}`}
+                  >
+                    {selectedUser.isBanned ? "Unban User" : "Ban User"}
+                  </button>
+                  <button onClick={() => setSelectedUser(null)} className="px-4 py-2.5 text-sm text-[#a0a0b0] hover:text-white border border-[#2a2a36] rounded-xl transition-colors">Close</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MATCH PLAYERS MODAL */}
+      {(matchPlayersLoading || matchPlayersData) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setMatchPlayersData(null)}>
+          <div className="bg-[#12121a] border border-[#00b4ff]/20 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-[#00b4ff]/10">
+              <h2 className="font-black uppercase text-white flex items-center gap-2"><Users className="w-5 h-5 text-[#00b4ff]" /> Match Players</h2>
+              <button onClick={() => setMatchPlayersData(null)} className="p-1.5 rounded-lg text-[#a0a0b0] hover:text-white hover:bg-[#1e1e2e] transition-colors"><XIcon className="w-4 h-4" /></button>
+            </div>
+            {matchPlayersLoading && !matchPlayersData ? (
+              <div className="p-10 text-center">
+                <RefreshCw className="w-8 h-8 text-[#00b4ff] animate-spin mx-auto mb-3" />
+                <p className="text-[#a0a0b0] text-sm">Loading players…</p>
+              </div>
+            ) : matchPlayersData && (
+              <div className="p-5">
+                <div className="bg-[#0d0d16] rounded-xl border border-[#1e1e2e] p-3 mb-4">
+                  <div className="text-white font-black text-sm">{matchPlayersData.match?.matchType} Match</div>
+                  <div className="text-[#a0a0b0] text-xs mt-0.5">Slots: {matchPlayersData.match?.filledSlots}/{matchPlayersData.match?.maxSlots} · Prize: ৳{Number(matchPlayersData.match?.prizePool ?? 0).toLocaleString()}</div>
+                </div>
+                {matchPlayersData.players.length === 0 ? (
+                  <div className="text-center py-8 text-[#a0a0b0]">
+                    <Users className="w-10 h-10 mx-auto mb-2 opacity-20" />
+                    <p className="text-sm">No players have joined yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-12 gap-2 text-[#606070] text-[10px] uppercase px-1 mb-1">
+                      <div className="col-span-1">#</div>
+                      <div className="col-span-4">Username</div>
+                      <div className="col-span-4">In-Game Name</div>
+                      <div className="col-span-3">UID</div>
+                    </div>
+                    {matchPlayersData.players.map((p: any, idx: number) => (
+                      <div key={p.id} className="grid grid-cols-12 gap-2 items-center bg-[#0d0d16] rounded-lg border border-[#1e1e2e] px-3 py-2.5 text-sm">
+                        <div className="col-span-1 text-[#4a4a5a] font-bold text-xs">{idx + 1}</div>
+                        <div className="col-span-4 text-white font-bold truncate">{p.username}</div>
+                        <div className="col-span-4 text-[#a0a0b0] truncate">{p.inGameName}</div>
+                        <div className="col-span-3 text-[#606070] font-mono text-xs truncate">{p.gameUid}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-4 pt-4 border-t border-[#1e1e2e] flex justify-end">
+                  <button onClick={() => setMatchPlayersData(null)} className="px-4 py-2 text-sm text-[#a0a0b0] hover:text-white border border-[#2a2a36] rounded-xl transition-colors">Close</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3329,6 +3773,117 @@ function SupportSettingsView({ apiFetch, toast }: { apiFetch: any; toast: any })
           </form>
         )}
       </div>
+    </div>
+  );
+}
+
+function GlobalSearchTab({ apiFetch }: { apiFetch: any }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const timeoutRef = useRef<any>(null);
+
+  const doSearch = async (q: string) => {
+    if (!q.trim()) { setResults(null); return; }
+    setLoading(true);
+    try {
+      const res = await apiFetch(`/admin/global-search?q=${encodeURIComponent(q)}`);
+      if (res.ok) setResults(await res.json());
+    } catch {} finally { setLoading(false); }
+  };
+
+  return (
+    <div>
+      <div className="relative mb-6">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#4a4a5a]" />
+        <input
+          value={query}
+          onChange={(e) => {
+            const q = e.target.value;
+            setQuery(q);
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = setTimeout(() => doSearch(q), 400);
+          }}
+          placeholder="Search users, tournaments, community matches…"
+          className="w-full bg-[#0d0d16] border border-[#1e1e2e] rounded-xl pl-12 pr-4 py-3 text-white text-sm placeholder-[#3a3a46] focus:outline-none focus:border-[#ff6b00]/40 transition-colors"
+        />
+        {loading && <RefreshCw className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a0a0b0] animate-spin" />}
+      </div>
+
+      {!results && !loading && (
+        <div className="text-center py-16 text-[#4a4a5a]">
+          <Search className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p className="text-sm">Type at least 2 characters to search</p>
+        </div>
+      )}
+
+      {results && (
+        <div className="space-y-6">
+          {results.users?.length > 0 && (
+            <div>
+              <h3 className="text-xs font-black uppercase text-[#ff6b00] mb-3 tracking-wider flex items-center gap-2"><Users className="w-3.5 h-3.5" /> Users ({results.users.length})</h3>
+              <div className="space-y-2">
+                {results.users.map((u: any) => (
+                  <div key={u.clerkId} className="bg-[#12121a] rounded-xl border border-[#1e1e2e] p-4 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-[#ff6b00]/10 border border-[#ff6b00]/20 flex items-center justify-center text-[#ff6b00] font-black text-sm shrink-0">
+                      {(u.displayName ?? u.username ?? "?")[0]?.toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-white text-sm">{u.displayName ?? u.username}</span>
+                        {u.isAdmin && <span className="text-[10px] font-bold text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/30 px-1.5 py-0.5 rounded">Admin</span>}
+                        {u.isBanned && <span className="text-[10px] font-bold text-[#ff2244] bg-[#ff2244]/10 border border-[#ff2244]/30 px-1.5 py-0.5 rounded">Banned</span>}
+                      </div>
+                      <div className="text-[#a0a0b0] text-xs">{u.email}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {results.tournaments?.length > 0 && (
+            <div>
+              <h3 className="text-xs font-black uppercase text-[#ff6b00] mb-3 tracking-wider flex items-center gap-2"><Trophy className="w-3.5 h-3.5" /> Tournaments ({results.tournaments.length})</h3>
+              <div className="space-y-2">
+                {results.tournaments.map((t: any) => (
+                  <div key={t.id} className="bg-[#12121a] rounded-xl border border-[#1e1e2e] p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-bold text-white text-sm truncate">{t.name}</div>
+                      <div className="text-[#a0a0b0] text-xs">৳{Number(t.prizePool).toLocaleString()} · {new Date(t.startDate).toLocaleDateString()}</div>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-bold uppercase ${t.status === "live" || t.status === "ongoing" ? "text-[#00ff88] border-[#00ff88]/30" : "text-[#a0a0b0] border-[#a0a0b0]/30"}`}>{t.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {results.matches?.length > 0 && (
+            <div>
+              <h3 className="text-xs font-black uppercase text-[#ff6b00] mb-3 tracking-wider flex items-center gap-2"><Swords className="w-3.5 h-3.5" /> Community Matches ({results.matches.length})</h3>
+              <div className="space-y-2">
+                {results.matches.map((m: any) => (
+                  <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#1e1e2e] p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-bold text-white text-sm">{m.matchType} Match</div>
+                      <div className="text-[#a0a0b0] text-xs">By {m.creatorName ?? "Unknown"} · {m.filledSlots}/{m.maxSlots} slots</div>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-bold uppercase ${m.status === "active" ? "text-[#00ff88] border-[#00ff88]/30" : m.status === "pending_approval" ? "text-yellow-400 border-yellow-400/30" : "text-[#a0a0b0] border-[#a0a0b0]/30"}`}>{m.status === "pending_approval" ? "Pending" : m.status}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {results.users?.length === 0 && results.tournaments?.length === 0 && results.matches?.length === 0 && (
+            <div className="text-center py-12 text-[#a0a0b0]">
+              <Search className="w-10 h-10 mx-auto mb-3 opacity-20" />
+              <p className="font-bold">No results for "{query}"</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

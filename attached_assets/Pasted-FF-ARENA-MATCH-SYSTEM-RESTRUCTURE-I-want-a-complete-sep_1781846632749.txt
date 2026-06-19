@@ -1,0 +1,235 @@
+FF ARENA MATCH SYSTEM RESTRUCTURE
+
+I want a complete separation between Admin Tournaments and User Community Matches.
+
+CURRENT PROBLEM:
+Admin-created tournaments and user-created matches are being mixed together. This causes confusion and makes the Tournament section look messy.
+
+REQUIRED STRUCTURE:
+
+====================================================
+SECTION 1: ADMIN TOURNAMENTS
+============================
+
+This section must only show tournaments created by admins.
+
+Create category tabs:
+
+* All Tournaments
+* BR Tournament
+* Clash Squad Tournament
+* Solo Tournament
+* Lone Wolf Tournament
+* Free Match Tournament
+
+Behavior:
+
+* Admin BR tournaments appear in BR Tournament.
+* Admin CS tournaments appear in Clash Squad Tournament.
+* Admin Solo tournaments appear in Solo Tournament.
+* Admin Lone Wolf tournaments appear in Lone Wolf Tournament.
+* Admin Free Match tournaments appear in Free Match Tournament.
+* All Tournament tab shows every admin tournament.
+
+User-created matches must NEVER appear here.
+
+====================================================
+SECTION 2: COMMUNITY MATCHES
+============================
+
+This section is for user-created matches only.
+
+Create filter tabs:
+
+* All
+* BR
+* Clash Squad
+* Solo
+* Lone Wolf
+
+Behavior:
+
+* User BR matches appear in BR tab.
+* User CS matches appear in Clash Squad tab.
+* User Solo matches appear in Solo tab.
+* User Lone Wolf matches appear in Lone Wolf tab.
+* All tab shows every community match.
+
+Admin tournaments must NEVER appear here.
+
+====================================================
+DATABASE STRUCTURE
+==================
+
+Add the following fields:
+
+createdBy:
+
+* admin
+* user
+
+matchCategory:
+
+* tournament
+* community
+
+gameMode:
+
+* br
+* cs
+* solo
+* lonewolf
+* free
+
+Example:
+
+Admin Tournament:
+
+{
+"createdBy": "admin",
+"matchCategory": "tournament",
+"gameMode": "br"
+}
+
+User Community Match:
+
+{
+"createdBy": "user",
+"matchCategory": "community",
+"gameMode": "cs"
+}
+
+====================================================
+MATCH CREATION RULES
+====================
+
+ADMIN:
+
+Admin-created matches:
+
+* go to Tournament System
+* visible in proper tournament category
+* appear in All Tournaments
+
+USER:
+
+User-created matches:
+
+* go to Community System only
+* visible in proper community category
+* appear in Community All tab
+
+User matches must never enter Tournament categories.
+
+====================================================
+UI REQUIREMENTS
+===============
+
+Keep the existing FF Arena design.
+
+Keep:
+
+* Dark theme
+* Orange accents
+* Existing cards
+* Existing animations
+* Existing mobile navigation
+
+Improve:
+
+* Fast category switching
+* Smooth filtering
+* Responsive mobile layout
+* Proper empty states
+* Better loading states
+
+====================================================
+COMMUNITY MATCH CARD
+====================
+
+Show:
+
+* Match Name
+* Mode Badge (BR / CS / SOLO / LONE WOLF)
+* Entry Fee
+* Prize Pool
+* Slots Filled
+* Match Date
+* Created By
+* Join Button
+
+====================================================
+TOURNAMENT CARD
+===============
+
+Show:
+
+* Tournament Name
+* Tournament Mode
+* Entry Fee
+* Prize Pool
+* Slots Filled
+* Match Date
+* Status
+* Join Button
+
+====================================================
+FILTER LOGIC
+============
+
+Tournament Section:
+
+matchCategory === "tournament"
+
+Community Section:
+
+matchCategory === "community"
+
+BR Filter:
+
+gameMode === "br"
+
+CS Filter:
+
+gameMode === "cs"
+
+Solo Filter:
+
+gameMode === "solo"
+
+Lone Wolf Filter:
+
+gameMode === "lonewolf"
+
+====================================================
+MOBILE OPTIMIZATION
+===================
+
+Must be fully mobile responsive.
+
+Requirements:
+
+* No horizontal scrolling
+* Proper spacing
+* Fast loading
+* Touch-friendly tabs
+* Sticky category navigation
+* Smooth card rendering
+* Optimized for Android devices
+
+====================================================
+IMPORTANT
+=========
+
+Do not change existing functionality.
+
+Do not break:
+
+* Wallet
+* Profile
+* Match Creation
+* Join Match
+* Notifications
+* Admin Features
+
+Only restructure and separate Admin Tournaments and User Community Matches into two independent systems while keeping all existing features working.
