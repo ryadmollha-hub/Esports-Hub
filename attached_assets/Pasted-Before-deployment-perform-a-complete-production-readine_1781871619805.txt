@@ -1,0 +1,90 @@
+Before deployment, perform a complete production readiness audit of my website and automatically fix all issues.
+
+Requirements:
+
+1. Project Structure & Build
+- Check all files and folders.
+- Remove unused files, duplicate code, and broken imports.
+- Fix all build errors and warnings.
+- Ensure production build completes successfully without errors.
+- Verify all dependencies are installed correctly.
+- Remove unused packages.
+
+2. Environment Variables
+- Identify all required environment variables.
+- Create proper .env.example file.
+- Prevent application crashes when environment variables are missing.
+- Add validation for required environment variables.
+
+3. Database
+- Check database connection.
+- Verify all tables, schemas, and migrations.
+- Fix database query errors.
+- Ensure database reconnect logic works.
+- Prevent application crashes from database failures.
+
+4. Authentication & Security
+- Verify login, signup, forgot password, and session management.
+- Fix authentication bugs.
+- Protect admin routes.
+- Validate user permissions.
+- Remove security vulnerabilities.
+- Add proper error handling.
+
+5. API & Backend
+- Test all API endpoints.
+- Fix broken routes.
+- Add validation for all requests.
+- Add proper success and error responses.
+- Prevent server crashes from invalid requests.
+
+6. Frontend
+- Check all pages, buttons, forms, modals, and navigation.
+- Fix broken links.
+- Fix responsive design issues.
+- Ensure mobile and desktop compatibility.
+- Fix console errors and warnings.
+
+7. Tournament System
+- Verify all tournament categories work correctly.
+- Ensure BR, CS, LOL, Free Match, and All Tournament sections display correct matches.
+- Fix category filtering issues.
+- Verify match creation, join requests, room ID distribution, and tournament visibility.
+- Ensure admin-created and user-created matches appear in the correct sections.
+
+8. Performance
+- Optimize images.
+- Optimize API calls.
+- Remove unnecessary re-renders.
+- Enable caching where appropriate.
+- Improve page loading speed.
+
+9. Deployment Preparation
+- Generate all deployment-required files.
+- Create production configuration.
+- Verify package.json scripts.
+- Verify build command.
+- Verify start command.
+- Verify hosting compatibility.
+- Check for deployment blockers.
+- Fix all deployment-related bugs.
+
+10. Error Handling
+- Add global error boundaries.
+- Add server error handling.
+- Prevent white-screen crashes.
+- Log errors properly.
+
+11. Final Verification
+- Run a full production build.
+- Run deployment simulation.
+- Fix every detected issue automatically.
+- Provide a detailed report of:
+  - Fixed issues
+  - Remaining issues
+  - Required environment variables
+  - Build command
+  - Start command
+  - Deployment instructions
+
+Do not stop after finding issues. Automatically fix them and then re-test until the application is deployment-ready with zero critical errors.
