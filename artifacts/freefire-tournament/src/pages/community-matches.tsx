@@ -224,6 +224,8 @@ function MatchCard({
             </div>
           ) : hasJoined ? (
             <span className="text-[10px] text-[#a0a0b0] font-bold uppercase">Joined ✓</span>
+          ) : m.credentialsReleased ? (
+            <span className="text-[10px] text-[#ff2244]/70 font-bold uppercase">🔒 Locked</span>
           ) : (
             <button
               onClick={onJoin}
@@ -533,6 +535,31 @@ export default function CommunityMatchesPage() {
                         <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#ff2244]/70">
                           <XCircle className="w-3 h-3 shrink-0" />
                           Your request was rejected.
+                        </div>
+                      )}
+
+                      {/* Leave match — hidden once credentials are live */}
+                      {req.status !== "rejected" && !req.adminRoomId && effStatus !== "ended" && effStatus !== "cancelled" && (
+                        <div className="mt-2 pt-2 border-t border-[#1e1e2e] flex justify-end">
+                          <button
+                            onClick={async () => {
+                              if (!confirm("Leave this match? You will receive a refund if entry fee was charged.")) return;
+                              try {
+                                const r = await authFetch(`/user-matches/${req.matchId}/leave`, { method: "DELETE" });
+                                const d = await r.json();
+                                if (r.ok) {
+                                  toast({ title: d.refunded ? "✅ Left match — refund credited" : "✅ Left match" });
+                                  fetchMyJoins();
+                                  fetchMatches();
+                                } else {
+                                  toast({ title: "Cannot leave", description: d.error, variant: "destructive" });
+                                }
+                              } catch { toast({ title: "Connection error", variant: "destructive" }); }
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase text-[#ff2244] bg-[#ff2244]/5 border border-[#ff2244]/20 rounded-lg hover:bg-[#ff2244]/15 transition-colors"
+                          >
+                            <XCircle className="w-3 h-3" /> Leave Match
+                          </button>
                         </div>
                       )}
                     </div>

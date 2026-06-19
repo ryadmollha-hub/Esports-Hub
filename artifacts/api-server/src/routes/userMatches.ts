@@ -328,6 +328,10 @@ router.post("/user-matches/:id/join", async (req, res) => {
     if (!["waiting", "active", "approved"].includes(effStatus)) {
       return res.status(400).json({ error: "This match is not open for joining." });
     }
+    // Block new joins once room credentials are live (anti-fraud lock)
+    if (isRoomVisible(match)) {
+      return res.status(400).json({ error: "Room credentials are already released — this match is now locked for new entries." });
+    }
     // Temporarily disabled for testing: creators may join their own match
     // if (match.creatorId === userId) return res.status(400).json({ error: "You cannot join your own match." });
     if (match.filledSlots >= match.maxSlots) return res.status(400).json({ error: "This match is full." });
@@ -538,6 +542,55 @@ router.patch("/user-matches/:id/join-requests/:joinId/reject", async (req, res) 
   }
 });
 
+// ─── Player: leave a match (refund if credentials not yet live) ───────────────
+
+router.delete("/user-matches/:id/leave", async (req, res) => {
+  const userId = await requireAuth(req, res);
+  if (!userId) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+
+    // Hard lock: cannot leave once room credentials are live
+    if (isRoomVisible(match)) {
+      return res.status(400).json({ error: "Room credentials have been released — you can no longer leave or request a refund for this match." });
+    }
+
+    const effStatus = effectiveStatus(match);
+    if (effStatus === "ended" || effStatus === "cancelled") {
+      return res.status(400).json({ error: "This match has already ended." });
+    }
+
+    const [join] = await db.select().from(userMatchJoinsTable)
+      .where(and(eq(userMatchJoinsTable.matchId, id), eq(userMatchJoinsTable.userId, userId)))
+      .limit(1);
+    if (!join) return res.status(404).json({ error: "You have not joined this match." });
+
+    // Refund entry fee if the join was accepted
+    const entryFee = parseFloat(match.entryFee);
+    if (entryFee > 0 && join.status === "accepted") {
+      await db.insert(walletTransactionsTable).values({
+        userId,
+        type: "tournament_prize",
+        amount: entryFee.toFixed(2),
+        status: "approved",
+        notes: `Refund: Left ${match.matchName || match.matchType} match #${match.id}`,
+        tournamentId: null,
+      });
+      await db.update(userMatchesTable)
+        .set({ filledSlots: sql`GREATEST(${userMatchesTable.filledSlots} - 1, 0)` })
+        .where(eq(userMatchesTable.id, id));
+    }
+
+    await db.delete(userMatchJoinsTable).where(eq(userMatchJoinsTable.id, join.id));
+    res.json({ success: true, refunded: entryFee > 0 && join.status === "accepted" });
+  } catch (err) {
+    logger.error({ err }, "Failed to leave match");
+    res.status(500).json({ error: "Failed to leave match." });
+  }
+});
+
 // ─── Creator/user: cancel match ───────────────────────────────────────────────
 
 router.delete("/user-matches/:id", async (req, res) => {
@@ -596,8 +649,19 @@ router.patch("/admin/user-matches/:id/room-credentials", async (req, res) => {
       adminRoomId: String(adminRoomId).trim(),
       adminRoomPassword: adminRoomPassword ? String(adminRoomPassword).trim() : null,
     };
-    if (roomReleaseTime) updateData.roomReleaseTime = new Date(roomReleaseTime);
-    if (roomHideTime) updateData.roomHideTime = new Date(roomHideTime);
+    // Use explicit times if provided; otherwise auto-calculate from scheduledAt
+    if (roomReleaseTime) {
+      updateData.roomReleaseTime = new Date(roomReleaseTime);
+    } else if (match.scheduledAt) {
+      // Auto: release 15 minutes before start
+      updateData.roomReleaseTime = new Date(new Date(match.scheduledAt).getTime() - 15 * 60 * 1000);
+    }
+    if (roomHideTime) {
+      updateData.roomHideTime = new Date(roomHideTime);
+    } else if (match.scheduledAt) {
+      // Auto: hide 5 minutes after start
+      updateData.roomHideTime = new Date(new Date(match.scheduledAt).getTime() + 5 * 60 * 1000);
+    }
 
     const [updated] = await db.update(userMatchesTable)
       .set(updateData)

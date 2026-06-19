@@ -303,6 +303,22 @@ router.get("/admin/registrations", async (req, res) => {
   }
 });
 
+router.delete("/admin/registrations/:id", async (req, res) => {
+  try {
+    if (!await requireAdmin(req, res)) return;
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid registration ID." });
+    const [reg] = await db.select().from(registrationsTable).where(eq(registrationsTable.id, id));
+    if (!reg) return res.status(404).json({ error: "Registration not found." });
+    await db.delete(registrationsTable).where(eq(registrationsTable.id, id));
+    const adminId = safeGetUserId(req);
+    await audit("admin.registration.deleted", { userId: adminId, req, details: { registrationId: id, tournamentId: reg.tournamentId } });
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: "Failed to delete registration." });
+  }
+});
+
 router.get("/admin/audit-logs", async (req, res) => {
   try {
     if (!await requireAdmin(req, res)) return;

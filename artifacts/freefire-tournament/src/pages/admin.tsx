@@ -425,6 +425,12 @@ export default function AdminPage() {
     const res = await apiFetch(`/registrations/${id}/reject`, { method: "PATCH" });
     if (res.ok) { toast({ title: "Registration rejected" }); loadRegistrations(); loadStats(); }
   };
+  const deleteReg = async (id: number) => {
+    if (!confirm("Permanently delete this registration? This cannot be undone.")) return;
+    const res = await apiFetch(`/admin/registrations/${id}`, { method: "DELETE" });
+    if (res.ok) { toast({ title: "Registration deleted" }); loadRegistrations(); loadStats(); }
+    else { const d = await res.json().catch(() => ({})); toast({ title: "Error", description: d.error || "Failed to delete.", variant: "destructive" }); }
+  };
 
   // User actions
   const toggleBan = async (id: string, isBanned: boolean) => {
@@ -1751,6 +1757,9 @@ export default function AdminPage() {
                                           </button>
                                         </>
                                       )}
+                                      <button onClick={(e) => { e.stopPropagation(); deleteReg(r.id); }} className="p-1.5 bg-[#ff2244]/5 border border-[#ff2244]/20 rounded-lg text-[#ff2244]/60 hover:bg-[#ff2244]/15 hover:text-[#ff2244] transition-colors" title="Delete registration">
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
                                       <span className="text-[#4a4a5a] text-xs">{isExpanded ? "▲" : "▼"}</span>
                                     </div>
                                   </div>
@@ -2513,7 +2522,22 @@ export default function AdminPage() {
                             </div>
                             <div className="flex flex-col gap-2 sm:flex-row">
                               <div className="flex-1">
-                                <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">Room Opens At <span className="normal-case font-normal">(room visible from)</span></label>
+                                <div className="flex items-center justify-between mb-1">
+                                  <label className="text-[#606070] text-[10px] uppercase font-bold">Room Opens At <span className="normal-case font-normal">(15 min before start)</span></label>
+                                  {m.scheduledAt && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const rel = new Date(new Date(m.scheduledAt).getTime() - 15 * 60 * 1000).toISOString().slice(0, 16);
+                                        const hid = new Date(new Date(m.scheduledAt).getTime() + 5 * 60 * 1000).toISOString().slice(0, 16);
+                                        setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: prev[m.id]?.roomId ?? "", password: prev[m.id]?.password ?? "", roomReleaseTime: rel, roomHideTime: hid } }));
+                                      }}
+                                      className="text-[9px] font-bold text-[#00b4ff] hover:text-[#33c9ff] uppercase transition-colors"
+                                    >
+                                      ⚡ Auto-fill from schedule
+                                    </button>
+                                  )}
+                                </div>
                                 <input
                                   type="datetime-local"
                                   value={roomCredentials[m.id]?.roomReleaseTime ?? (m.roomReleaseTime ? new Date(m.roomReleaseTime).toISOString().slice(0, 16) : "")}
@@ -2522,7 +2546,7 @@ export default function AdminPage() {
                                 />
                               </div>
                               <div className="flex-1">
-                                <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">Room Closes At <span className="normal-case font-normal">(auto-expire)</span></label>
+                                <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">Room Closes At <span className="normal-case font-normal">(5 min after start)</span></label>
                                 <input
                                   type="datetime-local"
                                   value={roomCredentials[m.id]?.roomHideTime ?? (m.roomHideTime ? new Date(m.roomHideTime).toISOString().slice(0, 16) : "")}

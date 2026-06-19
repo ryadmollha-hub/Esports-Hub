@@ -1,0 +1,17 @@
+Please implement the following critical admin controls, UI updates, and strict match-locking/timer logic based on the user's operational needs:
+
+1. Admin Panel - Registration Delete Option & UI Scaling (Image 1 context):
+   - Add a "Delete" action button (trash icon) next to each registered player/team row in the Admin Panel's "Registered Users" section so the admin can manually clear out or disqualify entries to prevent clutter.
+   - Slightly increase the font size and block padding of the user details/information section at the bottom for better readability.
+
+2. Strict Match-Locking Logic (Anti-Fraud for Room Password):
+   - Currently, users can leave a match and request a refund even after the Room ID and Password are leaked/released. This must be blocked instantly.
+   - Lock Status: Once a user joins, and absolutely when the Admin releases the Room ID/Password, completely disable and hide the "Leave Match" / refund option for that user. They cannot back out anymore.
+   - Join Restrictions: As soon as Room Credentials become live, freeze the match registration so no new users can join, even if empty slots are available.
+
+3. Room ID & Password Automatic Visibility & Hiding Timers:
+   - In the Admin Panel, when submitting Room ID and Password, connect them to two automated or configurable timer intervals based on the Match Start Time (`scheduledAt`):
+     * Credential Release Timer: Ensure the Room ID/Password automatically becomes visible to paid users exactly 15 minutes before the scheduled match time (e.g., if the match is at 9:00 PM, it unlocks at 8:45 PM).
+     * Credential Hide/Expiry Timer: Create a logic that automatically HIDES the Room ID and Password from the frontend UI a few minutes after the match starts (e.g., 5 minutes after start time). For example, if the match starts at 9:00 PM, the credentials must completely vanish from the player's screen at 9:05 PM to prevent leaks or late sabotage.
+
+Please update the database validation schemas, API controllers, backend cron/intervals, and frontend React buttons to enforce these security rules.
