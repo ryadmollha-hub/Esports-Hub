@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  ArrowLeft, Lock, Timer, Zap, Clock, ChevronDown, ChevronUp,
-  Swords, Users, Plus, RefreshCw, X, ChevronRight,
+  Lock, Zap, Swords, Users, Plus, RefreshCw, X,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -11,65 +10,26 @@ import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateMatch } from "@/lib/CreateMatchContext";
 
-// ─── Category definitions ────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  {
-    slug: "BR",
-    label: "BR Match",
-    heading: "BR Matches List",
-    sub: "Battle Royale · 48 players per lobby",
-    icon: "🔥",
-    color: "#ff6b00",
-    typeKey: "BR",
-    detail: "Large-scale battle — last squad standing wins the prize pool.",
-  },
-  {
-    slug: "CS",
-    label: "Clash Squad",
-    heading: "Clash Squad List",
-    sub: "CS Mode · 4v4 team battles",
-    icon: "⚔️",
-    color: "#00b4ff",
-    typeKey: "CS",
-    detail: "Round-based squad showdowns. Eliminate the enemy team to win.",
-  },
-  {
-    slug: "SOLO",
-    label: "Solo Survival",
-    heading: "Solo Survival List",
-    sub: "Every player for themselves · 12 slots",
-    icon: "🎯",
-    color: "#ffd700",
-    typeKey: "SOLO",
-    detail: "Pure skill — no teammates. Top performers share the prize.",
-  },
-  {
-    slug: "LONE_WOLF",
-    label: "Lone Wolf",
-    heading: "Lone Wolf List",
-    sub: "1v1 elimination format · 12 slots",
-    icon: "🐺",
-    color: "#a855f7",
-    typeKey: "LONE_WOLF",
-    detail: "Head-to-head duels. Climb the bracket to claim the win.",
-  },
-  {
-    slug: "FREE",
-    label: "Free Match",
-    heading: "Free Match List",
-    sub: "Giveaways & open rooms · 20 slots",
-    icon: "🎁",
-    color: "#00ff88",
-    typeKey: "FREE",
-    detail: "No entry fee — open rooms, fun matches, and free giveaways.",
-  },
+const TABS = [
+  { key: "all",       label: "All",         icon: "⚡", color: "#ff6b00" },
+  { key: "BR",        label: "BR",          icon: "🔥", color: "#ff6b00" },
+  { key: "CS",        label: "Clash Squad", icon: "⚔️", color: "#00b4ff" },
+  { key: "SOLO",      label: "Solo",        icon: "🎯", color: "#ffd700" },
+  { key: "LONE_WOLF", label: "Lone Wolf",   icon: "🐺", color: "#a855f7" },
+  { key: "FREE",      label: "Free Match",  icon: "🎁", color: "#00ff88" },
 ];
 
 const TYPE_LABEL: Record<string, string> = {
   BR: "Battle Royale", CS: "Clash Squad", SOLO: "Solo",
   LONE_WOLF: "Lone Wolf", FREE: "Giveaway",
   "1v1": "1v1", "2v2": "2v2", "3v3": "3v3", "4v4": "4v4",
+};
+
+const TYPE_COLOR: Record<string, string> = {
+  BR: "#ff6b00", CS: "#00b4ff", SOLO: "#ffd700",
+  LONE_WOLF: "#a855f7", FREE: "#00ff88",
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -91,100 +51,167 @@ function getStartsAt(m: any): Date | null {
 
 function fmtSchedule(dt: string | null | undefined): string {
   if (!dt) return "TBA";
-  const d = new Date(dt);
-  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true });
+  return new Date(dt).toLocaleString("en-US", {
+    month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: true,
+  });
 }
 
 function playersForType(t: string): number {
-  const map: Record<string, number> = { "1v1": 1, "2v2": 2, "3v3": 3, "4v4": 4, BR: 1, CS: 4, SOLO: 1, LONE_WOLF: 1, FREE: 1 };
+  const map: Record<string, number> = {
+    "1v1": 1, "2v2": 2, "3v3": 3, "4v4": 4,
+    BR: 1, CS: 4, SOLO: 1, LONE_WOLF: 1, FREE: 1,
+  };
   return map[t] ?? 1;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Match Card ───────────────────────────────────────────────────────────────
 
-function CommunityFeedCard({
+function MatchCard({
   m, myJoin, onJoin,
 }: {
-  m: any; myJoin: any; onJoin: () => void;
+  m: any;
+  myJoin?: { adminRoomId: string | null; adminRoomPassword: string | null; status: string };
+  onJoin: () => void;
 }) {
-  const cat = CATEGORIES.find((c) => c.typeKey === m.matchType);
-  const color = cat?.color ?? "#ff6b00";
-  const effStatus = getEffectiveStatus(m);
-  const isLive = !!m.credentialsReleased;
-  const isFull = m.filledSlots >= m.maxSlots;
-  const isEnded = effStatus === "ended" || effStatus === "cancelled";
-  const slotPct = Math.round((m.filledSlots / m.maxSlots) * 100);
+  const color       = TYPE_COLOR[m.matchType] ?? "#ff6b00";
+  const effStatus   = getEffectiveStatus(m);
+  const isLive      = !!m.credentialsReleased;
+  const isFull      = m.filledSlots >= m.maxSlots;
+  const isEnded     = effStatus === "ended" || effStatus === "cancelled";
+  const startsAt    = getStartsAt(m);
+  const slotPct     = Math.round((m.filledSlots / (m.maxSlots || 1)) * 100);
+  const hasJoined   = !!myJoin;
+  const roomReady   = hasJoined && (myJoin?.adminRoomId || m.roomId);
 
   return (
     <div
-      className={`bg-[#0e0e18] border rounded-xl overflow-hidden transition-all hover:border-opacity-50 ${isEnded ? "opacity-50" : ""}`}
-      style={{ borderColor: `${color}20` }}
+      className={`bg-[#0e0e18] border rounded-2xl overflow-hidden transition-all hover:shadow-lg ${
+        isEnded ? "opacity-50 border-[#1e1e2e]" : "border-[#1e1e2e] hover:border-[#2a2a3a]"
+      }`}
+      style={isLive ? { borderColor: `${color}35`, boxShadow: `0 0 20px ${color}08` } : {}}
     >
-      <div className="h-[2px]" style={{ background: isLive ? "#00ff88" : isEnded ? "#1e1e2e" : color }} />
-      <div className="px-4 py-3">
-        <div className="flex items-center gap-3">
-          {/* Type badge */}
-          <span
-            className="text-[10px] font-black uppercase px-2 py-1 rounded-lg shrink-0 tracking-wide"
-            style={{ background: `${color}15`, color }}
-          >
-            {TYPE_LABEL[m.matchType] ?? m.matchType}
-          </span>
+      {/* Top accent + live bar */}
+      <div className="h-[3px]" style={{ background: `linear-gradient(90deg, ${color}, ${color}20)` }} />
 
-          {/* Info */}
+      <div className="px-4 py-4">
+        {/* Row 1: title + badges */}
+        <div className="flex items-start gap-3 mb-3">
+          {/* Mode icon */}
+          <div
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 border"
+            style={{ background: `${color}10`, borderColor: `${color}20` }}
+          >
+            {TABS.find(t => t.key === m.matchType)?.icon ?? "🎮"}
+          </div>
+
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-              <h3 className="text-sm font-black text-white truncate leading-tight">
+            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+              <span className="text-white font-black text-sm leading-tight truncate">
                 {m.matchName || `${TYPE_LABEL[m.matchType] ?? m.matchType} Match`}
-              </h3>
+              </span>
+
+              {/* Live badge */}
               {isLive && (
                 <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/25 px-1.5 py-0.5 rounded-full shrink-0">
                   <span className="w-1 h-1 rounded-full bg-[#00ff88] animate-pulse" /> LIVE
                 </span>
               )}
+              {/* Full badge */}
+              {isFull && !isEnded && (
+                <span className="text-[9px] font-black uppercase text-[#ff2244] bg-[#ff2244]/10 border border-[#ff2244]/20 px-1.5 py-0.5 rounded-full shrink-0">
+                  FULL
+                </span>
+              )}
+              {/* Mode badge */}
+              <span
+                className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0"
+                style={{ color, background: `${color}10`, borderColor: `${color}25` }}
+              >
+                {m.matchType === "LONE_WOLF" ? "LONE WOLF" : m.matchType}
+              </span>
             </div>
-            <p className="text-[#606070] text-[11px]">
-              by <span className="text-[#a0a0b0] font-bold">{m.creatorName || "Player"}</span>
-              {" · "}
-              {Number(m.entryFee) > 0 ? <span className="text-[#ff6b00]">৳{Number(m.entryFee)} entry</span> : <span className="text-[#00ff88]">Free</span>}
-              {Number(m.prizePool) > 0 && <> · <span className="text-[#ffd700]">৳{Number(m.prizePool).toLocaleString()} prize</span></>}
-              {" · "}{m.filledSlots}/{m.maxSlots} slots
+
+            {/* Creator */}
+            <p className="text-[#606070] text-[10px]">
+              by <span className="text-[#a0a0b0]">{m.creatorName ?? "Player"}</span>
+              {m.isPrivate && (
+                <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] text-yellow-500">
+                  <Lock className="w-2.5 h-2.5" /> Private
+                </span>
+              )}
             </p>
           </div>
+        </div>
 
-          {/* Slot bar (desktop) */}
-          <div className="hidden sm:block w-28 shrink-0">
-            <div className="h-1.5 bg-[#1a1a24] rounded-full overflow-hidden mb-1">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${slotPct}%`,
-                  background: isFull ? "#ff2244" : slotPct > 75 ? "linear-gradient(90deg,#ff9500,#ff2244)" : "linear-gradient(90deg,#00ff88,#00b4ff)",
-                }}
-              />
+        {/* Row 2: stats grid */}
+        <div className="grid grid-cols-3 gap-2 mb-3 text-center">
+          <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5">
+            <div className="text-white font-black text-xs">
+              {Number(m.entryFee) === 0 ? "FREE" : `৳${Number(m.entryFee).toLocaleString()}`}
             </div>
-            <span className="text-[9px] text-[#606070] font-bold">
-              {isFull ? "FULL" : `${m.maxSlots - m.filledSlots} slots left`}
-            </span>
+            <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">Entry</div>
+          </div>
+          <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5">
+            <div className="text-[#ff6b00] font-black text-xs">
+              ৳{Number(m.prizePool).toLocaleString()}
+            </div>
+            <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">Prize</div>
+          </div>
+          <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5">
+            <div className="text-white font-black text-xs flex items-center justify-center gap-1">
+              <Users className="w-2.5 h-2.5 text-[#606070]" />
+              {m.filledSlots}/{m.maxSlots}
+            </div>
+            <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">Slots</div>
+          </div>
+        </div>
+
+        {/* Slot progress bar */}
+        <div className="h-1 bg-[#1a1a24] rounded-full mb-3 overflow-hidden">
+          <div
+            className="h-full rounded-full transition-all"
+            style={{
+              width: `${slotPct}%`,
+              background: isFull ? "#ff2244" : color,
+            }}
+          />
+        </div>
+
+        {/* Row 3: schedule + countdown + join */}
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-[10px] text-[#606070]">
+            {startsAt && !isLive ? (
+              <CountdownTimer targetDate={startsAt} compact />
+            ) : (
+              <span>{fmtSchedule(m.scheduledAt)}</span>
+            )}
           </div>
 
-          {/* Join button */}
+          {/* Action */}
           {isEnded ? (
-            <div className="px-3 py-1.5 rounded-lg bg-[#1a1a24] text-[#606070] text-[10px] font-black uppercase shrink-0">Ended</div>
-          ) : isFull ? (
-            <div className="px-3 py-1.5 rounded-lg bg-[#ff2244]/10 border border-[#ff2244]/20 text-[#ff2244] text-[10px] font-black uppercase shrink-0">Full</div>
-          ) : myJoin ? (
-            <div className="px-3 py-1.5 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 text-[#00ff88] text-[10px] font-black uppercase shrink-0">✓ Joined</div>
+            <span className="text-[10px] text-[#3a3a46] font-bold uppercase">Ended</span>
+          ) : roomReady ? (
+            <div className="text-right">
+              <div className="text-[9px] text-[#00ff88] font-black uppercase mb-0.5">Room Ready</div>
+              <div className="text-[10px] text-white font-mono">
+                {myJoin?.adminRoomId || m.roomId}
+              </div>
+            </div>
+          ) : hasJoined ? (
+            <span className="text-[10px] text-[#a0a0b0] font-bold uppercase">Joined ✓</span>
           ) : (
             <button
               onClick={onJoin}
-              className="px-4 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all hover:brightness-110 active:scale-95 shrink-0"
+              disabled={isFull}
+              className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-black uppercase rounded-xl transition-all hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
               style={{
                 background: isLive ? "#00ff88" : color,
                 color: isLive || color === "#ffd700" || color === "#00ff88" ? "#000" : "#fff",
+                boxShadow: `0 4px 14px ${color}33`,
               }}
             >
-              {isLive ? "⚡ Join" : "Join →"}
+              {isLive ? <><Zap className="w-3.5 h-3.5" /> Join Live</> : "JOIN →"}
             </button>
           )}
         </div>
@@ -193,120 +220,29 @@ function CommunityFeedCard({
   );
 }
 
-function StatCell({ label, value, valueClass = "text-white" }: { label: string; value: string; valueClass?: string }) {
-  return (
-    <div className="flex flex-col items-center min-w-[60px]">
-      <span className={`text-sm font-black leading-tight ${valueClass}`}>{value}</span>
-      <span className="text-[9px] font-bold uppercase text-[#3a3a46] mt-0.5 tracking-wider">{label}</span>
-    </div>
-  );
-}
-
-function StatusBadge({ isLive, isEnded }: { isLive: boolean; isEnded: boolean }) {
-  if (isLive) return (
-    <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/25 px-2 py-0.5 rounded-full">
-      <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" /> LIVE
-    </span>
-  );
-  if (isEnded) return (
-    <span className="text-[9px] font-black uppercase text-[#606070] bg-[#1a1a24] border border-[#2a2a36] px-2 py-0.5 rounded-full">ENDED</span>
-  );
-  return (
-    <span className="text-[9px] font-black uppercase text-[#a0a0b0] bg-[#1a1a24] border border-[#2a2a36] px-2 py-0.5 rounded-full">UPCOMING</span>
-  );
-}
-
-function PasswordBadge() {
-  return (
-    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-yellow-400 border border-yellow-500/20 px-1.5 py-0.5 rounded-full bg-yellow-500/8">
-      <Lock className="w-2.5 h-2.5" /> Protected
-    </span>
-  );
-}
-
-function SlotBar({ slotPct, filledSlots, maxSlots, isFull }: { slotPct: number; filledSlots: number; maxSlots: number; isFull: boolean }) {
-  return (
-    <div>
-      <div className="h-2 bg-[#1a1a24] rounded-full overflow-hidden mb-1">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${slotPct}%`,
-            background: isFull
-              ? "#ff2244"
-              : slotPct > 75
-              ? "linear-gradient(90deg,#ff9500,#ff2244)"
-              : "linear-gradient(90deg,#00ff88,#00b4ff)",
-          }}
-        />
-      </div>
-      <div className="flex justify-between">
-        <span className="text-[9px] text-[#606070] font-bold flex items-center gap-0.5">
-          <Users className="w-2.5 h-2.5" /> {filledSlots}/{maxSlots}
-        </span>
-        <span className={`text-[9px] font-black ${isFull ? "text-[#ff2244]" : "text-[#00ff88]"}`}>
-          {isFull ? "FULL" : `${maxSlots - filledSlots} left`}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function JoinButton({
-  m, isLive, isEnded, isFull, myJoin, color, onJoin,
-}: {
-  m: any; isLive: boolean; isEnded: boolean; isFull: boolean;
-  myJoin: any; color: string; onJoin: () => void;
-}) {
-  if (isEnded) return (
-    <div className="px-4 py-2 rounded-xl bg-[#1a1a24] text-[#606070] text-[10px] font-black uppercase text-center whitespace-nowrap">Ended</div>
-  );
-  if (isFull) return (
-    <div className="px-4 py-2 rounded-xl bg-[#ff2244]/10 border border-[#ff2244]/20 text-[#ff2244] text-[10px] font-black uppercase text-center whitespace-nowrap">Full</div>
-  );
-  if (myJoin) return (
-    <div className="px-4 py-2 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 text-[#00ff88] text-[10px] font-black uppercase text-center whitespace-nowrap">✓ Joined</div>
-  );
-  return (
-    <button
-      onClick={onJoin}
-      className="flex items-center gap-1.5 px-5 py-2 text-[11px] font-black uppercase rounded-xl transition-all hover:brightness-110 active:scale-95 whitespace-nowrap"
-      style={{
-        background: isLive ? "#00ff88" : color,
-        color: isLive || color === "#ffd700" || color === "#00ff88" ? "#000" : "#fff",
-        boxShadow: `0 4px 16px ${isLive ? "rgba(0,255,136,.2)" : `${color}33`}`,
-      }}
-    >
-      {isLive ? <><Zap className="w-3.5 h-3.5" /> Join Live</> : "JOIN →"}
-    </button>
-  );
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CommunityMatchesPage() {
   const { user, authFetch } = useAuthContext();
-  const { toast } = useToast();
+  const { toast }           = useToast();
   const { openCreateMatch } = useCreateMatch();
 
-  // ── View state ──
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const activeMeta = CATEGORIES.find((c) => c.slug === activeCategory) ?? null;
+  // ── Tab ──
+  const [activeTab, setActiveTab] = useState("all");
 
   // ── Match data ──
   const [allMatches, setAllMatches] = useState<any[]>([]);
-  const [countMap, setCountMap] = useState<Record<string, number>>({});
-  const [liveMap, setLiveMap] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(false);
-  const [myJoinMap, setMyJoinMap] = useState<Record<number, { adminRoomId: string | null; adminRoomPassword: string | null; status: string }>>({});
-  const [expandedCredentials, setExpandedCredentials] = useState<Record<number, boolean>>({});
+  const [loading, setLoading]       = useState(false);
+  const [myJoinMap, setMyJoinMap]   = useState<Record<number, {
+    adminRoomId: string | null; adminRoomPassword: string | null; status: string;
+  }>>({});
 
   // ── Join modal ──
-  const [joinMatch, setJoinMatch] = useState<any>(null);
+  const [joinMatch, setJoinMatch]     = useState<any>(null);
   const [joinPlayers, setJoinPlayers] = useState<{ name: string; uid: string }[]>([{ name: "", uid: "" }]);
   const [joinPassword, setJoinPassword] = useState("");
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [joining, setJoining] = useState(false);
+  const [joining, setJoining]         = useState(false);
 
   // tick for countdown
   const [, setTick] = useState(0);
@@ -322,14 +258,6 @@ export default function CommunityMatchesPage() {
       .then((d) => {
         const all = Array.isArray(d) ? d : [];
         setAllMatches(all);
-        const cm: Record<string, number> = {};
-        const lm: Record<string, number> = {};
-        for (const cat of CATEGORIES) {
-          cm[cat.typeKey] = all.filter((m) => m.matchType === cat.typeKey && m.creatorId === "admin").length;
-          lm[cat.typeKey] = all.filter((m) => m.matchType === cat.typeKey && m.creatorId === "admin" && !!m.credentialsReleased).length;
-        }
-        setCountMap(cm);
-        setLiveMap(lm);
       })
       .catch(() => setAllMatches([]))
       .finally(() => setLoading(false));
@@ -366,30 +294,30 @@ export default function CommunityMatchesPage() {
   useEffect(() => {
     if (user && joinMatch && Number(joinMatch.entryFee) > 0) {
       authFetch("/wallet/balance")
-        .then((r) => r.ok ? r.json() : null)
+        .then((r) => (r.ok ? r.json() : null))
         .then((d) => d && setWalletBalance(d.balance ?? 0))
         .catch(() => {});
     }
   }, [user, joinMatch]);
 
-  // Admin-only matches for category view (premium format pages)
-  const matches = activeMeta
-    ? allMatches.filter((m) => m.matchType === activeMeta.typeKey && m.creatorId === "admin")
-    : [];
-
-  // User-created matches for the community feed (shown below the category grid)
-  const communityFeedMatches = allMatches.filter(
+  // Community matches = user-created only (never admin)
+  const communityMatches = allMatches.filter(
     (m) => m.creatorId !== "admin" && m.status !== "cancelled"
   );
+
+  // Apply tab filter
+  const filtered =
+    activeTab === "all"
+      ? communityMatches
+      : communityMatches.filter((m) => m.matchType === activeTab);
 
   const openJoin = (m: any) => {
     if (!user) {
       toast({ title: "Sign in required", description: "Please sign in to join a match.", variant: "destructive" });
       return;
     }
-    const count = playersForType(m.matchType);
     setJoinMatch(m);
-    setJoinPlayers(Array.from({ length: count }, () => ({ name: "", uid: "" })));
+    setJoinPlayers(Array.from({ length: playersForType(m.matchType) }, () => ({ name: "", uid: "" })));
     setJoinPassword("");
     setWalletBalance(null);
   };
@@ -437,430 +365,132 @@ export default function CommunityMatchesPage() {
     (joinMatch?.isPasswordProtected && !joinPassword.trim()) ||
     (walletBalance !== null && Number(joinMatch?.entryFee ?? 0) > 0 && walletBalance < Number(joinMatch?.entryFee ?? 0));
 
+  const activeTabMeta = TABS.find((t) => t.key === activeTab)!;
+
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
       <div className="max-w-6xl mx-auto px-4 pt-16 pb-24">
+        <div className="mt-4">
 
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* VIEW 1 — Category Selection Screen (activeCategory === null)       */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {activeCategory === null && (
-          <div className="mt-6">
-
-            {/* Header row */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-              <div>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ff6b00]/10 border border-[#ff6b00]/20 text-[#ff6b00] text-[10px] font-black uppercase tracking-widest mb-3">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse" />
-                  Player Created
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight leading-tight">
-                  Community <span className="text-[#ff6b00]">Matches</span>
-                </h1>
-                <p className="text-[#606070] text-sm mt-2 font-medium">
-                  Browse by format — pick a category to see available rooms
-                </p>
+          {/* ── Page header ── */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ff6b00]/10 border border-[#ff6b00]/20 text-[#ff6b00] text-[10px] font-black uppercase tracking-widest mb-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse" />
+                Player Created
               </div>
-
-              {/* Create button */}
-              {user ? (
-                <button
-                  onClick={openCreateMatch}
-                  className="flex items-center gap-2 px-5 py-3 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black uppercase text-sm rounded-xl transition-all shadow-[0_4px_20px_rgba(255,107,0,0.35)] hover:shadow-[0_6px_28px_rgba(255,107,0,0.45)] hover:-translate-y-0.5 active:translate-y-0 shrink-0"
-                >
-                  <Plus className="w-4 h-4" /> Create a Match
-                </button>
-              ) : (
-                <Link href="/sign-in">
-                  <button className="flex items-center gap-2 px-5 py-3 bg-[#141420] hover:bg-[#1e1e2e] border border-[#ff6b00]/40 hover:border-[#ff6b00]/70 text-[#ff6b00] font-black uppercase text-sm rounded-xl transition-all shrink-0">
-                    <Plus className="w-4 h-4" /> Sign in to Create
-                  </button>
-                </Link>
-              )}
+              <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight leading-tight">
+                Community <span className="text-[#ff6b00]">Matches</span>
+              </h1>
+              <p className="text-[#606070] text-sm mt-1">
+                Rooms created by players — join or create your own
+              </p>
             </div>
 
-            {/* Divider */}
-            <div className="h-px bg-gradient-to-r from-transparent via-[#ff6b00]/20 to-transparent mb-8" />
+            {/* Create button */}
+            {user ? (
+              <button
+                onClick={openCreateMatch}
+                className="flex items-center gap-2 px-5 py-3 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black uppercase text-sm rounded-xl transition-all shadow-[0_4px_20px_rgba(255,107,0,0.35)] hover:shadow-[0_6px_28px_rgba(255,107,0,0.45)] hover:-translate-y-0.5 active:translate-y-0 shrink-0"
+              >
+                <Plus className="w-4 h-4" /> Create a Match
+              </button>
+            ) : (
+              <Link href="/sign-in">
+                <button className="flex items-center gap-2 px-5 py-3 bg-[#141420] hover:bg-[#1e1e2e] border border-[#ff6b00]/40 hover:border-[#ff6b00]/70 text-[#ff6b00] font-black uppercase text-sm rounded-xl transition-all shrink-0">
+                  <Plus className="w-4 h-4" /> Sign in to Create
+                </button>
+              </Link>
+            )}
+          </div>
 
-            {/* Category grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {CATEGORIES.map((cat) => {
-                const count = countMap[cat.typeKey] ?? 0;
-                const live = liveMap[cat.typeKey] ?? 0;
-
+          {/* ── Filter tabs (sticky) ── */}
+          <div className="sticky top-0 z-20 bg-[#0a0a0f] -mx-4 px-4 pt-1 pb-3 border-b border-[#12121a] mb-5">
+            <div className="flex gap-2 overflow-x-auto scrollbar-none">
+              {TABS.map((tab) => {
+                const cnt = tab.key === "all"
+                  ? communityMatches.length
+                  : communityMatches.filter((m) => m.matchType === tab.key).length;
                 return (
                   <button
-                    key={cat.slug}
-                    onClick={() => setActiveCategory(cat.slug)}
-                    className="group relative w-full text-left rounded-2xl overflow-hidden border transition-all duration-200 hover:-translate-y-1 active:translate-y-0 focus:outline-none"
-                    style={{
-                      background: "#0e0e18",
-                      borderColor: `${cat.color}30`,
-                    }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.borderColor = `${cat.color}70`;
-                      (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 8px 32px ${cat.color}12`;
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLButtonElement).style.borderColor = `${cat.color}30`;
-                      (e.currentTarget as HTMLButtonElement).style.boxShadow = "none";
-                    }}
+                    key={tab.key}
+                    onClick={() => setActiveTab(tab.key)}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase whitespace-nowrap transition-all flex-shrink-0 ${
+                      activeTab === tab.key
+                        ? "bg-[#ff6b00] text-white shadow-[0_4px_16px_rgba(255,107,0,0.35)]"
+                        : "bg-[#12121a] border border-[#2a2a36] text-[#a0a0b0] hover:text-white hover:border-[#3a3a46]"
+                    }`}
                   >
-                    {/* Top accent line */}
-                    <div
-                      className="h-[3px] w-full"
-                      style={{ background: `linear-gradient(90deg, ${cat.color}, ${cat.color}40)` }}
-                    />
-
-                    <div className="px-6 py-5 flex items-center gap-5">
-                      {/* Icon */}
-                      <div
-                        className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shrink-0 border"
-                        style={{ background: `${cat.color}10`, borderColor: `${cat.color}25` }}
+                    <span>{tab.icon}</span>
+                    {tab.label}
+                    {cnt > 0 && (
+                      <span
+                        className={`ml-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                          activeTab === tab.key
+                            ? "bg-white/20 text-white"
+                            : "bg-[#1e1e2e] text-[#606070]"
+                        }`}
                       >
-                        {cat.icon}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h2 className="text-lg font-black uppercase tracking-tight" style={{ color: cat.color }}>
-                            {cat.label}
-                          </h2>
-                          {live > 0 && (
-                            <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/25 px-1.5 py-0.5 rounded-full">
-                              <span className="w-1 h-1 rounded-full bg-[#00ff88] animate-pulse" /> {live} LIVE
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[#606070] text-[12px] leading-snug mb-2">{cat.sub}</p>
-                        <p className="text-[#3a3a46] text-[11px] leading-snug">{cat.detail}</p>
-                      </div>
-
-                      {/* Count + chevron */}
-                      <div className="shrink-0 flex flex-col items-end gap-1 pl-2">
-                        {loading ? (
-                          <div className="w-8 h-5 bg-[#1a1a24] rounded animate-pulse" />
-                        ) : (
-                          <span className="text-2xl font-black" style={{ color: count > 0 ? cat.color : "#2a2a36" }}>
-                            {count}
-                          </span>
-                        )}
-                        <span className="text-[9px] text-[#3a3a46] uppercase font-bold tracking-wider">
-                          {loading ? "" : count === 1 ? "match" : "matches"}
-                        </span>
-                        <ChevronRight
-                          className="w-5 h-5 mt-1 group-hover:translate-x-1 transition-transform duration-200"
-                          style={{ color: cat.color }}
-                        />
-                      </div>
-                    </div>
+                        {cnt}
+                      </span>
+                    )}
                   </button>
                 );
               })}
-            </div>
 
-            {/* Refresh */}
-            <div className="flex justify-center mt-6">
               <button
                 onClick={fetchMatches}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#0e0e18] border border-[#1e1e2e] hover:border-[#2a2a36] rounded-xl text-[#606070] hover:text-[#a0a0b0] transition-all text-xs font-bold uppercase"
+                className="ml-auto flex items-center gap-1.5 px-3 py-2 bg-[#12121a] border border-[#2a2a36] hover:border-[#3a3a46] rounded-xl text-[#606070] hover:text-[#a0a0b0] transition-all flex-shrink-0"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh Counts
+                <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
               </button>
             </div>
+          </div>
 
-            {/* ── Community Feed ── */}
-            <div className="mt-12">
-              {/* Section header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
-                <div>
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] text-[10px] font-black uppercase tracking-widest mb-2">
-                    <Swords className="w-3 h-3" /> Player Created
-                  </div>
-                  <h2 className="text-xl font-black uppercase tracking-tight text-white">
-                    Community <span className="text-[#a0a0b0]">Feed</span>
-                  </h2>
-                  <p className="text-[#606070] text-xs mt-1">Rooms created by fellow players — join or create your own</p>
-                </div>
-                {user ? (
-                  <button
-                    onClick={openCreateMatch}
-                    className="flex items-center gap-2 px-4 py-2.5 bg-[#141420] hover:bg-[#1e1e2e] border border-[#ff6b00]/30 hover:border-[#ff6b00]/60 text-[#ff6b00] font-black uppercase text-xs rounded-xl transition-all shrink-0"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Create a Match
-                  </button>
-                ) : (
-                  <Link href="/sign-in">
-                    <button className="flex items-center gap-2 px-4 py-2.5 bg-[#141420] border border-[#ff6b00]/30 text-[#ff6b00] font-black uppercase text-xs rounded-xl shrink-0">
-                      <Plus className="w-3.5 h-3.5" /> Sign in to Create
-                    </button>
-                  </Link>
-                )}
-              </div>
-
-              <div className="h-px bg-gradient-to-r from-transparent via-[#2a2a36] to-transparent mb-5" />
-
-              {loading ? (
-                <div className="space-y-2">
-                  {[1, 2, 3].map((i) => <div key={i} className="h-14 bg-[#12121a] rounded-xl animate-pulse" />)}
-                </div>
-              ) : communityFeedMatches.length === 0 ? (
-                <div className="text-center py-10 border border-dashed border-[#1e1e2e] rounded-2xl">
-                  <Swords className="w-8 h-8 mx-auto mb-3 text-[#2a2a36]" />
-                  <p className="text-[#606070] text-sm font-bold">No player-created matches yet</p>
-                  <p className="text-[#3a3a46] text-xs mt-1">Be the first — create a room and invite friends!</p>
-                  {user && (
-                    <button
-                      onClick={openCreateMatch}
-                      className="inline-flex items-center gap-2 px-4 py-2 mt-4 bg-[#ff6b00] text-white text-xs font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors"
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Create First Match
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {communityFeedMatches.map((m: any) => (
-                    <CommunityFeedCard
-                      key={m.id}
-                      m={m}
-                      myJoin={myJoinMap[m.id]}
-                      onJoin={() => openJoin(m)}
-                    />
-                  ))}
-                </div>
+          {/* ── Match list ── */}
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-44 bg-[#12121a] rounded-2xl animate-pulse" />
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="text-center py-16 border border-dashed border-[#1e1e2e] rounded-2xl">
+              <div className="text-5xl mb-4 opacity-20">{activeTabMeta.icon}</div>
+              <p className="text-[#606070] text-sm font-bold">
+                {activeTab === "all"
+                  ? "No community matches yet"
+                  : `No ${activeTabMeta.label} matches yet`}
+              </p>
+              <p className="text-[#3a3a46] text-xs mt-1">
+                Be the first — create a room and invite friends!
+              </p>
+              {user && (
+                <button
+                  onClick={openCreateMatch}
+                  className="inline-flex items-center gap-2 px-4 py-2 mt-5 bg-[#ff6b00] text-white text-xs font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Create First Match
+                </button>
               )}
             </div>
-          </div>
-        )}
-
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {/* VIEW 2 — Match List Screen (activeCategory !== null)               */}
-        {/* ═══════════════════════════════════════════════════════════════════ */}
-        {activeCategory !== null && activeMeta && (
-          <div className="mt-6">
-
-            {/* Back button + heading row */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setActiveCategory(null)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#0e0e18] border border-[#2a2a36] hover:border-[#ff6b00]/40 rounded-xl text-[#a0a0b0] hover:text-white transition-all text-sm font-black uppercase shrink-0"
-                >
-                  <ArrowLeft className="w-4 h-4" /> Back to Formats
-                </button>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tight" style={{ color: activeMeta.color }}>
-                    {activeMeta.heading}
-                  </h1>
-                  <p className="text-[#606070] text-xs mt-0.5">{activeMeta.sub}</p>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={fetchMatches}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-[#0e0e18] border border-[#2a2a36] hover:border-[#3a3a46] rounded-xl text-[#606070] hover:text-[#a0a0b0] transition-colors text-xs font-bold uppercase"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Refresh
-                </button>
-                {user ? (
-                  <button
-                    onClick={openCreateMatch}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase transition-all"
-                    style={{
-                      background: activeMeta.color,
-                      color: activeMeta.color === "#ffd700" || activeMeta.color === "#00ff88" ? "#000" : "#fff",
-                    }}
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Create
-                  </button>
-                ) : (
-                  <Link href="/sign-in">
-                    <button className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase bg-[#0e0e18] border border-[#ff6b00]/30 text-[#ff6b00] transition-all">
-                      <Plus className="w-3.5 h-3.5" /> Sign in
-                    </button>
-                  </Link>
-                )}
-              </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {filtered.map((m: any) => (
+                <MatchCard
+                  key={m.id}
+                  m={m}
+                  myJoin={myJoinMap[m.id]}
+                  onJoin={() => openJoin(m)}
+                />
+              ))}
             </div>
+          )}
 
-            {/* Divider with accent */}
-            <div
-              className="h-px mb-6"
-              style={{ background: `linear-gradient(90deg, ${activeMeta.color}40, transparent)` }}
-            />
-
-            {/* Column headers (desktop) */}
-            {!loading && matches.length > 0 && (
-              <div className="hidden md:grid grid-cols-[1fr_80px_80px_80px_80px_160px_120px] gap-4 px-5 py-2 mb-1">
-                <span className="text-[9px] font-black uppercase text-[#3a3a46] tracking-wider">Match</span>
-                <span className="text-[9px] font-black uppercase text-[#3a3a46] tracking-wider text-center">WIN PRIZE</span>
-                <span className="text-[9px] font-black uppercase text-[#3a3a46] tracking-wider text-center">ENTRY FEE</span>
-                <span className="text-[9px] font-black uppercase text-[#3a3a46] tracking-wider text-center">PER KILL</span>
-                <span className="text-[9px] font-black uppercase text-[#3a3a46] tracking-wider text-center">MAP</span>
-                <span className="text-[9px] font-black uppercase text-[#3a3a46] tracking-wider">SLOTS</span>
-                <span className="text-[9px] font-black uppercase text-[#3a3a46] tracking-wider text-right" />
-              </div>
-            )}
-
-            {/* Match rows */}
-            {loading ? (
-              <div className="space-y-2">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-20 bg-[#12121a] rounded-2xl animate-pulse" />
-                ))}
-              </div>
-            ) : matches.length === 0 ? (
-              <div className="text-center py-20 border border-dashed border-[#1e1e2e] rounded-2xl">
-                <div className="text-6xl mb-4 opacity-40">{activeMeta.icon}</div>
-                <h3 className="text-lg font-bold text-white mb-2">No {activeMeta.label} matches scheduled yet</h3>
-                <p className="text-[#606070] text-sm">Check back soon — admin-curated matches will appear here.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {matches.map((m: any) => {
-                  const effStatus = getEffectiveStatus(m);
-                  const isLive = !!m.credentialsReleased;
-                  const isFull = m.filledSlots >= m.maxSlots;
-                  const startsAt = getStartsAt(m);
-                  const isTimerOn = !!m.timerStartedAt && !isLive;
-                  const isEnded = effStatus === "ended" || effStatus === "cancelled";
-                  const myJoin = myJoinMap[m.id];
-                  const hasCredentials = !!myJoin && !!myJoin.adminRoomId;
-                  const credsExpanded = !!expandedCredentials[m.id];
-                  const slotPct = Math.round((m.filledSlots / m.maxSlots) * 100);
-
-                  return (
-                    <div
-                      key={m.id}
-                      className={`bg-[#0e0e18] border rounded-2xl overflow-hidden transition-all ${
-                        isLive
-                          ? "border-[#00ff88]/25 shadow-[0_0_24px_rgba(0,255,136,0.05)]"
-                          : "border-[#1e1e2e] hover:border-[#2a2a36]"
-                      } ${isEnded ? "opacity-55" : ""}`}
-                    >
-                      {/* Top accent line */}
-                      <div
-                        className="h-[2px] w-full"
-                        style={{ background: isLive ? "#00ff88" : isEnded ? "#1e1e2e" : activeMeta.color }}
-                      />
-
-                      {/* Main row */}
-                      <div className="px-5 py-4">
-                        {/* Mobile: stacked */}
-                        <div className="md:hidden space-y-3">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                                <StatusBadge isLive={isLive} isEnded={isEnded} />
-                                {m.isPasswordProtected && <PasswordBadge />}
-                              </div>
-                              <h3 className="text-sm font-black text-white truncate">
-                                {m.matchName || `${TYPE_LABEL[m.matchType] ?? m.matchType} Match`}
-                              </h3>
-                              <p className="text-[#606070] text-[11px] mt-0.5">
-                                by {m.creatorName || "Player"} · {fmtSchedule(m.scheduledAt)}
-                              </p>
-                            </div>
-                            <JoinButton m={m} isLive={isLive} isEnded={isEnded} isFull={isFull} myJoin={myJoin} color={activeMeta.color} onJoin={() => openJoin(m)} />
-                          </div>
-                          <div className="grid grid-cols-4 gap-2">
-                            <StatCell label="WIN PRIZE" value={Number(m.prizePool) > 0 ? `৳${Number(m.prizePool).toLocaleString()}` : "—"} valueClass="text-[#ffd700]" />
-                            <StatCell label="ENTRY FEE" value={Number(m.entryFee) > 0 ? `৳${Number(m.entryFee)}` : "Free"} valueClass={Number(m.entryFee) > 0 ? "text-[#ff6b00]" : "text-[#00ff88]"} />
-                            <StatCell label="PER KILL" value={m.perKill && Number(m.perKill) > 0 ? `৳${Number(m.perKill)}` : "—"} />
-                            <StatCell label="MAP" value={m.mapName || "—"} />
-                          </div>
-                          <SlotBar slotPct={slotPct} filledSlots={m.filledSlots} maxSlots={m.maxSlots} isFull={isFull} />
-                        </div>
-
-                        {/* Desktop: single-line grid */}
-                        <div className="hidden md:grid grid-cols-[1fr_80px_80px_80px_80px_160px_120px] gap-4 items-center">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
-                              <StatusBadge isLive={isLive} isEnded={isEnded} />
-                              {m.isPasswordProtected && <PasswordBadge />}
-                              {isTimerOn && startsAt && (
-                                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-[#ff6b00] bg-[#ff6b00]/8 border border-[#ff6b00]/20 px-1.5 py-0.5 rounded-full">
-                                  <Timer className="w-2.5 h-2.5" />
-                                  <CountdownTimer targetDate={startsAt} className="text-[9px] font-black text-[#ff6b00]" />
-                                </span>
-                              )}
-                            </div>
-                            <h3 className="text-sm font-black text-white truncate leading-tight">
-                              {m.matchName || `${TYPE_LABEL[m.matchType] ?? m.matchType} Match`}
-                            </h3>
-                            <p className="text-[#3a3a46] text-[10px] mt-0.5">
-                              by {m.creatorName || "Player"} · {fmtSchedule(m.scheduledAt)}
-                            </p>
-                          </div>
-                          <StatCell label="WIN PRIZE" value={Number(m.prizePool) > 0 ? `৳${Number(m.prizePool).toLocaleString()}` : "—"} valueClass="text-[#ffd700]" />
-                          <StatCell label="ENTRY FEE" value={Number(m.entryFee) > 0 ? `৳${Number(m.entryFee)}` : "Free"} valueClass={Number(m.entryFee) > 0 ? "text-[#ff6b00]" : "text-[#00ff88]"} />
-                          <StatCell label="PER KILL" value={m.perKill && Number(m.perKill) > 0 ? `৳${Number(m.perKill)}` : "—"} />
-                          <StatCell label="MAP" value={m.mapName || "—"} />
-                          <div>
-                            <SlotBar slotPct={slotPct} filledSlots={m.filledSlots} maxSlots={m.maxSlots} isFull={isFull} />
-                          </div>
-                          <div className="flex justify-end">
-                            <JoinButton m={m} isLive={isLive} isEnded={isEnded} isFull={isFull} myJoin={myJoin} color={activeMeta.color} onJoin={() => openJoin(m)} />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Room credentials accordion */}
-                      {(hasCredentials || myJoin) && (
-                        <div className="border-t border-[#1a1a24]">
-                          {hasCredentials ? (
-                            <>
-                              <button
-                                onClick={() => setExpandedCredentials((prev) => ({ ...prev, [m.id]: !prev[m.id] }))}
-                                className="w-full flex items-center justify-between gap-2 px-5 py-2.5 hover:bg-[#00ff88]/5 transition-colors"
-                              >
-                                <span className="flex items-center gap-1.5 text-[#00ff88] text-[10px] font-black uppercase">
-                                  🔑 Room Details — tap to reveal
-                                </span>
-                                {credsExpanded
-                                  ? <ChevronUp className="w-3.5 h-3.5 text-[#00ff88]" />
-                                  : <ChevronDown className="w-3.5 h-3.5 text-[#00ff88]" />
-                                }
-                              </button>
-                              {credsExpanded && (
-                                <div className="px-5 pb-4 flex flex-wrap gap-4">
-                                  <div className="flex items-center gap-3 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5">
-                                    <span className="text-[#606070] text-xs font-bold shrink-0">Room ID</span>
-                                    <span className="text-white font-black font-mono text-sm select-all">{myJoin?.adminRoomId}</span>
-                                  </div>
-                                  {myJoin?.adminRoomPassword && (
-                                    <div className="flex items-center gap-3 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5">
-                                      <span className="text-[#606070] text-xs font-bold shrink-0">Password</span>
-                                      <span className="text-white font-black font-mono text-sm select-all">{myJoin.adminRoomPassword}</span>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="flex items-center gap-2 px-5 py-2.5">
-                              <Clock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                              <span className="text-blue-400 text-[10px] font-bold">
-                                Room credentials will unlock 10 minutes before the match — for joined players only.
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
+        </div>
       </div>
       <Footer />
 

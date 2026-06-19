@@ -21,6 +21,7 @@ export const tournamentsTable = pgTable("tournaments", {
   countdownTo: timestamp("countdown_to"),
   winnerId: text("winner_id"),
   winnerName: text("winner_name"),
+  gameMode: text("game_mode"), // BR | CS | SOLO | LONE_WOLF | FREE (null = uncategorised)
   autoWinner: boolean("auto_winner").notNull().default(false),
   resultsPublished: boolean("results_published").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),

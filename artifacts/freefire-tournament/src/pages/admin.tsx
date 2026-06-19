@@ -76,7 +76,7 @@ export default function AdminPage() {
   const [resultMode, setResultMode] = useState<Record<number, "winner" | "results">>({}); // toggle between winner-select and results-entry
 
   // Tournament form
-  const [tForm, setTForm] = useState({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" });
+  const [tForm, setTForm] = useState({ name: "", description: "", mode: "squad", gameMode: "", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" });
   const [editingTournament, setEditingTournament] = useState<any>(null);
   const [showTForm, setShowTForm] = useState(false);
 
@@ -287,6 +287,7 @@ export default function AdminPage() {
         method,
         body: JSON.stringify({
           name: tForm.name, description: tForm.description, mode: tForm.mode,
+          gameMode: tForm.gameMode || undefined,
           startDate: tForm.startDate, endDate: tForm.endDate || undefined,
           maxSlots: parseInt(tForm.maxSlots), prizePool,
           entryFee: parseFloat(tForm.entryFee),
@@ -299,7 +300,7 @@ export default function AdminPage() {
       if (res.ok) {
         toast({ title: editingTournament ? "Tournament updated!" : "Tournament created!" });
         setShowTForm(false); setEditingTournament(null);
-        setTForm({ name: "", description: "", mode: "squad", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" });
+        setTForm({ name: "", description: "", mode: "squad", gameMode: "", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" });
         loadTournaments(); loadStats();
       } else {
         const d = await safeJson(res);
@@ -318,6 +319,7 @@ export default function AdminPage() {
     setEditingTournament(t);
     setTForm({
       name: t.name, description: t.description ?? "", mode: t.mode,
+      gameMode: t.gameMode ?? "",
       startDate: t.startDate?.slice(0, 16) ?? "", endDate: t.endDate?.slice(0, 16) ?? "",
       maxSlots: String(t.maxSlots), prizePool: String(t.prizePool),
       entryFee: String(t.entryFee), perKillReward: String(t.perKillReward ?? "0"),
@@ -903,7 +905,18 @@ export default function AdminPage() {
                       <textarea value={tForm.description} onChange={(e) => setTForm({ ...tForm, description: e.target.value })} rows={3} className="admin-input resize-none" placeholder="Tournament details..." />
                     </div>
                     <div>
-                      <label className="label-sm">Mode *</label>
+                      <label className="label-sm">Game Category *</label>
+                      <select value={tForm.gameMode} onChange={(e) => setTForm({ ...tForm, gameMode: e.target.value })} className="admin-input">
+                        <option value="">— Select Category —</option>
+                        <option value="BR">🔥 BR Tournament (Battle Royale)</option>
+                        <option value="CS">⚔️ Clash Squad Tournament</option>
+                        <option value="SOLO">🎯 Solo Tournament</option>
+                        <option value="LONE_WOLF">🐺 Lone Wolf Tournament</option>
+                        <option value="FREE">🎁 Free Match Tournament</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label-sm">Squad Mode</label>
                       <select value={tForm.mode} onChange={(e) => setTForm({ ...tForm, mode: e.target.value })} className="admin-input">
                         <option value="solo">Solo</option>
                         <option value="duo">Duo</option>

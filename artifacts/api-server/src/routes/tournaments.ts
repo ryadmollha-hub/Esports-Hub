@@ -23,10 +23,11 @@ const router: IRouter = Router();
 
 router.get("/tournaments", async (req, res) => {
   try {
-    const { status, mode, search, page = "1", limit = "20" } = req.query as Record<string, string>;
+    const { status, mode, search, gameMode, page = "1", limit = "20" } = req.query as Record<string, string>;
     const conditions = [];
     if (status) conditions.push(eq(tournamentsTable.status, status));
     if (mode) conditions.push(eq(tournamentsTable.mode, mode));
+    if (gameMode) conditions.push(eq(tournamentsTable.gameMode, gameMode));
     if (search) conditions.push(ilike(tournamentsTable.name, `%${search}%`));
     const rows = await db
       .select()
@@ -513,6 +514,7 @@ router.post("/tournaments", async (req, res) => {
       perKillReward: (data as any).perKillReward?.toString() ?? "0",
       bannerUrl: data.bannerUrl ?? null,
       countdownTo: data.countdownTo ? new Date(data.countdownTo) : null,
+      gameMode: (data as any).gameMode ?? null,
     }).returning();
     if (data.prizes && data.prizes.length > 0) {
       await db.insert(prizeTiersTable).values(
@@ -554,6 +556,7 @@ router.put("/tournaments/:id", async (req, res) => {
         ...((data as any).perKillReward !== undefined && { perKillReward: (data as any).perKillReward.toString() }),
         ...(data.bannerUrl !== undefined && { bannerUrl: data.bannerUrl }),
         ...(data.countdownTo && { countdownTo: new Date(data.countdownTo) }),
+        ...((data as any).gameMode !== undefined && { gameMode: (data as any).gameMode || null }),
       })
       .where(eq(tournamentsTable.id, id))
       .returning();
