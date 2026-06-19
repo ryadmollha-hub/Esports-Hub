@@ -360,8 +360,8 @@ export default function CommunityMatchesPage() {
           setAllMatches((prev) =>
             prev.map((m) => m.id === joinMatch.id ? { ...m, filledSlots: m.filledSlots + 1 } : m)
           );
-          fetchMyJoins();
         }
+        fetchMyJoins();
         setJoinMatch(null);
       } else {
         toast({ title: "Cannot join", description: data.error, variant: "destructive" });
@@ -379,7 +379,7 @@ export default function CommunityMatchesPage() {
     (joinMatch?.isPasswordProtected && !joinPassword.trim()) ||
     (walletBalance !== null && Number(joinMatch?.entryFee ?? 0) > 0 && walletBalance < Number(joinMatch?.entryFee ?? 0));
 
-  const activeTabMeta = TABS.find((t) => t.key === activeTab)!;
+  const activeTabMeta = TABS.find((t) => t.key === activeTab) ?? TABS[0];
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 

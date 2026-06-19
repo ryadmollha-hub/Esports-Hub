@@ -350,6 +350,10 @@ export default function AdminPage() {
   // Tournament CRUD
   const saveTournament = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!tForm.gameMode) {
+      toast({ title: "Category required", description: "Please select a tournament category (BR, CS, Solo, etc.)", variant: "destructive" });
+      return;
+    }
     setLoading(true);
     try {
       const url = editingTournament ? `/tournaments/${editingTournament.id}` : "/tournaments";
@@ -364,7 +368,7 @@ export default function AdminPage() {
         method,
         body: JSON.stringify({
           name: tForm.name, description: tForm.description, mode: tForm.mode,
-          gameMode: tForm.gameMode || undefined,
+          gameMode: tForm.gameMode,
           startDate: tForm.startDate, endDate: tForm.endDate || undefined,
           maxSlots: parseInt(tForm.maxSlots), prizePool,
           entryFee: parseFloat(tForm.entryFee),
@@ -1027,15 +1031,16 @@ export default function AdminPage() {
                       <textarea value={tForm.description} onChange={(e) => setTForm({ ...tForm, description: e.target.value })} rows={3} className="admin-input resize-none" placeholder="Tournament details..." />
                     </div>
                     <div>
-                      <label className="label-sm">Game Category *</label>
-                      <select value={tForm.gameMode} onChange={(e) => setTForm({ ...tForm, gameMode: e.target.value })} className="admin-input">
-                        <option value="">— Select Category —</option>
+                      <label className="label-sm">Game Category <span className="text-[#ff2244]">*</span></label>
+                      <select required value={tForm.gameMode} onChange={(e) => setTForm({ ...tForm, gameMode: e.target.value })} className={`admin-input ${!tForm.gameMode ? "border-[#ff2244]/40" : ""}`}>
+                        <option value="">— Select Category (Required) —</option>
                         <option value="BR">🔥 BR Tournament (Battle Royale)</option>
                         <option value="CS">⚔️ Clash Squad Tournament</option>
                         <option value="SOLO">🎯 Solo Tournament</option>
                         <option value="LONE_WOLF">🐺 Lone Wolf Tournament</option>
                         <option value="FREE">🎁 Free Match Tournament</option>
                       </select>
+                      {!tForm.gameMode && <p className="text-[10px] text-[#ff2244] mt-1">Category is required — tournaments without a category won't appear in tabs</p>}
                     </div>
                     <div>
                       <label className="label-sm">Squad Mode</label>

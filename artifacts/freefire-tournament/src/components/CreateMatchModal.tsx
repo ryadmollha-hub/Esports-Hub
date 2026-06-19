@@ -55,8 +55,8 @@ export default function CreateMatchModal() {
     if (open) {
       setRulesLoading(true);
       fetch("/api/settings/community-match-rules")
-        .then((r) => r.json())
-        .then((d) => setRules(d.rules ?? ""))
+        .then((r) => r.ok ? r.json() : null)
+        .then((d) => setRules(d?.rules ?? ""))
         .catch(() => {})
         .finally(() => setRulesLoading(false));
     }
