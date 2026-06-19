@@ -6,8 +6,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import {
-  Swords, Clock, Users, Lock, Globe, ChevronRight, CheckCircle,
-  XCircle, Timer, Copy, Eye, EyeOff, Trash2, Plus, RefreshCw,
+  Swords, Users, Lock, Globe, ChevronRight, CheckCircle,
+  XCircle, Timer, Copy, Trash2, Plus, RefreshCw,
   Trophy, AlertCircle, Shield,
 } from "lucide-react";
 import { useCreateMatch } from "@/lib/CreateMatchContext";
@@ -53,19 +53,9 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
   const { authFetch } = useAuthContext();
   const { toast } = useToast();
   const [expanded, setExpanded] = useState(false);
-  const [editRoomId, setEditRoomId] = useState("");
-  const [showRoomEdit, setShowRoomEdit] = useState(false);
-  const [timerDelay, setTimerDelay] = useState(5);
-  const [customDelay, setCustomDelay] = useState("");
-  const [useCustom, setUseCustom] = useState(false);
   const [requests, setRequests] = useState<any[]>([]);
   const [loadingRequests, setLoadingRequests] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [startingTimer, setStartingTimer] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [matchPassword, setMatchPassword] = useState("");
-  const [showPasswordEdit, setShowPasswordEdit] = useState(false);
 
   const effStatus = getEffectiveStatus(match);
   const startsAt = getStartsAt(match);
@@ -84,70 +74,6 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
   useEffect(() => {
     if (expanded) loadRequests();
   }, [expanded, loadRequests]);
-
-  const handleSaveRoomId = async () => {
-    setSaving(true);
-    try {
-      const res = await authFetch(`/user-matches/${match.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomId: editRoomId.trim() }),
-      });
-      if (res.ok) {
-        toast({ title: "Room ID saved!" });
-        setShowRoomEdit(false);
-        onRefresh();
-      } else {
-        const d = await res.json();
-        toast({ title: "Error", description: d.error, variant: "destructive" });
-      }
-    } catch { toast({ title: "Connection error", variant: "destructive" }); }
-    finally { setSaving(false); }
-  };
-
-  const handleSavePassword = async () => {
-    setSaving(true);
-    try {
-      const res = await authFetch(`/user-matches/${match.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: matchPassword }),
-      });
-      if (res.ok) {
-        toast({ title: "Password updated!" });
-        setShowPasswordEdit(false);
-        setMatchPassword("");
-        onRefresh();
-      } else {
-        const d = await res.json();
-        toast({ title: "Error", description: d.error, variant: "destructive" });
-      }
-    } catch { toast({ title: "Connection error", variant: "destructive" }); }
-    finally { setSaving(false); }
-  };
-
-  const handleStartTimer = async () => {
-    const delay = useCustom ? parseInt(customDelay) : timerDelay;
-    if (!delay || delay < 1 || delay > 120) {
-      toast({ title: "Enter a valid delay (1–120 min)", variant: "destructive" }); return;
-    }
-    setStartingTimer(true);
-    try {
-      const res = await authFetch(`/user-matches/${match.id}/start-timer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ delayMinutes: delay }),
-      });
-      if (res.ok) {
-        toast({ title: `Timer started! Match starts in ${delay} minute${delay > 1 ? "s" : ""}.` });
-        onRefresh();
-      } else {
-        const d = await res.json();
-        toast({ title: "Error", description: d.error, variant: "destructive" });
-      }
-    } catch { toast({ title: "Connection error", variant: "destructive" }); }
-    finally { setStartingTimer(false); }
-  };
 
   const handleApprove = async (joinId: number) => {
     try {
@@ -255,42 +181,6 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
       {expanded && (
         <div className="border-t border-[#2a2a36] p-4 space-y-4">
 
-          {/* Room ID */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[#a0a0b0] text-xs uppercase tracking-wider font-bold">Room ID</label>
-              <button onClick={() => { setShowRoomEdit(!showRoomEdit); setEditRoomId(match.roomId || ""); }}
-                className="text-[10px] text-[#ff6b00] font-bold uppercase hover:underline">
-                {showRoomEdit ? "Cancel" : match.roomId ? "Edit" : "Set Room ID"}
-              </button>
-            </div>
-            {match.roomId && !showRoomEdit && (
-              <div className="flex items-center gap-2">
-                <code className="flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2 text-[#00ff88] font-mono text-sm">
-                  {match.roomId}
-                </code>
-                <button onClick={() => copyToClipboard(match.roomId, toast)}
-                  className="w-8 h-8 bg-[#1a1a24] rounded-xl flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors">
-                  <Copy className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-            {!match.roomId && !showRoomEdit && (
-              <p className="text-[#4a4a5a] text-xs">No Room ID set yet. Click "Set Room ID" above.</p>
-            )}
-            {showRoomEdit && (
-              <div className="flex gap-2">
-                <input type="text" placeholder="e.g. FF123456" value={editRoomId}
-                  onChange={(e) => setEditRoomId(e.target.value)} maxLength={50}
-                  className="flex-1 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2 text-white text-sm font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                />
-                <button onClick={handleSaveRoomId} disabled={saving}
-                  className="px-3 py-2 bg-[#ff6b00] text-white text-xs font-black rounded-xl hover:bg-[#e66000] disabled:opacity-50 transition-colors">
-                  {saving ? "..." : "Save"}
-                </button>
-              </div>
-            )}
-          </div>
 
           {/* Admin Room Credentials (set by admin, read-only for creator) */}
           {(match.adminRoomId || match.adminRoomPassword) && (
@@ -321,82 +211,7 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
             </div>
           )}
 
-          {/* Password */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-[#a0a0b0] text-xs uppercase tracking-wider font-bold">Password</label>
-              <button onClick={() => { setShowPasswordEdit(!showPasswordEdit); setMatchPassword(""); }}
-                className="text-[10px] text-[#ff6b00] font-bold uppercase hover:underline">
-                {showPasswordEdit ? "Cancel" : match.isPasswordProtected ? "Change" : "Set Password"}
-              </button>
-            </div>
-            {match.isPasswordProtected && !showPasswordEdit && (
-              <p className="text-xs text-[#a0a0b0]">Password is set. Players need it to join.</p>
-            )}
-            {!match.isPasswordProtected && !showPasswordEdit && (
-              <p className="text-[#4a4a5a] text-xs">No password. Anyone can join.</p>
-            )}
-            {showPasswordEdit && (
-              <div className="space-y-2">
-                <div className="relative">
-                  <input type={showPassword ? "text" : "password"} placeholder="New password (blank to remove)"
-                    value={matchPassword} onChange={(e) => setMatchPassword(e.target.value)}
-                    className="w-full bg-[#0a0a0f] border border-yellow-500/30 rounded-xl px-3 py-2 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-yellow-400 transition-colors pr-9"
-                  />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#606070] hover:text-[#a0a0b0]">
-                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
-                </div>
-                <button onClick={handleSavePassword} disabled={saving}
-                  className="w-full py-2 bg-yellow-500/20 border border-yellow-500/30 text-yellow-400 text-xs font-black rounded-xl hover:bg-yellow-500/30 disabled:opacity-50 transition-colors">
-                  {saving ? "Saving..." : "Update Password"}
-                </button>
-              </div>
-            )}
-          </div>
 
-          {/* Timer controls */}
-          {!isActive && effStatus !== "ended" && effStatus !== "cancelled" && effStatus !== "pending_approval" && (
-            <div>
-              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold flex items-center gap-1">
-                <Timer className="w-3 h-3" />
-                {isTimerRunning ? "Timer Running" : "Start Match Timer"}
-              </label>
-              {isTimerRunning && startsAt ? (
-                <div className="bg-[#0a0a0f] rounded-xl px-3 py-2 text-xs text-[#a0a0b0] flex items-center justify-between">
-                  <span>Starts at {startsAt.toLocaleTimeString()}</span>
-                  <CountdownTimer targetDate={startsAt} className="text-xs" />
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    {[5, 10, 15].map((d) => (
-                      <button key={d} type="button" onClick={() => { setTimerDelay(d); setUseCustom(false); }}
-                        className={`flex-1 py-2 rounded-xl border text-xs font-black transition-all ${!useCustom && timerDelay === d ? "bg-[#ff6b00]/15 border-[#ff6b00] text-[#ff6b00]" : "bg-[#0a0a0f] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"}`}>
-                        {d} min
-                      </button>
-                    ))}
-                    <button type="button" onClick={() => setUseCustom(!useCustom)}
-                      className={`flex-1 py-2 rounded-xl border text-xs font-black transition-all ${useCustom ? "bg-[#ff6b00]/15 border-[#ff6b00] text-[#ff6b00]" : "bg-[#0a0a0f] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"}`}>
-                      Custom
-                    </button>
-                  </div>
-                  {useCustom && (
-                    <input type="number" min="1" max="120" placeholder="Minutes..."
-                      value={customDelay} onChange={(e) => setCustomDelay(e.target.value)}
-                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                    />
-                  )}
-                  <button onClick={handleStartTimer} disabled={startingTimer}
-                    className="w-full py-2.5 bg-[#ff6b00]/15 border border-[#ff6b00]/40 text-[#ff6b00] text-xs font-black uppercase rounded-xl hover:bg-[#ff6b00]/25 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
-                    <Timer className="w-3.5 h-3.5" />
-                    {startingTimer ? "Starting..." : `Start ${useCustom ? (customDelay || "?") : timerDelay}-Minute Countdown`}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Join Requests */}
           <div>
@@ -734,7 +549,7 @@ export default function MyMatchesPage() {
         {tab === "mine" && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-[#a0a0b0] text-xs">Matches you created — set room ID, start timer, manage requests</p>
+              <p className="text-[#a0a0b0] text-xs">Matches you created — manage join requests</p>
               <button onClick={loadMine} disabled={loadingMine} className="text-[#606070] hover:text-[#a0a0b0] transition-colors">
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingMine ? "animate-spin" : ""}`} />
               </button>

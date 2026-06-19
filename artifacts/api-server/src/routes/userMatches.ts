@@ -57,15 +57,15 @@ router.post("/user-matches", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
   try {
-    const { matchName, matchType, scheduledAt, description, password, roomId, isPrivate, prizePool: prizePoolInput, entryFee: entryFeeInput, perKill: perKillInput, mapName, version } = req.body;
+    const { matchName, matchType, scheduledAt, description, password, isPrivate, prizePool: prizePoolInput, mapName, version } = req.body;
     if (!matchType) return res.status(400).json({ error: "matchType is required." });
 
     const maxSlots = SLOTS_FOR_TYPE[matchType];
     if (!maxSlots) return res.status(400).json({ error: "Invalid matchType. Must be one of: 1v1, 2v2, 3v3, 4v4, BR, CS, SOLO, LONE_WOLF, FREE." });
 
     const prize = prizePoolInput !== undefined ? Math.max(0, parseFloat(prizePoolInput) || 0) : 0;
-    const fee = entryFeeInput !== undefined ? Math.max(0, parseFloat(entryFeeInput) || 0) : 0;
-    const perKill = perKillInput !== undefined ? Math.max(0, parseFloat(perKillInput) || 0) : 0;
+    const fee = 0;    // entry fee is set by admin only — users cannot set it
+    const perKill = 0; // per-kill reward is set by admin only
 
     const [user] = await db.select({ username: usersTable.username, displayName: usersTable.displayName })
       .from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
@@ -81,15 +81,15 @@ router.post("/user-matches", async (req, res) => {
       matchName: matchName?.trim() || null,
       matchType,
       prizePool: prize.toFixed(2),
-      entryFee: fee.toFixed(2),
-      perKill: perKill > 0 ? perKill.toFixed(2) : null,
+      entryFee: "0.00",
+      perKill: null,
       mapName: mapName?.trim() || null,
       version: version?.trim() || null,
       maxSlots,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       description: description ?? null,
       passwordHash,
-      roomId: roomId?.trim() || null,
+      roomId: null,
       isPrivate: !!isPrivate,
       status: "pending_approval",
     }).returning();
@@ -389,17 +389,10 @@ router.patch("/user-matches/:id", async (req, res) => {
     if (!match) return res.status(404).json({ error: "Match not found." });
     if (match.creatorId !== userId) return res.status(403).json({ error: "Not your match." });
 
+    // Users may only update name and description; room credentials are admin-only
     const updates: Partial<typeof userMatchesTable.$inferInsert> = {};
     if (req.body.matchName !== undefined) updates.matchName = req.body.matchName?.trim() || null;
     if (req.body.description !== undefined) updates.description = req.body.description || null;
-    if (req.body.roomId !== undefined) updates.roomId = req.body.roomId?.trim() || null;
-    if (req.body.password !== undefined) {
-      if (req.body.password && req.body.password.trim().length > 0) {
-        updates.passwordHash = await bcrypt.hash(req.body.password.trim(), 10);
-      } else {
-        updates.passwordHash = null;
-      }
-    }
 
     const [updated] = await db.update(userMatchesTable).set(updates).where(eq(userMatchesTable.id, id)).returning();
     res.json(stripMatch(updated, true));
@@ -411,9 +404,9 @@ router.patch("/user-matches/:id", async (req, res) => {
 
 // ─── Creator: start timer ─────────────────────────────────────────────────────
 
+// Admin-only: start the countdown timer for a community match
 router.post("/user-matches/:id/start-timer", async (req, res) => {
-  const userId = await requireAuth(req, res);
-  if (!userId) return;
+  if (!await requireAdmin(req, res)) return;
   try {
     const id = parseInt(req.params.id);
     const { delayMinutes } = req.body;
@@ -425,8 +418,7 @@ router.post("/user-matches/:id/start-timer", async (req, res) => {
 
     const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
     if (!match) return res.status(404).json({ error: "Match not found." });
-    if (match.creatorId !== userId) return res.status(403).json({ error: "Not your match." });
-    if (match.status === "pending_approval") return res.status(400).json({ error: "This match is pending admin approval. You can start the timer once it is approved." });
+    if (match.status === "pending_approval") return res.status(400).json({ error: "This match is pending admin approval." });
     if (effectiveStatus(match) === "active") return res.status(400).json({ error: "Match is already active." });
 
     const now = new Date();

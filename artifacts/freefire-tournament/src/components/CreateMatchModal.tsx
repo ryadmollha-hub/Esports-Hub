@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Swords, CheckCircle, Lock, Globe, Clock, BookOpen, AlertCircle, Target, Map, Globe2 } from "lucide-react";
+import { X, Swords, CheckCircle, Lock, Globe, Clock, BookOpen, AlertCircle, Map, Globe2 } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateMatch } from "@/lib/CreateMatchContext";
@@ -30,8 +30,6 @@ export default function CreateMatchModal() {
     isPrivate: false,
     password: "",
     prizePool: "",
-    entryFee: "",
-    perKill: "",
     mapName: "",
     version: "",
   });
@@ -58,7 +56,7 @@ export default function CreateMatchModal() {
 
   const handleClose = () => {
     closeCreateMatch();
-    setForm({ matchName: "", matchType: "BR", scheduledAt: "", description: "", isPrivate: false, password: "", prizePool: "", entryFee: "", perKill: "", mapName: "", version: "" });
+    setForm({ matchName: "", matchType: "BR", scheduledAt: "", description: "", isPrivate: false, password: "", prizePool: "", mapName: "", version: "" });
     setCreated(null);
     setShowRules(false);
   };
@@ -89,8 +87,6 @@ export default function CreateMatchModal() {
           password: form.password.trim() || undefined,
           isPrivate: form.isPrivate,
           prizePool: form.prizePool ? parseFloat(form.prizePool) : undefined,
-          entryFee: form.entryFee ? parseFloat(form.entryFee) : undefined,
-          perKill: form.perKill ? parseFloat(form.perKill) : undefined,
           mapName: form.mapName || undefined,
           version: form.version || undefined,
         }),
@@ -191,41 +187,21 @@ export default function CreateMatchModal() {
                   />
                 </div>
 
-                {/* Prize + Entry Fee row */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Prize Pool (৳)</label>
-                    <input
-                      type="number" placeholder="e.g. 10000" value={form.prizePool}
-                      onChange={(e) => setForm({ ...form, prizePool: e.target.value })}
-                      min="0" step="1"
-                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Entry Fee (৳)</label>
-                    <input
-                      type="number" placeholder="0 = Free" value={form.entryFee}
-                      onChange={(e) => setForm({ ...form, entryFee: e.target.value })}
-                      min="0" step="1"
-                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                    />
-                  </div>
+                {/* Prize Pool */}
+                <div>
+                  <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
+                    Prize Pool (৳) <span className="normal-case text-[#4a4a5a]">(optional)</span>
+                  </label>
+                  <input
+                    type="number" placeholder="e.g. 10000" value={form.prizePool}
+                    onChange={(e) => setForm({ ...form, prizePool: e.target.value })}
+                    min="0" step="1"
+                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                  />
                 </div>
 
-                {/* Per Kill + Map + Version */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1">
-                      <Target className="w-3 h-3" /> Per Kill (৳)
-                    </label>
-                    <input
-                      type="number" placeholder="0" value={form.perKill}
-                      onChange={(e) => setForm({ ...form, perKill: e.target.value })}
-                      min="0" step="1"
-                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
-                    />
-                  </div>
+                {/* Map + Version */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1">
                       <Map className="w-3 h-3" /> Map

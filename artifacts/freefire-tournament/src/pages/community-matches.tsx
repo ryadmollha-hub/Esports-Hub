@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  Lock, Zap, Swords, Users, Plus, RefreshCw, X,
+  Lock, Zap, Swords, Users, Plus, RefreshCw, X, Copy, CheckCircle, XCircle, Timer,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -182,7 +182,7 @@ function MatchCard({
         <div className="flex items-center justify-between gap-3">
           <div className="text-[10px] text-[#606070]">
             {startsAt && !isLive ? (
-              <CountdownTimer targetDate={startsAt} compact />
+              <CountdownTimer targetDate={startsAt} />
             ) : (
               <span>{fmtSchedule(m.scheduledAt)}</span>
             )}
@@ -236,6 +236,7 @@ export default function CommunityMatchesPage() {
   const [myJoinMap, setMyJoinMap]   = useState<Record<number, {
     adminRoomId: string | null; adminRoomPassword: string | null; status: string;
   }>>({});
+  const [myJoinedMatches, setMyJoinedMatches] = useState<any[]>([]);
 
   // ── Join modal ──
   const [joinMatch, setJoinMatch]     = useState<any>(null);
@@ -269,6 +270,7 @@ export default function CommunityMatchesPage() {
       const r = await authFetch("/user-matches/my-requests");
       if (!r.ok) return;
       const data: any[] = await r.json();
+      setMyJoinedMatches(data);
       const map: Record<number, any> = {};
       for (const j of data) {
         if (j.status === "accepted") {
@@ -406,6 +408,115 @@ export default function CommunityMatchesPage() {
               </Link>
             )}
           </div>
+
+          {/* ── My Messages (matches I joined) ── */}
+          {user && myJoinedMatches.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse" />
+                <h2 className="text-xs font-black uppercase text-[#a0a0b0] tracking-wider">
+                  My Messages
+                  <span className="ml-2 text-[#4a4a5a]">({myJoinedMatches.length})</span>
+                </h2>
+                <button onClick={fetchMyJoins} className="ml-auto text-[#4a4a5a] hover:text-[#a0a0b0] transition-colors">
+                  <RefreshCw className="w-3 h-3" />
+                </button>
+              </div>
+              <div className="space-y-2">
+                {myJoinedMatches.map((req: any) => {
+                  const statusColor = req.status === "accepted" ? "#00ff88" : req.status === "rejected" ? "#ff2244" : "#ffd700";
+                  const statusLabel = req.status === "accepted" ? "Accepted" : req.status === "rejected" ? "Rejected" : "Pending";
+                  const effStatus = req.effectiveStatus ?? "waiting";
+                  const isActive = effStatus === "active";
+                  const startsAt = req.timerStartedAt && req.startDelayMinutes
+                    ? new Date(new Date(req.timerStartedAt).getTime() + req.startDelayMinutes * 60000)
+                    : null;
+                  const copyText = (txt: string) => { navigator.clipboard.writeText(txt); toast({ title: "Copied!" }); };
+
+                  return (
+                    <div key={req.joinId} className="bg-[#0d0d16] border border-[#1e1e2e] rounded-xl px-3 py-3 hover:border-[#2a2a36] transition-colors">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-white text-xs font-bold truncate max-w-[160px]">
+                              {req.matchName || `${req.matchType} Match`}
+                            </span>
+                            <span className="text-[10px] text-[#606070]">{req.matchType}</span>
+                            {isActive && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/30">
+                                <span className="w-1 h-1 rounded-full bg-[#00ff88] animate-pulse" /> LIVE
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-[#606070] mt-0.5">by {req.creatorName}</div>
+                        </div>
+                        <span
+                          className="shrink-0 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border"
+                          style={{ color: statusColor, borderColor: `${statusColor}30`, background: `${statusColor}10` }}
+                        >
+                          {statusLabel}
+                        </span>
+                      </div>
+
+                      {/* Timer countdown */}
+                      {req.status === "accepted" && startsAt && !isActive && (
+                        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#a0a0b0]">
+                          <Timer className="w-3 h-3 text-[#ff6b00]" />
+                          <span>Starts in:</span>
+                          <CountdownTimer targetDate={startsAt} className="text-[11px]" />
+                        </div>
+                      )}
+
+                      {/* Room credentials */}
+                      {req.status === "accepted" && req.adminRoomId && isActive && (
+                        <div className="mt-2 grid grid-cols-2 gap-2">
+                          <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5 flex items-center gap-1.5 min-w-0">
+                            <span className="text-[#606070] text-[10px] shrink-0">Room</span>
+                            <code className="text-[#00ff88] font-mono text-xs font-bold truncate flex-1">{req.adminRoomId}</code>
+                            <button onClick={() => copyText(req.adminRoomId)} className="text-[#606070] hover:text-[#00ff88] shrink-0">
+                              <Copy className="w-3 h-3" />
+                            </button>
+                          </div>
+                          {req.adminRoomPassword && (
+                            <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5 flex items-center gap-1.5 min-w-0">
+                              <span className="text-[#606070] text-[10px] shrink-0">Pass</span>
+                              <code className="text-yellow-400 font-mono text-xs font-bold truncate flex-1">{req.adminRoomPassword}</code>
+                              <button onClick={() => copyText(req.adminRoomPassword)} className="text-[#606070] hover:text-yellow-400 shrink-0">
+                                <Copy className="w-3 h-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Accepted but no room set yet */}
+                      {req.status === "accepted" && !req.adminRoomId && (
+                        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#00ff88]/70">
+                          <CheckCircle className="w-3 h-3 shrink-0" />
+                          You're in! Room details will appear once admin sets them.
+                        </div>
+                      )}
+
+                      {/* Pending */}
+                      {req.status === "pending" && (
+                        <div className="mt-2 text-[11px] text-yellow-400/70">
+                          Waiting for creator to approve your request.
+                        </div>
+                      )}
+
+                      {/* Rejected */}
+                      {req.status === "rejected" && (
+                        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#ff2244]/70">
+                          <XCircle className="w-3 h-3 shrink-0" />
+                          Your request was rejected.
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── Filter tabs (sticky) ── */}
           <div className="sticky top-0 z-20 bg-[#0a0a0f] -mx-4 px-4 pt-1 pb-3 border-b border-[#12121a] mb-5">
@@ -545,14 +656,14 @@ export default function CommunityMatchesPage() {
                     placeholder="In-Game Name *"
                     value={player.name}
                     onChange={(e) => setJoinPlayers((prev) => prev.map((x, j) => j === idx ? { ...x, name: e.target.value } : x))}
-                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-3 text-white text-base placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
                   />
                   <input
                     type="text"
                     placeholder="Free Fire UID *"
                     value={player.uid}
                     onChange={(e) => setJoinPlayers((prev) => prev.map((x, j) => j === idx ? { ...x, uid: e.target.value } : x))}
-                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-sm font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-3 text-white text-base font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
                   />
                   {idx < joinPlayers.length - 1 && <div className="border-t border-[#1a1a24] pt-1" />}
                 </div>
@@ -567,7 +678,7 @@ export default function CommunityMatchesPage() {
                     placeholder="Enter match password"
                     value={joinPassword}
                     onChange={(e) => setJoinPassword(e.target.value)}
-                    className="w-full bg-[#0a0a0f] border border-yellow-500/30 rounded-xl px-3 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-yellow-400 transition-colors"
+                    className="w-full bg-[#0a0a0f] border border-yellow-500/30 rounded-xl px-4 py-3 text-white text-base placeholder-[#4a4a5a] focus:outline-none focus:border-yellow-400 transition-colors"
                   />
                 </div>
               )}
