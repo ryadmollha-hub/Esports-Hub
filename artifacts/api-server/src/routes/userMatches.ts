@@ -57,15 +57,13 @@ router.post("/user-matches", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
   try {
-    const { matchName, matchType, scheduledAt, description, password, isPrivate, prizePool: prizePoolInput, mapName, version } = req.body;
+    const { matchName, matchType, matchMode, scheduledAt, description, password, isPrivate, prizePool: prizePoolInput, mapName, version } = req.body;
     if (!matchType) return res.status(400).json({ error: "matchType is required." });
 
     const maxSlots = SLOTS_FOR_TYPE[matchType];
     if (!maxSlots) return res.status(400).json({ error: "Invalid matchType. Must be one of: 1v1, 2v2, 3v3, 4v4, BR, CS, SOLO, LONE_WOLF, FREE." });
 
     const prize = prizePoolInput !== undefined ? Math.max(0, parseFloat(prizePoolInput) || 0) : 0;
-    const fee = 0;    // entry fee is set by admin only — users cannot set it
-    const perKill = 0; // per-kill reward is set by admin only
 
     const [user] = await db.select({ username: usersTable.username, displayName: usersTable.displayName })
       .from(usersTable).where(eq(usersTable.clerkId, userId)).limit(1);
@@ -75,11 +73,15 @@ router.post("/user-matches", async (req, res) => {
       passwordHash = await bcrypt.hash(password.trim(), 10);
     }
 
+    // FREE matches are auto-approved — no financial risk, no admin review needed
+    const isFreeMatch = matchType === "FREE";
+
     const [match] = await db.insert(userMatchesTable).values({
       creatorId: userId,
       creatorName: user?.displayName ?? user?.username ?? "Unknown",
       matchName: matchName?.trim() || null,
       matchType,
+      matchMode: matchMode?.trim() || null,
       prizePool: prize.toFixed(2),
       entryFee: "0.00",
       perKill: null,
@@ -91,7 +93,7 @@ router.post("/user-matches", async (req, res) => {
       passwordHash,
       roomId: null,
       isPrivate: !!isPrivate,
-      status: "pending_approval",
+      status: isFreeMatch ? "approved" : "pending_approval",
     }).returning();
 
     res.status(201).json(stripMatch(match, true));

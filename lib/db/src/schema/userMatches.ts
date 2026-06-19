@@ -11,6 +11,7 @@ export const userMatchesTable = pgTable("user_matches", {
   prizePool: numeric("prize_pool", { precision: 10, scale: 2 }).notNull(),
   entryFee: numeric("entry_fee", { precision: 10, scale: 2 }).notNull().default("0.00"),
   perKill: numeric("per_kill", { precision: 10, scale: 2 }),
+  matchMode: text("match_mode"),
   mapName: text("map_name"),
   version: text("version"),
   maxSlots: integer("max_slots").notNull(),

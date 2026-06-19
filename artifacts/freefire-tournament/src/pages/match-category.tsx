@@ -372,6 +372,11 @@ export default function MatchCategoryPage() {
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
                           <StatusBadge isLive={isLive} isEnded={isEnded} />
+                          {m.matchMode && (
+                            <span className="inline-flex items-center text-[9px] font-black uppercase text-[#00b4ff] bg-[#00b4ff]/10 border border-[#00b4ff]/25 px-1.5 py-0.5 rounded-full">
+                              {m.matchMode}
+                            </span>
+                          )}
                           {m.isPasswordProtected && <PasswordBadge />}
                           {isTimerOn && startsAt && (
                             <span className="inline-flex items-center gap-1 text-[9px] font-bold text-[#ff6b00] bg-[#ff6b00]/8 border border-[#ff6b00]/20 px-1.5 py-0.5 rounded-full">
