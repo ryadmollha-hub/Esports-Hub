@@ -2504,10 +2504,10 @@ export default function AdminPage() {
 
               {/* Status filter tabs */}
               <div className="flex gap-2 mb-5 flex-wrap">
-                {["all", "pending_approval", "approved", "waiting", "active", "ended", "cancelled"].map((s) => {
+                {["all", "pending_approval", "approved", "waiting", "active", "ended", "cancelled", "archived"].map((s) => {
                   const typeFiltered = umTypeFilter === "all" ? userMatches : userMatches.filter((m) => (m?.matchType ?? "").toUpperCase() === umTypeFilter);
                   const count = s === "all" ? typeFiltered.length : typeFiltered.filter((m) => m.status === s).length;
-                  const labels: Record<string, string> = { all: "All", pending_approval: "Pending", approved: "Approved", waiting: "Waiting", active: "Active", ended: "Ended", cancelled: "Cancelled" };
+                  const labels: Record<string, string> = { all: "All", pending_approval: "Pending", approved: "Approved", waiting: "Waiting", active: "Active", ended: "Ended", cancelled: "Cancelled", archived: "📦 Archive" };
                   const colors: Record<string, string> = {
                     all: "border-[#ff6b00]/30 text-[#ff6b00] bg-[#ff6b00]/5",
                     pending_approval: "border-yellow-400/30 text-yellow-400",
@@ -2516,8 +2516,9 @@ export default function AdminPage() {
                     active: "border-[#00ff88]/50 text-[#00ff88] bg-[#00ff88]/5",
                     ended: "border-[#a0a0b0]/30 text-[#a0a0b0]",
                     cancelled: "border-[#ff2244]/30 text-[#ff2244]",
+                    archived: "border-[#606070]/30 text-[#606070]",
                   };
-                  if (count === 0 && s !== "all" && s !== "pending_approval") return null;
+                  if (count === 0 && s !== "all" && s !== "pending_approval" && s !== "archived") return null;
                   return (
                     <button
                       key={s}
@@ -2568,6 +2569,19 @@ export default function AdminPage() {
                             >
                               <Users className="w-3.5 h-3.5" /> Players ({m.filledSlots ?? 0})
                             </button>
+                            {m.status !== "archived" && (
+                              <button
+                                onClick={async () => {
+                                  if (!confirm("Archive this match? It will be hidden from active listings but all data is preserved. Players with paid entry fees will be refunded.")) return;
+                                  const res = await apiFetch(`/admin/user-matches/${m.id}/archive`, { method: "PATCH" });
+                                  if (res.ok) { toast({ title: "📦 Match archived", description: "Moved to archive. Data is preserved." }); loadUserMatches(); }
+                                  else { const d = await safeJson(res); toast({ title: "Error", description: d.error, variant: "destructive" }); }
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#606070]/10 border border-[#606070]/30 text-[#a0a0b0] text-xs font-bold rounded-lg hover:bg-[#606070]/20 transition-colors whitespace-nowrap"
+                              >
+                                Archive
+                              </button>
+                            )}
                             <button
                               onClick={() => { setDeletingMatch(m.id); setRejectingMatch(null); }}
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] text-xs font-bold rounded-lg hover:bg-[#ff2244]/20 transition-colors whitespace-nowrap"

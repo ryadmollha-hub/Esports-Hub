@@ -1,0 +1,277 @@
+FF ARENA – COMMUNITY MATCH, COUNTDOWN, ARCHIVE & MATCH MANAGEMENT SYSTEM
+
+==================================================
+ISSUE 1: COMMUNITY MATCHES NOT APPEARING
+========================================
+
+Problem:
+
+User-created public matches are being successfully created and saved.
+
+However, they are not appearing inside the Community Matches section on the Tournament page.
+
+Required Fix:
+
+Display all public community matches automatically inside the Community Matches section.
+
+Requirements:
+
+* Public community matches must appear immediately after creation.
+* Match cards must update automatically.
+* Community Matches section must load real database data.
+* Do not require manual approval.
+* Do not hide valid public matches.
+
+Display:
+
+* Match Number
+* Match Name
+* Match Mode
+* Host Name
+* Entry Fee
+* Prize Pool
+* Player Count
+* Start Time
+* Join Button
+
+Private Matches:
+
+* Also display them.
+* Show a Private Badge.
+* Do not reveal passwords.
+* Allow authorized users to join using password.
+
+==================================================
+ISSUE 2: LIVE COUNTDOWN TIMER SYSTEM
+====================================
+
+Add a real-time countdown timer for all tournaments and community matches.
+
+Display countdown directly on the match card.
+
+Example:
+
+STARTS IN:
+01h 42m 15s
+
+Requirements:
+
+* Auto-update every second.
+* Use match scheduled start time.
+* No page refresh required.
+
+States:
+
+Before Start:
+⏱ Starts In
+
+After Start:
+🔴 LIVE NOW
+
+After End:
+✅ ENDED
+
+==================================================
+MATCH TIMER SETTINGS
+====================
+
+Allow Admin and Hosts to configure:
+
+* Match Start Time
+* Match End Time
+
+The timer must automatically calculate:
+
+Current Time → Start Time
+
+and display remaining time.
+
+==================================================
+CARD DISPLAY
+============
+
+Show countdown prominently on every match card.
+
+Position:
+
+* Above Join Button
+  OR
+* Above Match Details
+
+Must be visible on:
+
+* Tournament Matches
+* Community Matches
+* Match Details Pages
+
+==================================================
+MOBILE REQUIREMENTS
+===================
+
+* Responsive countdown
+* No overflow
+* No layout breaking
+* No horizontal scrolling
+
+==================================================
+MATCH COMPLETION & AUTO HIDE SYSTEM
+===================================
+
+Problem:
+
+After a match result is entered and marked as completed, the match still remains visible in active tournament lists and management sections.
+
+Required Behavior:
+
+When Admin clicks:
+
+"Save Results & Mark Complete"
+
+Automatically:
+
+* Match status becomes COMPLETED
+* Match is removed from all active tournament pages
+* Match is removed from active player join pages
+* Match is removed from upcoming matches
+* Match is removed from active tournament listings
+* Match can no longer be joined
+
+Completed matches should only appear in:
+
+* Results Page
+* Match History
+* Archived Matches
+* Admin Records
+
+Do not permanently delete match data.
+
+Keep all records for future reference.
+
+==================================================
+MATCH ARCHIVE SYSTEM
+====================
+
+Create a separate:
+
+ARCHIVED MATCHES
+
+section.
+
+Completed matches should automatically move into Archive.
+
+Archive should contain:
+
+* Match Number
+* Match Name
+* Match Results
+* Rankings
+* Winners
+* Room History
+* Prize Information
+* Match Date
+
+Admins can review archived matches anytime.
+
+==================================================
+DELETE SYSTEM (TWO LEVELS)
+==========================
+
+Level 1:
+
+COMPLETE → ARCHIVE
+
+Recommended default action.
+
+Behavior:
+
+* Match disappears from active sections.
+* Match remains in Archive.
+* Results remain available.
+* History remains available.
+* Rankings remain available.
+* Room history remains available.
+
+Level 2:
+
+PERMANENT DELETE
+
+Add:
+
+🗑 Delete Match
+
+button on every Match Management Card.
+
+Before deletion show:
+
+"Are you sure you want to permanently delete this match?"
+
+Buttons:
+
+* Cancel
+* Confirm Delete
+
+Permanent Delete removes:
+
+* Match Information
+* Rankings
+* Room Details
+* Room Credentials
+* Player Registrations
+* Match Results
+* Match History
+* Associated Records
+
+Deleted matches cannot be restored.
+
+==================================================
+ADMIN CLEANUP SYSTEM
+====================
+
+Admin can:
+
+* Complete Match → Move to Archive
+* Permanently Delete Match
+* View Archived Matches
+
+This prevents thousands of old matches from filling active management pages.
+
+==================================================
+IMPORTANT REQUIREMENTS
+======================
+
+Do NOT break:
+
+* Tournament Creation
+* Community Match Creation
+* Match Joining
+* Room Release System
+* Player Join System
+* Result Publishing
+* Tournament System
+* Community Match System
+
+Maintain:
+
+* Existing FF Arena Design
+* Existing Theme
+* Existing Navigation
+* Mobile Responsiveness
+* Tablet Responsiveness
+* Desktop Responsiveness
+
+No horizontal scrolling.
+
+==================================================
+FINAL GOAL
+==========
+
+Create a production-ready Community Match and Tournament Management System where:
+
+* Public community matches automatically appear on the Tournament page.
+* Private matches appear with password protection.
+* Real-time countdown timers work correctly.
+* Completed matches automatically move to Archive.
+* Archived matches remain accessible for future review.
+* Admin can permanently delete unwanted matches.
+* Active pages remain clean and organized.
+* The system remains scalable for thousands of matches without performance issues.

@@ -33,6 +33,7 @@ async function getUserBalance(userId: string): Promise<number> {
 function effectiveStatus(match: typeof userMatchesTable.$inferSelect): string {
   if (match.status === "cancelled") return "cancelled";
   if (match.status === "ended") return "ended";
+  if (match.status === "archived") return "archived";
   if (match.status === "pending_approval") return "pending_approval";
 
   const now = Date.now();
@@ -335,7 +336,8 @@ router.post("/user-matches/:id/join", async (req, res) => {
       return res.status(400).json({ error: "This match is not open for joining." });
     }
     // Block new joins once room credentials are live (anti-fraud lock)
-    if (isRoomVisible(match)) {
+    // Only locks when adminRoomId is actually set AND currently visible
+    if (match.adminRoomId && isRoomVisible(match)) {
       return res.status(400).json({ error: "Room credentials are already released — this match is now locked for new entries." });
     }
     // Temporarily disabled for testing: creators may join their own match
@@ -558,8 +560,8 @@ router.delete("/user-matches/:id/leave", async (req, res) => {
     const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
     if (!match) return res.status(404).json({ error: "Match not found." });
 
-    // Hard lock: cannot leave once room credentials are live
-    if (isRoomVisible(match)) {
+    // Hard lock: cannot leave once room credentials are actually live
+    if (match.adminRoomId && isRoomVisible(match)) {
       return res.status(400).json({ error: "Room credentials have been released — you can no longer leave or request a refund for this match." });
     }
 
@@ -737,6 +739,40 @@ router.get("/admin/user-matches", async (req, res) => {
     res.json(matches.map((m) => ({ ...stripMatch(m, true), effectiveStatus: effectiveStatus(m) })));
   } catch {
     res.status(500).json({ error: "Failed to load matches." });
+  }
+});
+
+// ─── Admin: archive a match (hide from active, keep data) ─────────────────────
+
+router.patch("/admin/user-matches/:id/archive", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [match] = await db.select().from(userMatchesTable).where(eq(userMatchesTable.id, id)).limit(1);
+    if (!match) return res.status(404).json({ error: "Match not found." });
+
+    // Refund any accepted players if entry fee > 0
+    const entryFee = parseFloat(match.entryFee);
+    if (entryFee > 0) {
+      const accepted = await db.select().from(userMatchJoinsTable)
+        .where(and(eq(userMatchJoinsTable.matchId, id), eq(userMatchJoinsTable.status, "accepted")));
+      for (const j of accepted) {
+        await db.insert(walletTransactionsTable).values({
+          userId: j.userId,
+          type: "tournament_prize",
+          amount: entryFee.toFixed(2),
+          status: "approved",
+          notes: `Refund: ${match.matchName || match.matchType} match #${match.id} archived by admin`,
+          tournamentId: null,
+        });
+      }
+    }
+
+    await db.update(userMatchesTable).set({ status: "archived" }).where(eq(userMatchesTable.id, id));
+    res.json({ success: true });
+  } catch (err) {
+    logger.error({ err }, "Failed to archive match");
+    res.status(500).json({ error: "Failed to archive match." });
   }
 });
 
