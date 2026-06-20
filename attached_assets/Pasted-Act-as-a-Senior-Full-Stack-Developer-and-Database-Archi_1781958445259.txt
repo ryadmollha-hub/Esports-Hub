@@ -1,0 +1,44 @@
+Act as a Senior Full-Stack Developer and Database Architect. I need to implement an Automated Tournament Prize Distribution System for my Esports platform. 
+
+CRITICAL DIRECTION:
+- DO NOT create a new wallet system, withdrawal system, or registration system.
+- DO NOT wipe or delete existing data.
+- Everything must integrate directly with our EXISTING User, Wallet, and Transaction models in the database.
+
+==================================================
+1. ADMIN INPUT INTERFACE REQUIREMENTS
+==================================================
+In the Admin Dashboard under the Tournament/Match Results section, create a secure form where the Admin can:
+- Select a Match/Tournament by its ID.
+- Select the 1st, 2nd, and 3rd Place Teams/Players from a dropdown of registered participants for that specific match.
+- Input individual kill counts for all participating players via a list or search-and-enter field mapped to their User IDs.
+- Provide a "Preview Calculations" button so the Admin can double-check the final payouts before distributing.
+
+==================================================
+2. AUTOMATED PRIZE DISTRIBUTION LOGIC (BACKEND)
+==================================================
+Create a secure POST API endpoint (e.g., `/api/admin/matches/:id/distribute`) protected by Admin middleware. When triggered, process the following logic inside a Database Transaction (Atomic execution):
+
+A. Winning Prize Distribution (Shared Equally):
+   - Automatically detect the Match Type (Solo, Duo, Squad) and the number of actual registered members in the winning teams.
+   - Divide the Placement Prize Pool equally among all registered members of that team.
+   - Example: If Squad 1st Prize is ৳400 and the team has 4 registered members, calculate ৳400 ÷ 4 = ৳100 for each member's User ID.
+
+B. Kill Prize Distribution (Strictly Individual):
+   - Multiply the player's inputted kill count by the match's per-kill rate (e.g., 5 kills × ৳10 = ৳50).
+   - This reward belongs strictly to that specific individual player's User ID and must NOT be shared with team members.
+
+C. Wallet Credit & Transaction History:
+   - Combine both values (Winning Share + Kill Reward) for each individual player.
+   - Increment their existing `wallet.balance` directly in the database.
+   - Create and insert a formal row in the existing `Transaction / Wallet History` table for each player with clear descriptions (e.g., "Match #15 Winning Prize +৳100", "Match #15 Kill Reward +৳50") so users can track it on their profile.
+
+==================================================
+3. IDEMPOTENCY & SAFETY (DUPLICATE PROTECTION)
+==================================================
+- Add a boolean flag `prizeDistributed` (default: false) to the Match/Tournament schema.
+- Before executing the payout, check if `match.prizeDistributed === true`. If it is true, immediately block the request and return a 400 error.
+- Once the wallet updates succeed inside the transaction block, set `match.prizeDistributed = true`.
+- In the frontend UI, if `prizeDistributed` is true, disable the "Distribute Prize" button and change text to "Prize Already Distributed".
+
+Please inspect our existing frontend form files, backend routes, and database schema, then implement this clean workflow step-by-step. Let me know which files you are modifying first.
