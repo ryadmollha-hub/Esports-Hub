@@ -147,6 +147,18 @@ export default function AdminPage() {
   // Room form
   const [roomForm, setRoomForm] = useState<Record<number, { roomId: string; roomPassword: string }>>({});
 
+  // Per-tournament match management (in Tournaments tab)
+  const [expandedTournamentMatches, setExpandedTournamentMatches] = useState<Record<number, boolean>>({});
+  const [tournamentMatchesList, setTournamentMatchesList] = useState<Record<number, any[]>>({});
+  const [tournamentMatchesLoading, setTournamentMatchesLoading] = useState<Record<number, boolean>>({});
+  const [showTournamentMatchForm, setShowTournamentMatchForm] = useState<Record<number, boolean>>({});
+  const [tournamentMatchForms, setTournamentMatchForms] = useState<Record<number, { matchNumber: string; scheduledAt: string; mapName: string }>>({});
+  const [creatingTournamentMatch, setCreatingTournamentMatch] = useState<Record<number, boolean>>({});
+  const [tournamentMatchRoomForms, setTournamentMatchRoomForms] = useState<Record<number, { roomId: string; roomPassword: string }>>({});
+  const [settingTournamentMatchRoom, setSettingTournamentMatchRoom] = useState<Record<number, boolean>>({});
+  const [tournamentsLoading, setTournamentsLoading] = useState(false);
+  const [matchesLoading, setMatchesLoading] = useState(false);
+
   // Maintenance mode
   const [maintenanceMode, setMaintenanceModeState] = useState<boolean>(false);
   const [maintenanceLoading, setMaintenanceLoading] = useState(false);
@@ -169,13 +181,14 @@ export default function AdminPage() {
   }, [apiFetch]);
 
   const loadTournaments = useCallback(async () => {
+    setTournamentsLoading(true);
     try {
       const res = await apiFetch("/tournaments?limit=100");
       if (res.ok) {
         const data = await safeJson(res);
         setTournaments(Array.isArray(data) ? data : data.tournaments ?? []);
       }
-    } catch {}
+    } catch {} finally { setTournamentsLoading(false); }
   }, [apiFetch]);
 
   const loadUsers = useCallback(async () => {
@@ -208,11 +221,89 @@ export default function AdminPage() {
 
   const loadMatches = useCallback(async () => {
     if (!selectedTournament) return;
+    setMatchesLoading(true);
     try {
       const res = await apiFetch(`/tournaments/${selectedTournament}/matches`);
       if (res.ok) setMatches(await res.json());
-    } catch {}
+    } catch {} finally { setMatchesLoading(false); }
   }, [apiFetch, selectedTournament]);
+
+  const loadTournamentMatchesById = useCallback(async (tournamentId: number) => {
+    setTournamentMatchesLoading((prev) => ({ ...prev, [tournamentId]: true }));
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}/matches`);
+      if (res.ok) {
+        const data = await res.json();
+        setTournamentMatchesList((prev) => ({ ...prev, [tournamentId]: data }));
+      }
+    } catch {} finally {
+      setTournamentMatchesLoading((prev) => ({ ...prev, [tournamentId]: false }));
+    }
+  }, [apiFetch]);
+
+  const createMatchForTournament = useCallback(async (tournamentId: number) => {
+    const form = tournamentMatchForms[tournamentId];
+    if (!form?.matchNumber || !form?.scheduledAt) {
+      toast({ title: "Match number and date required", variant: "destructive" });
+      return;
+    }
+    setCreatingTournamentMatch((prev) => ({ ...prev, [tournamentId]: true }));
+    try {
+      const res = await apiFetch(`/tournaments/${tournamentId}/matches`, {
+        method: "POST",
+        body: JSON.stringify({
+          matchNumber: parseInt(form.matchNumber),
+          scheduledAt: form.scheduledAt,
+          mapName: form.mapName || undefined,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: "✅ Match created" });
+        setShowTournamentMatchForm((prev) => ({ ...prev, [tournamentId]: false }));
+        setTournamentMatchForms((prev) => ({ ...prev, [tournamentId]: { matchNumber: "", scheduledAt: "", mapName: "" } }));
+        loadTournamentMatchesById(tournamentId);
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error ?? "Failed to create match", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setCreatingTournamentMatch((prev) => ({ ...prev, [tournamentId]: false }));
+    }
+  }, [apiFetch, tournamentMatchForms, toast, loadTournamentMatchesById]);
+
+  const setTournamentMatchRoomCredentials = useCallback(async (tournamentId: number, matchId: number) => {
+    const form = tournamentMatchRoomForms[matchId];
+    if (!form?.roomId) {
+      toast({ title: "Enter Room ID", variant: "destructive" });
+      return;
+    }
+    setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: true }));
+    try {
+      const res = await apiFetch(`/matches/${matchId}/room`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          roomId: form.roomId,
+          roomPassword: form.roomPassword ?? "",
+          roomReleaseMinutesBefore: 10,
+          roomHideMinutesAfter: 5,
+        }),
+      });
+      if (res.ok) {
+        toast({ title: "✅ Room saved!" });
+        setTournamentMatchRoomForms((prev) => { const n = { ...prev }; delete n[matchId]; return n; });
+        loadTournamentMatchesById(tournamentId);
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: false }));
+    }
+  }, [apiFetch, tournamentMatchRoomForms, toast, loadTournamentMatchesById]);
 
   const loadUserMatches = useCallback(async () => {
     setUserMatchesLoading(true);
@@ -1290,7 +1381,30 @@ export default function AdminPage() {
               )}
 
               <div className="space-y-4">
-                {tournaments.length === 0 ? (
+                {tournamentsLoading ? (
+                  [1, 2, 3].map((i) => (
+                    <div key={i} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-5 animate-pulse">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-1 space-y-2">
+                          <div className="h-5 bg-[#1a1a24] rounded w-64" />
+                          <div className="h-4 bg-[#1a1a24] rounded w-80" />
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="w-9 h-9 bg-[#1a1a24] rounded-lg" />
+                          <div className="w-9 h-9 bg-[#1a1a24] rounded-lg" />
+                        </div>
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-[#ff6b00]/5 space-y-2">
+                        <div className="h-4 bg-[#1a1a24] rounded w-24" />
+                        <div className="flex gap-2">
+                          <div className="h-8 bg-[#1a1a24] rounded-lg w-32" />
+                          <div className="h-8 bg-[#1a1a24] rounded-lg w-28" />
+                          <div className="h-8 bg-[#1a1a24] rounded-lg w-20" />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : tournaments.length === 0 ? (
                   <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
                     <Trophy className="w-12 h-12 mx-auto mb-3 opacity-20" />
                     <p>No tournaments yet. Create your first tournament above.</p>
@@ -1533,6 +1647,176 @@ export default function AdminPage() {
                         </div>
                       )}
                     </div>
+
+                    {/* ── Tournament Matches ── */}
+                    <div className="mt-4 pt-4 border-t border-[#ff6b00]/5">
+                      <div className="flex items-center justify-between mb-3">
+                        <button
+                          onClick={() => {
+                            const open = !expandedTournamentMatches[t.id];
+                            setExpandedTournamentMatches((prev) => ({ ...prev, [t.id]: open }));
+                            if (open && !tournamentMatchesList[t.id]) loadTournamentMatchesById(t.id);
+                          }}
+                          className="flex items-center gap-2 text-sm font-bold text-[#a0a0b0] hover:text-white transition-colors"
+                        >
+                          <span>🗓️</span>
+                          <span className="uppercase text-xs tracking-wider">Matches</span>
+                          {tournamentMatchesList[t.id] && (
+                            <span className="text-[10px] bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/20 px-1.5 py-0.5 rounded-full font-black">
+                              {tournamentMatchesList[t.id].length}
+                            </span>
+                          )}
+                          <span className="text-[#404050] text-xs">{expandedTournamentMatches[t.id] ? "▲" : "▼"}</span>
+                        </button>
+                        <button
+                          onClick={() => setShowTournamentMatchForm((prev) => ({ ...prev, [t.id]: !prev[t.id] }))}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-xs uppercase rounded-lg hover:bg-[#e66000] transition-colors"
+                        >
+                          <Plus className="w-3 h-3" /> Add Match
+                        </button>
+                      </div>
+
+                      {showTournamentMatchForm[t.id] && (
+                        <div className="bg-[#0a0a14] border border-[#ff6b00]/20 rounded-xl p-4 mb-3">
+                          <h3 className="text-xs font-black uppercase text-[#ff6b00] mb-3">New Match for {t.name}</h3>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-[#606070] text-[10px] uppercase block mb-1">Match Number *</label>
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder="1"
+                                value={tournamentMatchForms[t.id]?.matchNumber ?? ""}
+                                onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { matchNumber: e.target.value, scheduledAt: prev[t.id]?.scheduledAt ?? "", mapName: prev[t.id]?.mapName ?? "" } }))}
+                                className="admin-input"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[#606070] text-[10px] uppercase block mb-1">Scheduled At *</label>
+                              <input
+                                type="datetime-local"
+                                value={tournamentMatchForms[t.id]?.scheduledAt ?? ""}
+                                onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { matchNumber: prev[t.id]?.matchNumber ?? "", scheduledAt: e.target.value, mapName: prev[t.id]?.mapName ?? "" } }))}
+                                className="admin-input"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[#606070] text-[10px] uppercase block mb-1">Map Name</label>
+                              <input
+                                placeholder="Bermuda, Purgatory..."
+                                value={tournamentMatchForms[t.id]?.mapName ?? ""}
+                                onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { matchNumber: prev[t.id]?.matchNumber ?? "", scheduledAt: prev[t.id]?.scheduledAt ?? "", mapName: e.target.value } }))}
+                                className="admin-input"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex gap-2 mt-3">
+                            <button
+                              onClick={() => createMatchForTournament(t.id)}
+                              disabled={creatingTournamentMatch[t.id]}
+                              className="px-4 py-2 bg-[#ff6b00] text-white font-bold text-xs uppercase rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50"
+                            >
+                              {creatingTournamentMatch[t.id] ? "Creating..." : "Create Match"}
+                            </button>
+                            <button
+                              onClick={() => setShowTournamentMatchForm((prev) => ({ ...prev, [t.id]: false }))}
+                              className="px-4 py-2 bg-[#1a1a24] text-[#a0a0b0] font-bold text-xs uppercase rounded-lg hover:text-white transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {expandedTournamentMatches[t.id] && (
+                        <div className="space-y-2">
+                          {tournamentMatchesLoading[t.id] ? (
+                            [1, 2, 3].map((i) => (
+                              <div key={i} className="h-20 bg-[#1a1a24] rounded-xl animate-pulse" />
+                            ))
+                          ) : !tournamentMatchesList[t.id] || tournamentMatchesList[t.id].length === 0 ? (
+                            <div className="text-center py-5 text-[#a0a0b0] text-xs border border-dashed border-[#2a2a36] rounded-xl">
+                              No matches yet — click "Add Match" above to create the first one.
+                            </div>
+                          ) : tournamentMatchesList[t.id].map((m: any) => (
+                            <div key={m.id} className="bg-[#0d0d18] border border-[#2a2a36] rounded-xl p-3">
+                              <div className="flex items-start justify-between gap-2 flex-wrap">
+                                <div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {m.serialNumber && (
+                                      <span className="text-[#ff6b00] font-mono text-[10px] bg-[#ff6b00]/10 border border-[#ff6b00]/20 px-1.5 py-0.5 rounded">
+                                        {m.serialNumber}
+                                      </span>
+                                    )}
+                                    <span className="text-white text-sm font-bold">Match #{m.matchNumber}</span>
+                                    {m.mapName && <span className="text-[#a0a0b0] text-xs">— {m.mapName}</span>}
+                                    <span className={statusBadge(m.status)}>{m.status}</span>
+                                  </div>
+                                  {m.scheduledAt && (
+                                    <div className="text-[#a0a0b0] text-xs mt-0.5">{new Date(m.scheduledAt).toLocaleString()}</div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Room credentials for this match */}
+                              <div className="mt-2 pt-2 border-t border-[#2a2a36]">
+                                {m.roomId ? (
+                                  <div className="flex items-center gap-3 text-xs mb-2 flex-wrap">
+                                    <span className="text-[#00ff88] font-bold flex items-center gap-1">
+                                      <Key className="w-3 h-3" /> <span className="font-mono">{m.roomId}</span>
+                                    </span>
+                                    <span className="text-[#a0a0b0]">Pass: <span className="font-mono text-white">{m.roomPassword}</span></span>
+                                    {(() => {
+                                      const now = Date.now();
+                                      const rel = m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null;
+                                      const hid = m.roomHideAt ? new Date(m.roomHideAt).getTime() : null;
+                                      if (rel && now >= rel && (!hid || now < hid)) return <span className="text-[#00ff88] text-[10px] font-bold">🟢 Live</span>;
+                                      if (rel && now < rel) return <span className="text-yellow-400 text-[10px] font-bold">⏳ {new Date(rel).toLocaleTimeString()}</span>;
+                                      return <span className="text-[#ff2244] text-[10px] font-bold">🔴 Hidden</span>;
+                                    })()}
+                                  </div>
+                                ) : (
+                                  <p className="text-[#606070] text-[10px] mb-2">No room set</p>
+                                )}
+                                <div className="flex gap-2 items-end flex-wrap">
+                                  <div>
+                                    <label className="text-[#606070] text-[10px] uppercase block mb-1">Room ID</label>
+                                    <input
+                                      placeholder="Room ID"
+                                      value={tournamentMatchRoomForms[m.id]?.roomId ?? ""}
+                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({ ...prev, [m.id]: { roomId: e.target.value, roomPassword: prev[m.id]?.roomPassword ?? "" } }))}
+                                      className="admin-input-sm w-28"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[#606070] text-[10px] uppercase block mb-1">Password</label>
+                                    <input
+                                      placeholder="Password"
+                                      value={tournamentMatchRoomForms[m.id]?.roomPassword ?? ""}
+                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({ ...prev, [m.id]: { roomId: prev[m.id]?.roomId ?? "", roomPassword: e.target.value } }))}
+                                      className="admin-input-sm w-28"
+                                    />
+                                  </div>
+                                  <button
+                                    onClick={() => setTournamentMatchRoomCredentials(t.id, m.id)}
+                                    disabled={settingTournamentMatchRoom[m.id]}
+                                    className="px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-[10px] uppercase rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50"
+                                  >
+                                    {settingTournamentMatchRoom[m.id] ? "Saving..." : "Set Room"}
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => loadTournamentMatchesById(t.id)}
+                            className="flex items-center gap-1.5 text-xs text-[#a0a0b0] hover:text-white transition-colors mt-1"
+                          >
+                            <RefreshCw className="w-3 h-3" /> Refresh matches
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1542,7 +1826,10 @@ export default function AdminPage() {
           {/* MATCHES */}
           {activeTab === "matches" && (
             <div>
-              <h1 className="text-2xl font-black uppercase mb-6">Manage <span className="text-[#ff6b00]">Matches</span></h1>
+              <div className="mb-6">
+                <h1 className="text-2xl font-black uppercase">Manage <span className="text-[#ff6b00]">Matches</span></h1>
+                <p className="text-[#a0a0b0] text-sm mt-1">Results entry &amp; prize distribution. Create matches or set room details in the <span className="text-[#ff6b00] font-bold">Tournaments</span> tab.</p>
+              </div>
               <div className="mb-6">
                 <label className="label-sm mb-2 block">Select Tournament</label>
                 <select
@@ -1559,52 +1846,34 @@ export default function AdminPage() {
 
               {selectedTournament && (
                 <>
-                  <button
-                    onClick={() => setShowMatchForm(true)}
-                    className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors mb-4"
-                  >
-                    <Plus className="w-4 h-4" /> Add Match
-                  </button>
-
-                  {showMatchForm && (
-                    <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-4">
-                      <h2 className="font-black uppercase text-[#ff6b00] mb-4">New Match</h2>
-                      <form onSubmit={createMatch} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <label className="label-sm">Match Number *</label>
-                          <input type="number" value={matchForm.matchNumber} onChange={(e) => setMatchForm({ ...matchForm, matchNumber: e.target.value })} required min="1" className="admin-input" />
-                        </div>
-                        <div>
-                          <label className="label-sm">Scheduled At *</label>
-                          <input type="datetime-local" value={matchForm.scheduledAt} onChange={(e) => setMatchForm({ ...matchForm, scheduledAt: e.target.value })} required className="admin-input" />
-                        </div>
-                        <div>
-                          <label className="label-sm">Map Name</label>
-                          <input value={matchForm.mapName} onChange={(e) => setMatchForm({ ...matchForm, mapName: e.target.value })} placeholder="Bermuda, Purgatory..." className="admin-input" />
-                        </div>
-                        <div>
-                          <label className="label-sm">Room ID (optional)</label>
-                          <input value={matchForm.roomId} onChange={(e) => setMatchForm({ ...matchForm, roomId: e.target.value })} placeholder="Room ID" className="admin-input" />
-                        </div>
-                        <div>
-                          <label className="label-sm">Room Password (optional)</label>
-                          <input value={matchForm.roomPassword} onChange={(e) => setMatchForm({ ...matchForm, roomPassword: e.target.value })} placeholder="Password" className="admin-input" />
-                        </div>
-                        <div className="md:col-span-3 flex gap-3">
-                          <button type="submit" className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors">
-                            Create Match
-                          </button>
-                          <button type="button" onClick={() => setShowMatchForm(false)} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">
-                            Cancel
-                          </button>
-                        </div>
-                      </form>
-                    </div>
-                  )}
+                  <div className="bg-[#0d0d16] border border-[#ff6b00]/10 rounded-xl px-4 py-3 mb-4 flex items-start gap-3">
+                    <span className="text-[#ff6b00] text-lg mt-0.5">ℹ️</span>
+                    <p className="text-xs text-[#a0a0b0] leading-relaxed">
+                      To <strong className="text-white">create matches</strong> or <strong className="text-white">set room credentials</strong>, go to the <strong className="text-[#ff6b00]">Manage Tournaments</strong> tab and expand the tournament's <em>Matches</em> section. This tab is dedicated to match results and prize distribution only.
+                    </p>
+                  </div>
 
                   <div className="space-y-4">
-                    {matches.length === 0 ? (
-                      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-8 text-center text-[#a0a0b0] text-sm">No matches for this tournament yet.</div>
+                    {matchesLoading ? (
+                      [1, 2, 3].map((i) => (
+                        <div key={i} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 overflow-hidden animate-pulse">
+                          <div className="p-4 flex gap-3">
+                            <div className="flex-1 space-y-2">
+                              <div className="h-5 bg-[#1a1a24] rounded w-48" />
+                              <div className="h-4 bg-[#1a1a24] rounded w-32" />
+                            </div>
+                            <div className="flex gap-2">
+                              <div className="h-8 w-20 bg-[#1a1a24] rounded-lg" />
+                              <div className="h-8 w-24 bg-[#1a1a24] rounded-lg" />
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : matches.length === 0 ? (
+                      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-8 text-center text-[#a0a0b0] text-sm">
+                        <div className="text-3xl mb-2">🎮</div>
+                        No matches yet — go to the <strong className="text-[#ff6b00]">Tournaments</strong> tab to create matches for this tournament.
+                      </div>
                     ) : matches.map((m: any) => {
                       const isExpanded = expandedMatchResult[m.id];
                       const rows = matchResultRows[m.id] ?? [];
@@ -1720,126 +1989,6 @@ export default function AdminPage() {
                                   ))}
                                 </div>
                               )}
-                            </div>
-                          )}
-
-                          {/* Room Management Section */}
-                          {m.status !== "completed" && (
-                            <div className="border-t border-[#ff6b00]/5 bg-[#0d0d16]/60 px-4 py-3">
-                              <p className="text-xs text-[#a0a0b0] uppercase font-bold mb-2 flex items-center gap-1.5">
-                                <Key className="w-3 h-3" /> Room Details
-                              </p>
-                              {m.roomId ? (
-                                <div className="flex items-center flex-wrap gap-3 text-xs mb-2">
-                                  <span className="text-[#a0a0b0]">ID: <span className="text-white font-mono font-bold">{m.roomId}</span></span>
-                                  <span className="text-[#a0a0b0]">Pass: <span className="text-white font-mono font-bold">{m.roomPassword}</span></span>
-                                  {(() => {
-                                    const now = Date.now();
-                                    const relMs = m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null;
-                                    const hideMs = m.roomHideAt ? new Date(m.roomHideAt).getTime() : (m.scheduledAt ? new Date(m.scheduledAt).getTime() : null);
-                                    if (relMs && now >= relMs && (!hideMs || now < hideMs)) return <span className="text-[#00ff88] font-bold">🟢 Live to players</span>;
-                                    if (relMs && now < relMs) return <span className="text-yellow-400 font-bold">⏳ Opens {new Date(relMs).toLocaleTimeString()}</span>;
-                                    return <span className="text-[#ff2244] font-bold">🔴 Hidden</span>;
-                                  })()}
-                                  {m.roomReleaseAt && <span className="text-[#404050] text-[10px]">Open: {new Date(m.roomReleaseAt).toLocaleTimeString()}</span>}
-                                  {m.roomHideAt && <span className="text-[#404050] text-[10px]">Close: {new Date(m.roomHideAt).toLocaleTimeString()}</span>}
-                                </div>
-                              ) : (
-                                <p className="text-xs text-[#a0a0b0] mb-2">No room details set.</p>
-                              )}
-                              <div className="flex gap-2 flex-wrap items-end">
-                                <div>
-                                  <label className="text-[#606070] text-[10px] uppercase block mb-1">Room ID</label>
-                                  <input
-                                    placeholder="Room ID"
-                                    value={matchRoomForm[m.id]?.roomId ?? ""}
-                                    onChange={(e) => setMatchRoomForm({ ...matchRoomForm, [m.id]: { ...matchRoomForm[m.id], roomId: e.target.value } })}
-                                    className="admin-input-sm w-28"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-[#606070] text-[10px] uppercase block mb-1">Password</label>
-                                  <input
-                                    placeholder="Password"
-                                    value={matchRoomForm[m.id]?.roomPassword ?? ""}
-                                    onChange={(e) => setMatchRoomForm({ ...matchRoomForm, [m.id]: { ...matchRoomForm[m.id], roomPassword: e.target.value } })}
-                                    className="admin-input-sm w-28"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-[#606070] text-[10px] uppercase block mb-1">Release (min before)</label>
-                                  <select
-                                    value={matchRoomForm[m.id]?.releaseMinutes ?? "10"}
-                                    onChange={(e) => setMatchRoomForm({ ...matchRoomForm, [m.id]: { ...matchRoomForm[m.id], releaseMinutes: e.target.value } })}
-                                    className="admin-input-sm w-24"
-                                  >
-                                    <option value="5">5 min</option>
-                                    <option value="10">10 min</option>
-                                    <option value="15">15 min</option>
-                                    <option value="30">30 min</option>
-                                    <option value="0">Immediately</option>
-                                  </select>
-                                </div>
-                                <div>
-                                  <label className="text-[#606070] text-[10px] uppercase block mb-1">Close (min after)</label>
-                                  <select
-                                    value={matchRoomForm[m.id]?.hideMinutes ?? "5"}
-                                    onChange={(e) => setMatchRoomForm({ ...matchRoomForm, [m.id]: { ...matchRoomForm[m.id], hideMinutes: e.target.value } })}
-                                    className="admin-input-sm w-24"
-                                  >
-                                    <option value="0">At start</option>
-                                    <option value="5">5 min after</option>
-                                    <option value="15">15 min after</option>
-                                    <option value="30">30 min after</option>
-                                    <option value="60">60 min after</option>
-                                  </select>
-                                </div>
-                                <button
-                                  onClick={() => setMatchRoom(m.id)}
-                                  disabled={settingMatchRoom[m.id]}
-                                  className="px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-xs uppercase rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50"
-                                >
-                                  {settingMatchRoom[m.id] ? "Saving..." : "Save Credentials & Timing"}
-                                </button>
-                                <button
-                                  onClick={async () => {
-                                    if (!m.roomId) {
-                                      toast({ title: "Set room credentials first", variant: "destructive" });
-                                      return;
-                                    }
-                                    setSettingMatchRoom((prev) => ({ ...prev, [m.id]: true }));
-                                    try {
-                                      const res = await apiFetch(`/matches/${m.id}/room`, {
-                                        method: "PATCH",
-                                        body: JSON.stringify({
-                                          roomId: m.roomId,
-                                          roomPassword: m.roomPassword,
-                                          roomReleaseMinutesBefore: -1,
-                                          roomHideMinutesAfter: parseInt(matchRoomForm[m.id]?.hideMinutes || "5"),
-                                        }),
-                                      });
-                                      if (res.ok) { toast({ title: "🟢 Room released immediately!" }); loadMatches(); }
-                                      else { const d = await safeJson(res); toast({ title: "Error", description: d.error, variant: "destructive" }); }
-                                    } catch { toast({ title: "Connection error", variant: "destructive" }); }
-                                    finally { setSettingMatchRoom((prev) => ({ ...prev, [m.id]: false })); }
-                                  }}
-                                  disabled={!m.roomId || settingMatchRoom[m.id]}
-                                  className="px-3 py-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] font-bold text-xs uppercase rounded-lg hover:bg-[#00ff88]/20 transition-colors disabled:opacity-50"
-                                  title="Release room to players right now"
-                                >
-                                  Manual Release
-                                </button>
-                                {m.roomId && (
-                                  <button
-                                    onClick={() => deleteMatchRoom(m.id)}
-                                    disabled={deletingMatchRoom[m.id]}
-                                    className="px-3 py-1.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-bold text-xs uppercase rounded-lg hover:bg-[#ff2244]/20 transition-colors disabled:opacity-50"
-                                    title="Clear room credentials"
-                                  >
-                                    {deletingMatchRoom[m.id] ? "Clearing..." : "Clear Room"}
-                                  </button>
-                                )}
-                              </div>
                             </div>
                           )}
 
