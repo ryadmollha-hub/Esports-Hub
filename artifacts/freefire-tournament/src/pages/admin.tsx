@@ -1945,21 +1945,25 @@ export default function AdminPage() {
 
                           {/* Prize Distribution Panel */}
                           {expandedPrize[m.id] && (
-                            <div className="border-t border-yellow-500/20 bg-[#0d0d16] p-4">
-                              <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-black uppercase text-yellow-400 text-sm flex items-center gap-2">
-                                  💰 Prize Distribution
+                            <div className="border-t border-yellow-500/20 bg-[#08080f]">
+                              {/* ── Header ── */}
+                              <div className="flex items-center justify-between px-5 py-3 border-b border-[#1a1a26]">
+                                <div className="flex items-center gap-2.5">
+                                  <span className="text-base">💰</span>
+                                  <span className="font-black uppercase text-white text-sm tracking-wide">Prize Distribution</span>
                                   {m.prizeDistributed && (
-                                    <span className="text-[#00ff88] text-xs font-bold border border-[#00ff88]/30 bg-[#00ff88]/10 px-2 py-0.5 rounded">✅ Already Distributed</span>
+                                    <span className="text-[10px] font-bold border border-[#00ff88]/30 bg-[#00ff88]/10 text-[#00ff88] px-2 py-0.5 rounded-full">✅ PAID</span>
                                   )}
-                                </h3>
-                                <button onClick={() => setExpandedPrize((prev) => ({ ...prev, [m.id]: false }))} className="text-[#606070] hover:text-white text-xs">▲ Close</button>
+                                </div>
+                                <button onClick={() => setExpandedPrize((prev) => ({ ...prev, [m.id]: false }))} className="text-[#505060] hover:text-white text-xs transition-colors">✕ Close</button>
                               </div>
 
                               {prizeRegData[m.id]?.loading ? (
-                                <div className="text-center py-6 text-[#a0a0b0] text-sm">Loading registrations…</div>
+                                <div className="flex items-center justify-center gap-2 py-10 text-[#606070] text-sm">
+                                  <span className="animate-spin">⏳</span> Loading registrations…
+                                </div>
                               ) : !prizeRegData[m.id] || prizeRegData[m.id].registrations.length === 0 ? (
-                                <div className="text-center py-6 text-[#a0a0b0] text-sm">No approved registrations found for this tournament.</div>
+                                <div className="text-center py-10 text-[#505060] text-sm">No approved registrations found for this tournament.</div>
                               ) : (() => {
                                 const prd = prizeRegData[m.id];
                                 const t = prd.tournament;
@@ -1968,145 +1972,230 @@ export default function AdminPage() {
                                 const kills = prizeKills[m.id] ?? {};
                                 const preview = prizePreviewData[m.id];
 
+                                // Flat list of every player across all teams for the kill table
+                                const allPlayers: { regId: number; mIdx: number; name: string; uid: string; isCapt: boolean; teamName: string; teamSize: number }[] = [];
+                                for (const reg of regs) {
+                                  const members = reg.teamMembersArr ?? [];
+                                  allPlayers.push({ regId: reg.id, mIdx: 0, name: reg.playerName, uid: reg.freefireUid ?? "", isCapt: true, teamName: reg.playerName, teamSize: 1 + members.length });
+                                  members.forEach((mem: any, i: number) => {
+                                    allPlayers.push({ regId: reg.id, mIdx: i + 1, name: mem.name, uid: mem.uid ?? "", isCapt: false, teamName: reg.playerName, teamSize: 1 + members.length });
+                                  });
+                                }
+
+                                // Prize tier amounts for display
+                                const tierAmounts = (t.prizes ?? []).map((p: any) => Number(p.amount));
+                                const pool = Number(t.prizePool ?? 0);
+                                const prize1 = tierAmounts[0] ?? (pool > 0 ? pool * 0.5 : 0);
+                                const prize2 = tierAmounts[1] ?? (pool > 0 ? pool * 0.3 : 0);
+                                const prize3 = tierAmounts[2] ?? (pool > 0 ? pool * 0.2 : 0);
+                                const perKill = Number(t.perKillReward ?? 0);
+
+                                const placedRegIds = new Set(Object.values(placements).filter(Boolean).map(Number));
+
                                 return (
-                                  <div>
-                                    {/* Tournament prize info */}
-                                    <div className="flex flex-wrap gap-3 mb-4 p-3 bg-[#12121a] rounded-xl border border-[#2a2a36]">
-                                      <div className="text-xs text-[#a0a0b0]">
-                                        <span className="text-[#606070] uppercase font-bold text-[10px] block mb-0.5">Prize Tiers</span>
-                                        {(t.prizes ?? []).length === 0 ? <span className="text-yellow-400">No prize tiers set</span> : (t.prizes ?? []).map((p: any, i: number) => (
-                                          <span key={i} className="mr-3 text-white font-bold">
-                                            {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} ৳{Number(p.amount).toLocaleString()}
-                                          </span>
-                                        ))}
+                                  <div className="p-5 space-y-6">
+
+                                    {/* ── Prize Info Bar ── */}
+                                    <div className="flex flex-wrap gap-4 px-4 py-3 bg-[#0e0e1a] border border-[#1e1e2e] rounded-xl text-xs">
+                                      {[["🥇 1st", prize1], ["🥈 2nd", prize2], ["🥉 3rd", prize3]].map(([label, amt]) => (
+                                        <div key={String(label)} className="flex items-center gap-1.5">
+                                          <span className="text-[#606070]">{label}</span>
+                                          <span className="text-white font-bold">৳{Number(amt).toLocaleString()}</span>
+                                        </div>
+                                      ))}
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[#606070]">⚔️ Per Kill</span>
+                                        <span className="text-white font-bold">৳{perKill.toLocaleString()}</span>
                                       </div>
-                                      <div className="text-xs text-[#a0a0b0]">
-                                        <span className="text-[#606070] uppercase font-bold text-[10px] block mb-0.5">Per Kill</span>
-                                        <span className="text-white font-bold">৳{Number(t.perKillReward ?? 0).toLocaleString()}</span>
-                                      </div>
-                                      <div className="text-xs text-[#a0a0b0]">
-                                        <span className="text-[#606070] uppercase font-bold text-[10px] block mb-0.5">Mode</span>
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-[#606070]">Mode</span>
                                         <span className="text-white font-bold uppercase">{t.mode}</span>
                                       </div>
                                     </div>
 
-                                    {/* Teams list */}
-                                    <div className="space-y-3 mb-4">
-                                      {regs.map((reg: any) => {
-                                        const allMembers = [
-                                          { name: reg.playerName, uid: reg.freefireUid, isCapt: true },
-                                          ...(reg.teamMembersArr ?? []).map((m2: any) => ({ name: m2.name, uid: m2.uid, isCapt: false })),
-                                        ];
-                                        return (
-                                          <div key={reg.id} className="bg-[#12121a] border border-[#2a2a36] rounded-xl p-3">
-                                            <div className="flex items-center gap-3 mb-2 flex-wrap">
-                                              <span className="text-white font-bold text-xs truncate max-w-[160px]">{reg.playerName}</span>
-                                              {(reg.teamMembersArr ?? []).length > 0 && (
-                                                <span className="text-[#606070] text-[10px]">+{reg.teamMembersArr.length} members</span>
-                                              )}
-                                              <div className="ml-auto">
-                                                <select
-                                                  value={placements[reg.id] ?? ""}
-                                                  onChange={(e) => setPrizePlacements((prev) => ({
-                                                    ...prev,
-                                                    [m.id]: { ...(prev[m.id] ?? {}), [reg.id]: e.target.value },
-                                                  }))}
-                                                  className="bg-[#0a0a0f] border border-[#2a2a36] text-white text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-yellow-500"
-                                                >
-                                                  <option value="">No Placement</option>
-                                                  <option value="1">🥇 1st Place</option>
-                                                  <option value="2">🥈 2nd Place</option>
-                                                  <option value="3">🥉 3rd Place</option>
-                                                </select>
+                                    {/* ── SECTION A: Placement Selection ── */}
+                                    <div>
+                                      <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section A — Rankings</p>
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        {([
+                                          { rank: "1", label: "1st Place", medal: "🥇", color: "border-yellow-500/40 focus:border-yellow-400", badge: "bg-yellow-500/10 text-yellow-400" },
+                                          { rank: "2", label: "2nd Place", medal: "🥈", color: "border-[#9ca3af]/30 focus:border-[#9ca3af]", badge: "bg-[#9ca3af]/10 text-[#9ca3af]" },
+                                          { rank: "3", label: "3rd Place", medal: "🥉", color: "border-orange-700/30 focus:border-orange-600", badge: "bg-orange-800/10 text-orange-500" },
+                                        ] as const).map(({ rank, label, medal, color, badge }) => {
+                                          const selectedRegId = Object.entries(placements).find(([, v]) => v === rank)?.[0];
+                                          return (
+                                            <div key={rank} className={`relative bg-[#0e0e1a] border ${color} rounded-xl p-3 transition-colors`}>
+                                              <div className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mb-2 ${badge}`}>
+                                                {medal} {label}
                                               </div>
+                                              <select
+                                                value={selectedRegId ?? ""}
+                                                onChange={(e) => {
+                                                  const newRegId = e.target.value;
+                                                  setPrizePlacements((prev) => {
+                                                    const cur = { ...(prev[m.id] ?? {}) };
+                                                    // Remove this rank from any other reg
+                                                    Object.keys(cur).forEach((k) => { if ((cur as Record<string, string>)[k] === rank) delete (cur as Record<string, string>)[k]; });
+                                                    if (newRegId) cur[parseInt(newRegId)] = rank;
+                                                    return { ...prev, [m.id]: cur };
+                                                  });
+                                                }}
+                                                className="w-full bg-[#06060f] border border-[#1e1e2e] text-white text-xs rounded-lg px-3 py-2 focus:outline-none appearance-none cursor-pointer"
+                                              >
+                                                <option value="">— No selection —</option>
+                                                {regs.map((reg: any) => (
+                                                  <option key={reg.id} value={reg.id} disabled={placedRegIds.has(reg.id) && String(reg.id) !== selectedRegId}>
+                                                    {reg.playerName}{reg.teamMembersArr?.length > 0 ? ` (+${reg.teamMembersArr.length})` : ""}
+                                                  </option>
+                                                ))}
+                                              </select>
                                             </div>
-                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                              {allMembers.map((member, mIdx) => (
-                                                <div key={mIdx} className="flex items-center gap-2 bg-[#0a0a0f] border border-[#1a1a24] rounded-lg px-2 py-1.5">
-                                                  <div className="flex-1 min-w-0">
-                                                    <div className="text-[#a0a0b0] text-[10px] truncate">
-                                                      {member.isCapt && <span className="text-yellow-400 mr-1">★</span>}
-                                                      {member.name}
-                                                    </div>
-                                                    {member.uid && <div className="text-[#606070] text-[10px] font-mono truncate">{member.uid}</div>}
-                                                  </div>
-                                                  <div className="shrink-0">
-                                                    <input
-                                                      type="number"
-                                                      min="0"
-                                                      placeholder="0"
-                                                      value={kills[`${reg.id}-${mIdx}`] ?? 0}
-                                                      onChange={(e) => setPrizeKills((prev) => ({
-                                                        ...prev,
-                                                        [m.id]: { ...(prev[m.id] ?? {}), [`${reg.id}-${mIdx}`]: parseInt(e.target.value) || 0 },
-                                                      }))}
-                                                      className="w-14 bg-[#12121a] border border-[#2a2a36] text-white text-xs rounded px-2 py-1 focus:outline-none focus:border-yellow-500 text-center"
-                                                    />
-                                                    <div className="text-[#606070] text-[10px] text-center mt-0.5">kills</div>
-                                                  </div>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
+                                          );
+                                        })}
+                                      </div>
                                     </div>
 
-                                    {/* Preview results */}
-                                    {preview && (
-                                      <div className="mb-4 bg-[#12121a] border border-yellow-500/20 rounded-xl p-4">
-                                        <p className="text-yellow-400 font-bold text-xs uppercase mb-3">💡 Prize Preview</p>
-                                        <div className="space-y-3">
-                                          {(preview.payouts ?? []).map((payout: any) => (
-                                            <div key={payout.registrationId} className="border border-[#2a2a36] rounded-lg p-3">
-                                              <div className="flex items-center gap-2 mb-2">
-                                                <span className="text-white font-bold text-xs">{payout.teamName}</span>
-                                                {payout.rank && <span className="text-xs">{payout.rank === 1 ? "🥇" : payout.rank === 2 ? "🥈" : "🥉"}</span>}
-                                                <span className="text-[#a0a0b0] text-xs">Rank prize: ৳{Number(payout.rankPrize).toFixed(2)} ÷ {payout.totalMembers} members</span>
-                                              </div>
-                                              <div className="space-y-1">
-                                                {(payout.memberPayouts ?? []).map((mp: any, mpi: number) => (
-                                                  <div key={mpi} className={`flex items-center justify-between text-xs px-2 py-1 rounded ${mp.userFound ? "bg-[#0a0a0f]" : "bg-[#ff2244]/5 border border-[#ff2244]/10"}`}>
-                                                    <span className={mp.userFound ? "text-[#a0a0b0]" : "text-[#ff6060]"}>
-                                                      {mp.isCapt && "★ "}{mp.name}
-                                                      {!mp.userFound && <span className="text-[#ff2244] ml-1">(no account)</span>}
-                                                    </span>
-                                                    <span className="text-[#00ff88] font-bold">
-                                                      ৳{Number(mp.totalReward).toFixed(2)}
-                                                      <span className="text-[#606070] font-normal ml-1">({mp.kills} kills)</span>
-                                                    </span>
-                                                  </div>
-                                                ))}
-                                              </div>
-                                            </div>
-                                          ))}
+                                    {/* ── SECTION B: Kill Entry Table ── */}
+                                    <div>
+                                      <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section B — Kill Counts</p>
+                                      <div className="bg-[#0e0e1a] border border-[#1e1e2e] rounded-xl overflow-hidden">
+                                        {/* Table header */}
+                                        <div className="grid grid-cols-[1fr_auto] gap-4 px-4 py-2 border-b border-[#1a1a26] bg-[#0a0a14]">
+                                          <span className="text-[10px] uppercase font-black text-[#404050] tracking-widest">Player / UID</span>
+                                          <span className="text-[10px] uppercase font-black text-[#404050] tracking-widest w-20 text-center">Kills</span>
                                         </div>
-                                        <div className="mt-3 pt-3 border-t border-[#2a2a36] flex items-center justify-between">
-                                          <span className="text-[#a0a0b0] text-xs">Total to distribute</span>
-                                          <span className="text-[#00ff88] font-black text-sm">৳{Number(preview.totalDistributed).toFixed(2)}</span>
+                                        {/* Rows */}
+                                        <div className="divide-y divide-[#111120]">
+                                          {allPlayers.map((player, pIdx) => {
+                                            const killKey = `${player.regId}-${player.mIdx}`;
+                                            const isFirstInTeam = player.mIdx === 0;
+                                            const teamPlacement = placements[player.regId];
+                                            const placementEmoji = teamPlacement === "1" ? "🥇" : teamPlacement === "2" ? "🥈" : teamPlacement === "3" ? "🥉" : null;
+                                            return (
+                                              <div key={pIdx} className={`grid grid-cols-[1fr_auto] gap-4 items-center px-4 py-2.5 ${isFirstInTeam && pIdx > 0 ? "border-t border-[#1e1e2e] mt-0" : ""} hover:bg-[#0c0c16] transition-colors`}>
+                                                <div className="flex items-center gap-2.5 min-w-0">
+                                                  {player.isCapt ? (
+                                                    <span className="shrink-0 text-yellow-400 text-[10px] font-black w-4 text-center" title="Captain">★</span>
+                                                  ) : (
+                                                    <span className="shrink-0 text-[#303040] text-[10px] w-4 text-center">·</span>
+                                                  )}
+                                                  <div className="min-w-0">
+                                                    <div className="flex items-center gap-1.5">
+                                                      <span className="text-white text-xs font-semibold truncate">{player.name}</span>
+                                                      {placementEmoji && player.isCapt && (
+                                                        <span className="text-xs shrink-0">{placementEmoji}</span>
+                                                      )}
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                      {player.uid ? (
+                                                        <span className="text-[#404050] text-[10px] font-mono">{player.uid}</span>
+                                                      ) : (
+                                                        <span className="text-[10px] text-[#505058] bg-[#1a1a24] border border-[#2a2a34] px-1.5 py-0.5 rounded-full">Guest · No Wallet</span>
+                                                      )}
+                                                      {!player.isCapt && (
+                                                        <span className="text-[#303040] text-[10px]">· {player.teamName}</span>
+                                                      )}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                                <div className="w-20 shrink-0">
+                                                  <input
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="0"
+                                                    value={kills[killKey] === 0 ? "" : kills[killKey] ?? ""}
+                                                    onChange={(e) => setPrizeKills((prev) => ({
+                                                      ...prev,
+                                                      [m.id]: { ...(prev[m.id] ?? {}), [killKey]: parseInt(e.target.value) || 0 },
+                                                    }))}
+                                                    tabIndex={0}
+                                                    className="w-full bg-[#06060f] border border-[#1e1e2e] text-white text-sm font-bold rounded-lg px-3 py-1.5 text-center focus:outline-none focus:border-yellow-500/60 focus:bg-[#0a0a14] transition-colors"
+                                                  />
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    {/* ── SECTION C: Preview Receipt ── */}
+                                    {preview && (
+                                      <div>
+                                        <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section C — Payout Preview</p>
+                                        <div className="bg-[#060610] border border-[#00ff88]/20 rounded-xl overflow-hidden">
+                                          <div className="px-4 py-2.5 border-b border-[#00ff88]/10 bg-[#00ff88]/5 flex items-center justify-between">
+                                            <span className="text-[#00ff88] text-xs font-black uppercase tracking-wider">Receipt</span>
+                                            <span className="text-[10px] text-[#00cc66]">{new Date().toLocaleString()}</span>
+                                          </div>
+                                          <div className="divide-y divide-[#0e1a14]">
+                                            {(preview.payouts ?? []).flatMap((payout: any) =>
+                                              (payout.memberPayouts ?? []).map((mp: any, mpi: number) => (
+                                                <div key={`${payout.registrationId}-${mpi}`} className="flex items-center justify-between px-4 py-2.5">
+                                                  <div className="flex items-center gap-2 min-w-0">
+                                                    {mp.isCapt
+                                                      ? <span className="text-yellow-400 text-[10px] shrink-0">★</span>
+                                                      : <span className="text-[#303040] text-[10px] shrink-0">·</span>
+                                                    }
+                                                    <div className="min-w-0">
+                                                      <div className="flex items-center gap-1.5">
+                                                        <span className={`text-xs font-semibold truncate ${mp.userFound ? "text-white" : "text-[#606060]"}`}>{mp.name}</span>
+                                                        {!mp.userFound && (
+                                                          <span className="text-[10px] text-[#404048] bg-[#1a1a22] border border-[#2a2a30] px-1.5 py-0.5 rounded-full shrink-0">No Wallet</span>
+                                                        )}
+                                                        {payout.rank === 1 && mp.isCapt && <span className="text-xs shrink-0">🥇</span>}
+                                                        {payout.rank === 2 && mp.isCapt && <span className="text-xs shrink-0">🥈</span>}
+                                                        {payout.rank === 3 && mp.isCapt && <span className="text-xs shrink-0">🥉</span>}
+                                                      </div>
+                                                      <div className="text-[10px] text-[#404050] mt-0.5">
+                                                        {mp.rankShare > 0 && `Win ৳${Number(mp.rankShare).toFixed(2)}`}
+                                                        {mp.rankShare > 0 && mp.killReward > 0 && " + "}
+                                                        {mp.killReward > 0 && `Kills ৳${Number(mp.killReward).toFixed(2)} (${mp.kills}×৳${perKill})`}
+                                                        {mp.rankShare === 0 && mp.killReward === 0 && "No earnings"}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                  <span className={`text-sm font-black shrink-0 ml-4 ${mp.userFound && mp.totalReward > 0 ? "text-[#00ff88]" : "text-[#404050]"}`}>
+                                                    {mp.userFound ? `৳${Number(mp.totalReward).toFixed(2)}` : "—"}
+                                                  </span>
+                                                </div>
+                                              ))
+                                            )}
+                                          </div>
+                                          <div className="px-4 py-3 border-t border-[#00ff88]/20 bg-[#00ff88]/5 flex items-center justify-between">
+                                            <span className="text-[#00aa44] text-xs font-bold uppercase">Total Payout</span>
+                                            <span className="text-[#00ff88] font-black text-lg">৳{Number(preview.totalDistributed).toFixed(2)}</span>
+                                          </div>
                                         </div>
                                       </div>
                                     )}
 
-                                    {/* Action buttons */}
-                                    <div className="flex items-center gap-3 flex-wrap">
+                                    {/* ── CTAs ── */}
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
                                       <button
                                         onClick={() => previewPrizes(m.id)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold text-xs uppercase rounded-xl hover:text-white hover:border-yellow-500/30 transition-colors"
+                                        className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-[#0e1e1e] border border-[#00aa66]/40 text-[#00cc88] font-black text-sm uppercase rounded-xl hover:bg-[#122020] hover:border-[#00aa66]/70 transition-colors"
                                       >
                                         🔍 Preview Prizes
                                       </button>
                                       <button
                                         onClick={() => distributePrizes(m.id)}
                                         disabled={distributing[m.id] || m.prizeDistributed}
-                                        className="flex items-center gap-2 px-5 py-2 bg-yellow-500 text-[#0a0a0f] font-black text-xs uppercase rounded-xl hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-[#ff6b00] text-white font-black text-sm uppercase rounded-xl hover:bg-[#e66000] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg shadow-[#ff6b00]/20"
                                       >
-                                        {distributing[m.id] ? "Distributing…" : m.prizeDistributed ? "✅ Already Distributed" : "🏆 Distribute Prizes"}
+                                        {distributing[m.id]
+                                          ? <><span className="animate-spin">⏳</span> Distributing…</>
+                                          : m.prizeDistributed
+                                          ? "✅ Prize Already Distributed"
+                                          : "🏆 Distribute Prizes"}
                                       </button>
-                                      {m.prizeDistributedAt && (
-                                        <span className="text-[#606070] text-xs">Paid: {new Date(m.prizeDistributedAt).toLocaleString()}</span>
-                                      )}
                                     </div>
+                                    {m.prizeDistributedAt && (
+                                      <p className="text-center text-[#404050] text-[11px]">
+                                        Paid on {new Date(m.prizeDistributedAt).toLocaleString()}
+                                      </p>
+                                    )}
+
                                   </div>
                                 );
                               })()}
