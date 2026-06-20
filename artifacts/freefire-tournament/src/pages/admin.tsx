@@ -394,7 +394,7 @@ export default function AdminPage() {
           perKillReward: parseFloat(tForm.perKillReward),
           status: tForm.status,
           bannerUrl: tForm.bannerUrl || undefined,
-          prizes: editingTournament ? undefined : prizes,
+          prizes,
         }),
       });
       if (res.ok) {

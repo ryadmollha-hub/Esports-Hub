@@ -1,0 +1,56 @@
+Act as a Senior Full-Stack Engineer and Database Architect. I have an existing Esports Tournament Platform built with React, Node.js/Express, and a relational database. 
+
+CRITICAL CURRENT ISSUES TO FIX IMMEDIATELY:
+My app is currently broken across multiple existing modules due to API payload mismatches or database constraint failures. Before writing any new logic, you must inspect, debug, and fix:
+1. Deposit & Withdrawal requests failing to submit (showing runtime/network errors).
+2. Admin cannot update or publish Room ID and Password for matches.
+3. Tournament match results cannot be uploaded or published.
+4. Creating community/private matches triggers server crashes or unhandled validation errors.
+
+TASK OVERVIEW:
+Fix all the above broken features first. Then, safely integrate a complete, automated "Tournament Prize Distribution System" by connecting tournament results directly into our EXISTING wallet and transaction systems. 
+
+STRICT CONSTRAINTS:
+- DO NOT rewrite or duplicate the existing wallet, deposit, withdrawal, or team registration schemas/logic.
+- DO NOT delete or wipe any existing user or match data.
+- Maintain maximum backward compatibility. Reuse existing data models wherever possible.
+
+=========================================
+STEP 1: DATABASE AUDIT & SCHEMA SAFETY
+=========================================
+1. Locate and inspect the database configuration/schema file (e.g., `schema.prisma` or Mongoose models).
+2. Check why existing mutations (Deposit, Withdraw, Room ID updates) are failing. Look for missing fields, incorrect types (e.g., String vs Number for amount), or broken Foreign Key/Relation hooks.
+3. To handle tournament results without breaking existing tables, safely add a `MatchResult` model and ensure the `Tournament` or `Match` model has a `prizeDistributed` boolean flag (default: false) and an `isDistributed` check to prevent duplicate operations.
+
+=========================================
+STEP 2: BACKEND RESULTS & PRIZE DISTRIBUTION LOGIC
+=========================================
+Create a secure POST endpoint (e.g., `/api/admin/matches/:id/distribute-prizes`) that executes within a Database Transaction (to ensure atomic rollbacks if anything fails):
+1. Inputs: Match Number/ID, 1st Place Team, 2nd Place Team, 3rd Place Team, and an array of individual player kills: `[{ userId: "id", kills: X }]`.
+2. Winning Prize Calculation (Shared Equally):
+   - Fetch all registered members of the winning/placed teams dynamically from the Registration table.
+   - Divide the placement prize pool equally among all members (e.g., Squad 1st Prize ৳400 ÷ 4 registered members = ৳100 each). It must adapt automatically to Solo (1), Duo (2), or Squad (4) based on actual team size.
+3. Kill Prize Calculation (Individual):
+   - Multiply individual kills by the per-kill prize rate. This goes strictly to that specific player's wallet.
+4. Final Wallet Update:
+   - Combine (Winning Share + Kill Reward) for each individual player.
+   - Atomically increment their existing `wallet.balance`.
+   - Insert a record into the existing `Transaction/Wallet History` table with clear descriptions (e.g., "Match #15 Winning Prize +৳100", "Match #15 Kill Reward +৳40").
+5. Save a detailed log into a distribution report/log table for auditing.
+
+=========================================
+STEP 3: IDEMPOTENCY & DUPLICATE PROTECTION
+=========================================
+- Before processing any transaction, check if `match.prizeDistributed === true`. If yes, immediately reject the request with a 400 error.
+- Once transaction balances are updated successfully, set `match.prizeDistributed = true` inside the same transaction block. This prevents double-crediting.
+
+=========================================
+STEP 4: FRONTEND INTEGRATION & FIXED FORMS
+=========================================
+1. Fix the Deposit, Withdraw, and Room ID input forms by ensuring the client state perfectly matches the backend Joi/Zod validators or schemas.
+2. In the Admin Dashboard, update the Match Result Upload interface to include fields for 1st, 2nd, 3rd places, and player-wise kill inputs.
+3. Add a "Distribute Prize" button. 
+   - If `match.prizeDistributed` is true, disable the button and change its text to "Prize Already Distributed".
+   - Include a preview calculation section so the Admin can double-check the values before clicking submit.
+
+Review the codebase, starting with the console/network errors for Deposit/Withdrawal/Room-ID, fix them step-by-step, and then deliver the complete end-to-end atomic prize distribution code.

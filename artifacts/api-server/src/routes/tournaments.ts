@@ -561,6 +561,23 @@ router.put("/tournaments/:id", async (req, res) => {
       .where(eq(tournamentsTable.id, id))
       .returning();
     if (!updated) return res.status(404).json({ error: "Tournament not found." });
+
+    // Update prize tiers if provided (replace existing ones)
+    if ((data as any).prizes && Array.isArray((data as any).prizes) && (data as any).prizes.length > 0) {
+      await db.delete(prizeTiersTable).where(eq(prizeTiersTable.tournamentId, id));
+      await db.insert(prizeTiersTable).values(
+        (data as any).prizes
+          .filter((p: any) => p && p.amount)
+          .map((p: any) => ({
+            tournamentId: id,
+            rank: p.rank,
+            amount: p.amount.toString(),
+            percentage: p.percentage?.toString() ?? null,
+            description: p.description ?? null,
+          }))
+      );
+    }
+
     res.json(updated);
   } catch (err: any) {
     if (err?.name === "ZodError") {

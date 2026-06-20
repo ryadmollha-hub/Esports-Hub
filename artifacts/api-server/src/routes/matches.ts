@@ -311,7 +311,8 @@ router.patch("/matches/:id/results", async (req, res) => {
         playerName: r.playerName,
         rank: r.rank,
         kills: r.kills,
-        points: r.points,
+        // Accept prizeMoney as an alias for points (frontend sends prizeMoney)
+        points: r.points ?? (r as any).prizeMoney ?? 0,
       }))
     );
 

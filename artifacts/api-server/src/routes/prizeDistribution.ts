@@ -98,9 +98,20 @@ router.post("/admin/matches/:matchId/distribute-prizes", async (req, res) => {
       .where(eq(prizeTiersTable.tournamentId, match.tournamentId))
       .orderBy(prizeTiersTable.rank);
 
-    // Map rank (1, 2, 3) → prize amount using array position
+    // Map rank (1, 2, 3) → prize amount using array position.
+    // Fallback: if no prize tiers are configured, split tournament prizePool
+    // using default percentages: 1st=50%, 2nd=30%, 3rd=20%.
     const prizeByRank: Record<number, number> = {};
-    prizes.forEach((p, i) => { prizeByRank[i + 1] = Number(p.amount); });
+    if (prizes.length > 0) {
+      prizes.forEach((p, i) => { prizeByRank[i + 1] = Number(p.amount); });
+    } else {
+      const pool = Number(tournament.prizePool ?? 0);
+      if (pool > 0) {
+        prizeByRank[1] = parseFloat((pool * 0.50).toFixed(2));
+        prizeByRank[2] = parseFloat((pool * 0.30).toFixed(2));
+        prizeByRank[3] = parseFloat((pool * 0.20).toFixed(2));
+      }
+    }
 
     const perKill = Number(tournament.perKillReward ?? 0);
 

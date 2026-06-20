@@ -698,11 +698,14 @@ router.post("/admin/user-matches", async (req, res) => {
     if (!matchType) return res.status(400).json({ error: "matchType is required." });
 
     const maxSlots = SLOTS_FOR_TYPE[matchType];
-    if (!maxSlots) return res.status(400).json({ error: "Invalid matchType. Must be one of: BR, CS, SOLO, LONE_WOLF, FREE." });
+    if (!maxSlots) return res.status(400).json({ error: "Invalid matchType. Must be one of: 1v1, 2v2, 3v3, 4v4, BR, CS, SOLO, LONE_WOLF, FREE." });
 
     const prize = prizePoolInput !== undefined ? Math.max(0, parseFloat(prizePoolInput) || 0) : 0;
     const fee = entryFeeInput !== undefined ? Math.max(0, parseFloat(entryFeeInput) || 0) : 0;
     const perKill = perKillInput !== undefined ? Math.max(0, parseFloat(perKillInput) || 0) : 0;
+
+    // Auto-generate permanent serial number (C-0001, C-0002, …)
+    const serialNumber = await nextMatchSerial("community");
 
     const [match] = await db.insert(userMatchesTable).values({
       creatorId: "admin",
@@ -714,6 +717,7 @@ router.post("/admin/user-matches", async (req, res) => {
       perKill: perKill > 0 ? perKill.toFixed(2) : null,
       mapName: mapName?.trim() || null,
       maxSlots,
+      serialNumber,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       description: description?.trim() || null,
       isPrivate: !!isPrivate,
