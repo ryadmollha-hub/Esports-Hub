@@ -1,0 +1,165 @@
+Tournament Management and Community Match Integration
+
+1. ADMIN TOURNAMENT MANAGEMENT
+
+Add all room management features currently available in User Matches to Admin Tournament Management.
+
+For every Admin Tournament add:
+
+* Players Button
+* Room ID Release System
+* Room Password Release System
+* Manual Release
+* Auto Release Before Match Start
+* Room Open Time
+* Room Close Time
+* Save Credentials & Timing
+* Release Status Indicator
+
+Admin tournaments should have the same room-control functionality currently available in User Matches.
+
+Do not remove existing tournament functionality.
+
+---
+
+2. COMMUNITY MATCHES SECTION
+
+On the Tournament Home Page, keep all tournament category cards unchanged.
+
+Below all category cards create a new section:
+
+COMMUNITY MATCHES
+
+This section must display only user-created matches.
+
+Show:
+
+* Match Number
+* Match Name
+* Match Mode
+* Host Name
+* Entry Fee
+* Prize Pool
+* Players Joined
+* Match Time
+* Join Button
+
+---
+
+3. PUBLIC MATCHES
+
+Public community matches must automatically appear inside the Community Matches section.
+
+---
+
+4. PRIVATE MATCHES
+
+Private community matches should also appear.
+
+Display:
+
+🔒 Private Match
+
+Show match information but indicate that password access is required.
+
+Do not reveal room password publicly.
+
+---
+
+5. DESIGN REQUIREMENTS
+
+Keep existing FF Arena design.
+
+Do not redesign category cards.
+
+Do not modify tournament navigation.
+
+Do not change database structure unnecessarily.
+
+Do not break any existing functionality.
+
+Keep full mobile responsiveness.
+
+Keep all buttons working.
+
+Keep all existing routes working.
+
+Only add Community Matches display section and Admin Tournament room-management tools.
+
+---
+
+6. MATCH SERIAL NUMBER SYSTEM
+
+Implement a permanent auto-generated Match Number system.
+
+This is required because admins manage many matches and need a simple way to identify matches when publishing results, reviewing matches, or managing rooms.
+
+Requirements:
+
+* Every match must receive a permanent unique Match Number.
+* Match Numbers must be generated automatically.
+* Match Numbers must never repeat.
+* Match Numbers must never reset.
+* Deleted matches must not reuse old numbers.
+* Numbers must continue increasing forever.
+
+Recommended Format:
+
+Admin Tournament Matches:
+
+T-0001
+T-0002
+T-0003
+
+Community Matches:
+
+C-0001
+C-0002
+C-0003
+
+Display Match Number on:
+
+* Tournament Cards
+* Community Match Cards
+* Tournament Details
+* Community Match Details
+* Admin Tournament Management
+* User Match Management
+* Results Page
+* Match History
+* Players Page
+
+Search System:
+
+Admin must be able to search matches by:
+
+* Match Number
+* Match Name
+
+Result Publishing:
+
+Always display:
+
+Match Number
+Match Name
+Match Type
+
+Example:
+
+T-0125
+Friday BR Cup
+BR Tournament
+
+This ensures admins never get confused when managing hundreds or thousands of matches.
+
+---
+
+FINAL REQUIREMENTS
+
+* Keep existing database records working.
+* Assign Match Numbers to old matches if they do not already have one.
+* Future matches must automatically receive a number when created.
+* Maintain performance even with 10,000+ matches.
+* Do not break existing match creation, joining, result publishing, or room release functionality.
+* Fully mobile responsive.
+* Production ready implementation only.

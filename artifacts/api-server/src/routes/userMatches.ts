@@ -10,6 +10,7 @@ import {
 import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { requireAdmin, requireAuth } from "../middlewares/requireAdmin";
 import bcrypt from "bcryptjs";
+import { nextMatchSerial } from "../lib/matchSerial";
 
 const router: IRouter = Router();
 
@@ -106,6 +107,9 @@ router.post("/user-matches", async (req, res) => {
     // FREE matches are auto-approved — no financial risk, no admin review needed
     const isFreeMatch = matchType === "FREE";
 
+    // Auto-generate permanent serial number (C-0001, C-0002, …)
+    const serialNumber = await nextMatchSerial("community");
+
     const [match] = await db.insert(userMatchesTable).values({
       creatorId: userId,
       creatorName: user?.displayName ?? user?.username ?? "Unknown",
@@ -123,6 +127,7 @@ router.post("/user-matches", async (req, res) => {
       passwordHash,
       roomId: null,
       isPrivate: !!isPrivate,
+      serialNumber,
       status: isFreeMatch ? "approved" : "pending_approval",
     }).returning();
 

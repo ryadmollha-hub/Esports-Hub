@@ -30,6 +30,7 @@ export const userMatchesTable = pgTable("user_matches", {
   startTime: timestamp("start_time"),
   roomReleaseTime: timestamp("room_release_time"),
   roomHideTime: timestamp("room_hide_time"),
+  serialNumber: text("serial_number"), // C-0001, C-0002, … — globally unique permanent ID
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

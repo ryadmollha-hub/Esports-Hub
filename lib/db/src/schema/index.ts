@@ -2,7 +2,7 @@ export * from "./users";
 export * from "./teams";
 export * from "./tournaments";
 export * from "./registrations";
-export * from "./matches";
+export * from "./matches"; // also exports matchCountersTable
 export * from "./announcements";
 export * from "./wallet";
 export * from "./notifications";

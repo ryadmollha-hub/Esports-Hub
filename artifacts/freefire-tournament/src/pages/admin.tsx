@@ -116,8 +116,11 @@ export default function AdminPage() {
   const [showAdminMatchForm, setShowAdminMatchForm] = useState(false);
   const [adminMatchForm, setAdminMatchForm] = useState({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "", roomReleaseTime: "", roomHideTime: "" });
   const [adminMatchCreating, setAdminMatchCreating] = useState(false);
-  const [matchRoomForm, setMatchRoomForm] = useState<Record<number, { roomId: string; roomPassword: string; releaseMinutes: string }>>({});
+  const [matchRoomForm, setMatchRoomForm] = useState<Record<number, { roomId: string; roomPassword: string; releaseMinutes: string; hideMinutes: string }>>({});
   const [settingMatchRoom, setSettingMatchRoom] = useState<Record<number, boolean>>({});
+  const [matchRegPlayers, setMatchRegPlayers] = useState<any[]>([]);
+  const [loadingMatchRegPlayers, setLoadingMatchRegPlayers] = useState(false);
+  const [showMatchRegPlayers, setShowMatchRegPlayers] = useState<Record<number, boolean>>({});
   const [deletingMatchRoom, setDeletingMatchRoom] = useState<Record<number, boolean>>({});
   const [matchNumberInputs, setMatchNumberInputs] = useState<Record<number, string>>({});
   const [settingMatchNumber, setSettingMatchNumber] = useState<Record<number, boolean>>({});
@@ -609,12 +612,13 @@ export default function AdminPage() {
           roomId: form.roomId,
           roomPassword: form.roomPassword,
           roomReleaseMinutesBefore: parseInt(form.releaseMinutes || "10"),
+          roomHideMinutesAfter: parseInt(form.hideMinutes || "5"),
         }),
       });
       if (res.ok) {
-        toast({ title: "✅ Room set! Status → Live", description: `Room details will be visible ${form.releaseMinutes || "10"} min before match time.` });
+        toast({ title: "✅ Room saved!", description: `Room opens ${form.releaseMinutes === "-1" ? "immediately" : `${form.releaseMinutes || "10"} min before`} match time.` });
         loadMatches();
-        setMatchRoomForm((prev) => ({ ...prev, [matchId]: { roomId: "", roomPassword: "", releaseMinutes: "10" } }));
+        setMatchRoomForm((prev) => ({ ...prev, [matchId]: { roomId: "", roomPassword: "", releaseMinutes: "10", hideMinutes: "5" } }));
       } else {
         const d = await safeJson(res);
         toast({ title: "Error", description: d.error, variant: "destructive" });
@@ -1488,7 +1492,10 @@ export default function AdminPage() {
                           {/* Match header */}
                           <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex-1">
-                              <div className="font-bold text-white text-base">Match #{m.matchNumber} — {m.mapName ?? "TBD"}</div>
+                              <div className="font-bold text-white text-base flex items-center gap-2 flex-wrap">
+                                {m.serialNumber && <span className="text-[#ff6b00] font-mono text-xs bg-[#ff6b00]/10 border border-[#ff6b00]/20 px-1.5 py-0.5 rounded">{m.serialNumber}</span>}
+                                Match #{m.matchNumber} — {m.mapName ?? "TBD"}
+                              </div>
                               {m.scheduledAt && <div className="text-[#a0a0b0] text-sm">{new Date(m.scheduledAt).toLocaleString()}</div>}
                               {m.roomId && (
                                 <div className="text-[#00ff88] text-xs mt-1 font-bold flex items-center gap-1">
@@ -1542,8 +1549,45 @@ export default function AdminPage() {
                               >
                                 {isExpanded ? "▲ Close" : "▼ Enter Results"}
                               </button>
+                              <button
+                                onClick={async () => {
+                                  const showing = !showMatchRegPlayers[m.id];
+                                  setShowMatchRegPlayers((prev) => ({ ...prev, [m.id]: showing }));
+                                  if (showing && matchRegPlayers.length === 0 && selectedTournament) {
+                                    setLoadingMatchRegPlayers(true);
+                                    try {
+                                      const res = await apiFetch(`/tournaments/${selectedTournament}/registrations`);
+                                      if (res.ok) setMatchRegPlayers(await res.json());
+                                    } catch {} finally { setLoadingMatchRegPlayers(false); }
+                                  }
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400 text-xs font-bold hover:bg-blue-500/20 transition-colors"
+                              >
+                                👥 Players
+                              </button>
                             </div>
                           </div>
+
+                          {/* Players Panel */}
+                          {showMatchRegPlayers[m.id] && (
+                            <div className="border-t border-[#ff6b00]/5 px-4 py-3 bg-[#0a0a16]/40">
+                              <p className="text-xs text-[#a0a0b0] uppercase font-bold mb-2">👥 Registered Players</p>
+                              {loadingMatchRegPlayers ? (
+                                <div className="text-xs text-[#a0a0b0]">Loading...</div>
+                              ) : matchRegPlayers.filter((p: any) => p.status === "approved").length === 0 ? (
+                                <div className="text-xs text-[#a0a0b0]">No approved registrations yet.</div>
+                              ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 max-h-40 overflow-y-auto">
+                                  {matchRegPlayers.filter((p: any) => p.status === "approved").map((p: any, i: number) => (
+                                    <div key={p.id} className="text-xs bg-[#0a0a0f] border border-[#2a2a36] rounded px-2 py-1 flex items-center gap-1.5">
+                                      <span className="text-[#a0a0b0] shrink-0">#{i + 1}</span>
+                                      <span className="text-white truncate">{p.playerName ?? p.username ?? p.userId}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
 
                           {/* Room Management Section */}
                           {m.status !== "completed" && (
@@ -1552,10 +1596,19 @@ export default function AdminPage() {
                                 <Key className="w-3 h-3" /> Room Details
                               </p>
                               {m.roomId ? (
-                                <div className="flex items-center gap-4 text-xs mb-2">
+                                <div className="flex items-center flex-wrap gap-3 text-xs mb-2">
                                   <span className="text-[#a0a0b0]">ID: <span className="text-white font-mono font-bold">{m.roomId}</span></span>
                                   <span className="text-[#a0a0b0]">Pass: <span className="text-white font-mono font-bold">{m.roomPassword}</span></span>
-                                  <span className="text-[#00ff88] font-bold">✓ Visible to joined players</span>
+                                  {(() => {
+                                    const now = Date.now();
+                                    const relMs = m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null;
+                                    const hideMs = m.roomHideAt ? new Date(m.roomHideAt).getTime() : (m.scheduledAt ? new Date(m.scheduledAt).getTime() : null);
+                                    if (relMs && now >= relMs && (!hideMs || now < hideMs)) return <span className="text-[#00ff88] font-bold">🟢 Live to players</span>;
+                                    if (relMs && now < relMs) return <span className="text-yellow-400 font-bold">⏳ Opens {new Date(relMs).toLocaleTimeString()}</span>;
+                                    return <span className="text-[#ff2244] font-bold">🔴 Hidden</span>;
+                                  })()}
+                                  {m.roomReleaseAt && <span className="text-[#404050] text-[10px]">Open: {new Date(m.roomReleaseAt).toLocaleTimeString()}</span>}
+                                  {m.roomHideAt && <span className="text-[#404050] text-[10px]">Close: {new Date(m.roomHideAt).toLocaleTimeString()}</span>}
                                 </div>
                               ) : (
                                 <p className="text-xs text-[#a0a0b0] mb-2">No room details set.</p>
@@ -1593,12 +1646,54 @@ export default function AdminPage() {
                                     <option value="0">Immediately</option>
                                   </select>
                                 </div>
+                                <div>
+                                  <label className="text-[#606070] text-[10px] uppercase block mb-1">Close (min after)</label>
+                                  <select
+                                    value={matchRoomForm[m.id]?.hideMinutes ?? "5"}
+                                    onChange={(e) => setMatchRoomForm({ ...matchRoomForm, [m.id]: { ...matchRoomForm[m.id], hideMinutes: e.target.value } })}
+                                    className="admin-input-sm w-24"
+                                  >
+                                    <option value="0">At start</option>
+                                    <option value="5">5 min after</option>
+                                    <option value="15">15 min after</option>
+                                    <option value="30">30 min after</option>
+                                    <option value="60">60 min after</option>
+                                  </select>
+                                </div>
                                 <button
                                   onClick={() => setMatchRoom(m.id)}
                                   disabled={settingMatchRoom[m.id]}
                                   className="px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-xs uppercase rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50"
                                 >
-                                  {settingMatchRoom[m.id] ? "Saving..." : "Save Room Credentials"}
+                                  {settingMatchRoom[m.id] ? "Saving..." : "Save Credentials & Timing"}
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (!m.roomId) {
+                                      toast({ title: "Set room credentials first", variant: "destructive" });
+                                      return;
+                                    }
+                                    setSettingMatchRoom((prev) => ({ ...prev, [m.id]: true }));
+                                    try {
+                                      const res = await apiFetch(`/matches/${m.id}/room`, {
+                                        method: "PATCH",
+                                        body: JSON.stringify({
+                                          roomId: m.roomId,
+                                          roomPassword: m.roomPassword,
+                                          roomReleaseMinutesBefore: -1,
+                                          roomHideMinutesAfter: parseInt(matchRoomForm[m.id]?.hideMinutes || "5"),
+                                        }),
+                                      });
+                                      if (res.ok) { toast({ title: "🟢 Room released immediately!" }); loadMatches(); }
+                                      else { const d = await safeJson(res); toast({ title: "Error", description: d.error, variant: "destructive" }); }
+                                    } catch { toast({ title: "Connection error", variant: "destructive" }); }
+                                    finally { setSettingMatchRoom((prev) => ({ ...prev, [m.id]: false })); }
+                                  }}
+                                  disabled={!m.roomId || settingMatchRoom[m.id]}
+                                  className="px-3 py-1.5 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] font-bold text-xs uppercase rounded-lg hover:bg-[#00ff88]/20 transition-colors disabled:opacity-50"
+                                  title="Release room to players right now"
+                                >
+                                  Manual Release
                                 </button>
                                 {m.roomId && (
                                   <button

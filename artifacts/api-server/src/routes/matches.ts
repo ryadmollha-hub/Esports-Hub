@@ -4,6 +4,7 @@ import { matchesTable, matchResultsTable, tournamentsTable } from "@workspace/db
 import { eq, desc } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import { logger } from "../lib/logger";
+import { nextMatchSerial } from "../lib/matchSerial";
 
 const router: IRouter = Router();
 
@@ -12,26 +13,25 @@ function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
   const now = new Date();
   const isCompleted = match.status === "completed";
   const startTime = new Date(match.scheduledAt);
+  // Room hides at roomHideAt when set; otherwise auto-hides at scheduledAt
+  const hideAt = match.roomHideAt ? new Date(match.roomHideAt) : startTime;
 
-  // Room details are visible only within the release window:
-  //   from roomReleaseAt  →  until scheduledAt (auto-hidden at match start)
   let roomVisible = false;
   let effectiveStatus = match.status;
 
   if (!isCompleted && match.roomId) {
-    // After match start time: room is always hidden (auto-hide)
-    if (now < startTime) {
+    if (now < hideAt) {
       if (match.roomReleaseAt && now >= new Date(match.roomReleaseAt)) {
         roomVisible = true;
         if (effectiveStatus === "scheduled") {
           effectiveStatus = "live";
         }
       } else if (match.status === "live") {
-        // Admin manually marked live but release window not open yet — still show room
+        // Admin manually marked live — still show room even before release window
         roomVisible = true;
       }
     }
-    // now >= startTime: roomVisible stays false (auto-hidden at match start)
+    // now >= hideAt: room is auto-hidden
   }
 
   return { roomVisible, effectiveStatus };
@@ -149,11 +149,15 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       releaseAt = new Date(new Date(scheduledAt).getTime() - 10 * 60 * 1000);
     }
 
+    // Auto-generate permanent serial number (T-0001, T-0002, …)
+    const serialNumber = await nextMatchSerial("tournament");
+
     const [match] = await db
       .insert(matchesTable)
       .values({
         tournamentId: id,
         matchNumber: parseInt(matchNumber),
+        serialNumber,
         scheduledAt: new Date(scheduledAt),
         status: status ?? "scheduled",
         mapName: mapName ?? null,
@@ -215,14 +219,22 @@ router.patch("/matches/:id/room", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
   try {
     const id = parseInt(req.params.id);
-    const { roomId, roomPassword, roomReleaseMinutesBefore } = req.body;
+    const { roomId, roomPassword, roomReleaseMinutesBefore, roomHideMinutesAfter } = req.body;
 
     const [existing] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
     if (!existing) return res.status(404).json({ error: "Match not found." });
 
-    // Calculate release time based on minutes before scheduled time
+    // Release time: N minutes BEFORE scheduledAt (default 10 min before)
     const minutesBefore = roomReleaseMinutesBefore ?? 10;
-    const releaseAt = new Date(new Date(existing.scheduledAt).getTime() - minutesBefore * 60 * 1000);
+    const releaseAt = minutesBefore === -1
+      ? new Date() // -1 = manual/immediate release
+      : new Date(new Date(existing.scheduledAt).getTime() - minutesBefore * 60 * 1000);
+
+    // Hide time: N minutes AFTER scheduledAt, or null = auto-hide at scheduledAt
+    let hideAt: Date | null = null;
+    if (roomHideMinutesAfter != null) {
+      hideAt = new Date(new Date(existing.scheduledAt).getTime() + Number(roomHideMinutesAfter) * 60 * 1000);
+    }
 
     const [updated] = await db
       .update(matchesTable)
@@ -230,7 +242,7 @@ router.patch("/matches/:id/room", async (req, res) => {
         roomId: roomId ?? null,
         roomPassword: roomPassword ?? null,
         roomReleaseAt: releaseAt,
-        // Status NOT changed here — time-based visibility controls when room appears
+        roomHideAt: hideAt,
       })
       .where(eq(matchesTable.id, id))
       .returning();
@@ -250,7 +262,7 @@ router.delete("/matches/:id/room", async (req, res) => {
     if (!existing) return res.status(404).json({ error: "Match not found." });
     await db
       .update(matchesTable)
-      .set({ roomId: null, roomPassword: null, roomReleaseAt: null })
+      .set({ roomId: null, roomPassword: null, roomReleaseAt: null, roomHideAt: null })
       .where(eq(matchesTable.id, id));
     res.json({ success: true });
   } catch {

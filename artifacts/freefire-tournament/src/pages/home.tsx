@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Trophy, Users, Zap, ChevronRight, Flame } from "lucide-react";
+import { Trophy, Users, Zap, ChevronRight, Flame, Lock, Swords } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import TournamentCard from "@/components/TournamentCard";
@@ -23,6 +24,16 @@ export default function Home() {
   const featured = Array.isArray(_featured) ? _featured : [];
   const announcements = Array.isArray(_announcements) ? _announcements : [];
   const leaderboard = Array.isArray(_leaderboard) ? _leaderboard : [];
+
+  const [communityMatches, setCommunityMatches] = useState<any[]>([]);
+  const [loadingCommunity, setLoadingCommunity] = useState(true);
+  useEffect(() => {
+    fetch("/api/user-matches")
+      .then((r) => r.json())
+      .then((d) => setCommunityMatches(Array.isArray(d) ? d : []))
+      .catch(() => setCommunityMatches([]))
+      .finally(() => setLoadingCommunity(false));
+  }, []);
 
   const nextTournament = featured[0];
 
@@ -109,6 +120,98 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {featured.map((t) => <TournamentCard key={t.id} t={t as any} featured />)}
+          </div>
+        )}
+      </section>
+
+      {/* Community Matches */}
+      <section className="max-w-7xl mx-auto px-4 pb-10">
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl md:text-2xl font-black uppercase">
+            Community <span className="text-[#ff6b00]">Matches</span>
+          </h2>
+          <Link href="/matches" className="flex items-center gap-1 text-[#ff6b00] text-xs font-bold hover:gap-2 transition-all">
+            View All <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {loadingCommunity ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-36 bg-[#12121a] rounded-xl animate-pulse" />
+            ))}
+          </div>
+        ) : communityMatches.length === 0 ? (
+          <div className="text-center py-12 text-[#a0a0b0] bg-[#12121a] rounded-xl border border-[#ff6b00]/10">
+            <Swords className="w-12 h-12 mx-auto mb-3 opacity-20" />
+            <p className="text-lg font-bold text-white/30">No Community Matches Yet</p>
+            <p className="text-sm mt-1">Be the first to host a community match!</p>
+            <Link href="/matches" className="inline-block mt-4 px-5 py-2 bg-[#ff6b00] text-white font-bold text-xs rounded-lg hover:bg-[#e66000] transition-colors">
+              Host a Match
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {communityMatches.slice(0, 6).map((m: any) => {
+              const isFree = !m.entryFee || parseFloat(m.entryFee) === 0;
+              const prize = m.prizePool ? parseFloat(m.prizePool) : 0;
+              const scheduledAt = m.scheduledAt ? new Date(m.scheduledAt) : null;
+              return (
+                <Link key={m.id} href="/matches">
+                  <div className="bg-[#12121a] border border-[#ff6b00]/10 hover:border-[#ff6b00]/30 rounded-xl p-4 transition-all cursor-pointer group">
+                    {/* Header row */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {m.serialNumber && (
+                          <span className="shrink-0 text-[#ff6b00] font-mono text-xs bg-[#ff6b00]/10 border border-[#ff6b00]/20 px-1.5 py-0.5 rounded">
+                            {m.serialNumber}
+                          </span>
+                        )}
+                        <span className="text-white font-bold text-sm truncate group-hover:text-[#ff6b00] transition-colors">
+                          {m.matchName || m.matchType}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0">
+                        {m.isPrivate && <Lock className="w-3 h-3 text-[#a0a0b0]" />}
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#ff6b00]/10 text-[#ff6b00] uppercase">
+                          {m.matchMode ?? m.matchType}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Host */}
+                    <p className="text-[#a0a0b0] text-xs mb-2">
+                      By <span className="text-white font-semibold">{m.creatorName}</span>
+                    </p>
+
+                    {/* Stats row */}
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className={isFree ? "text-[#00ff88] font-bold" : "text-white font-bold"}>
+                        {isFree ? "FREE" : `৳${m.entryFee}`}
+                      </span>
+                      {prize > 0 && (
+                        <span className="text-yellow-400 font-bold flex items-center gap-0.5">
+                          🏆 ৳{prize.toFixed(0)}
+                        </span>
+                      )}
+                      <span className="text-[#a0a0b0] ml-auto flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        {m.filledSlots ?? 0}/{m.maxSlots}
+                      </span>
+                    </div>
+
+                    {/* Scheduled time */}
+                    {scheduledAt && (
+                      <div className="mt-2 text-[10px] text-[#606070]">
+                        {scheduledAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                        {" · "}
+                        {scheduledAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>
