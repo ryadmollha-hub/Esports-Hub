@@ -15,6 +15,7 @@ export const walletTransactionsTable = pgTable("wallet_transactions", {
   adminNote: text("admin_note"),
   notes: text("notes"),             // human-readable description
   tournamentId: integer("tournament_id"), // for tournament_entry / tournament_prize
+  matchId: integer("match_id"),     // for match-level prize tracking
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

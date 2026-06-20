@@ -18,6 +18,7 @@ import rulesRouter from "./rules";
 import settingsRouter from "./settings";
 import supportRouter from "./support";
 import userMatchesRouter from "./userMatches";
+import prizeDistributionRouter from "./prizeDistribution";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(rulesRouter);
 router.use(settingsRouter);
 router.use(supportRouter);
 router.use(userMatchesRouter);
+router.use(prizeDistributionRouter);
 
 export default router;

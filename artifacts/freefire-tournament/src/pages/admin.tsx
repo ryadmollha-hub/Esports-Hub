@@ -131,6 +131,19 @@ export default function AdminPage() {
   const [matchResultRows, setMatchResultRows] = useState<Record<number, Array<{ playerName: string; rank: string; kills: string; prizeMoney: string }>>>({});
   const [submittingMatchResult, setSubmittingMatchResult] = useState<Record<number, boolean>>({});
 
+  // Prize distribution state
+  const [expandedPrize, setExpandedPrize] = useState<Record<number, boolean>>({});
+  const [prizeRegData, setPrizeRegData] = useState<Record<number, { loading: boolean; tournament: any; registrations: any[] }>>({});
+  const [prizePlacements, setPrizePlacements] = useState<Record<number, Record<number, string>>>({});
+  const [prizeKills, setPrizeKills] = useState<Record<number, Record<string, number>>>({});
+  const [prizePreviewData, setPrizePreviewData] = useState<Record<number, any>>({});
+  const [distributing, setDistributing] = useState<Record<number, boolean>>({});
+  // Prize distribution report
+  const [prizeReport, setPrizeReport] = useState<any[]>([]);
+  const [prizeReportLoading, setPrizeReportLoading] = useState(false);
+  const [showPrizeReport, setShowPrizeReport] = useState(false);
+  const [expandedReportMatch, setExpandedReportMatch] = useState<Record<number, boolean>>({});
+
   // Room form
   const [roomForm, setRoomForm] = useState<Record<number, { roomId: string; roomPassword: string }>>({});
 
@@ -573,6 +586,115 @@ export default function AdminPage() {
       toast({ title: "Network error", variant: "destructive" });
     } finally {
       setDeletingMatchRoom((prev) => ({ ...prev, [matchId]: false }));
+    }
+  };
+
+  // ─── Prize distribution handlers ─────────────────────────────────────────────
+
+  const loadPrizeReport = async () => {
+    setPrizeReportLoading(true);
+    try {
+      const res = await apiFetch("/admin/prize-distributions");
+      if (res.ok) setPrizeReport(await res.json());
+      else { const d = await safeJson(res); toast({ title: "Failed to load prize report", description: d.error, variant: "destructive" }); }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    } finally {
+      setPrizeReportLoading(false);
+    }
+  };
+
+  const loadPrizeRegistrations = async (matchId: number, tournamentId: number) => {
+    setPrizeRegData((prev) => ({ ...prev, [matchId]: { loading: true, tournament: prev[matchId]?.tournament ?? null, registrations: prev[matchId]?.registrations ?? [] } }));
+    try {
+      const res = await apiFetch(`/admin/tournaments/${tournamentId}/prize-registrations`);
+      if (res.ok) {
+        const d = await res.json();
+        setPrizeRegData((prev) => ({ ...prev, [matchId]: { loading: false, tournament: d.tournament, registrations: d.registrations } }));
+        // Init kills to 0 for all members
+        const kills: Record<string, number> = {};
+        for (const reg of (d.registrations ?? [])) {
+          kills[`${reg.id}-0`] = 0;
+          for (let i = 0; i < (reg.teamMembersArr ?? []).length; i++) {
+            kills[`${reg.id}-${i + 1}`] = 0;
+          }
+        }
+        setPrizeKills((prev) => ({ ...prev, [matchId]: kills }));
+        setPrizePlacements((prev) => ({ ...prev, [matchId]: {} }));
+        setPrizePreviewData((prev) => ({ ...prev, [matchId]: null }));
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Failed to load registrations", description: d.error, variant: "destructive" });
+        setPrizeRegData((prev) => ({ ...prev, [matchId]: { loading: false, tournament: null, registrations: [] } }));
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+      setPrizeRegData((prev) => ({ ...prev, [matchId]: { loading: false, tournament: null, registrations: [] } }));
+    }
+  };
+
+  const buildPrizePayload = (matchId: number, preview: boolean) => {
+    const data = prizeRegData[matchId];
+    const placements = prizePlacements[matchId] ?? {};
+    const kills = prizeKills[matchId] ?? {};
+    const placementsArr = Object.entries(placements)
+      .filter(([, rank]) => rank && rank !== "")
+      .map(([regId, rank]) => ({ registrationId: parseInt(regId), rank: parseInt(rank) }));
+    const teamKillsArr = (data?.registrations ?? []).map((reg: any) => ({
+      registrationId: reg.id,
+      captainKills: kills[`${reg.id}-0`] ?? 0,
+      memberKills: (reg.teamMembersArr ?? []).map((_: any, i: number) => kills[`${reg.id}-${i + 1}`] ?? 0),
+    }));
+    return { preview, placements: placementsArr, teamKills: teamKillsArr };
+  };
+
+  const previewPrizes = async (matchId: number) => {
+    const payload = buildPrizePayload(matchId, true);
+    if (payload.placements.length === 0 && !payload.teamKills.some((k: any) => k.captainKills > 0 || k.memberKills.some((m: number) => m > 0))) {
+      return toast({ title: "Enter at least one placement or kill count", variant: "destructive" });
+    }
+    try {
+      const res = await apiFetch(`/admin/matches/${matchId}/distribute-prizes`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const d = await safeJson(res);
+      if (res.ok) {
+        setPrizePreviewData((prev) => ({ ...prev, [matchId]: d }));
+      } else {
+        toast({ title: "Preview failed", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    }
+  };
+
+  const distributePrizes = async (matchId: number) => {
+    const payload = buildPrizePayload(matchId, false);
+    if (payload.placements.length === 0 && !payload.teamKills.some((k: any) => k.captainKills > 0 || k.memberKills.some((m: number) => m > 0))) {
+      return toast({ title: "Enter at least one placement or kill count", variant: "destructive" });
+    }
+    setDistributing((prev) => ({ ...prev, [matchId]: true }));
+    try {
+      const res = await apiFetch(`/admin/matches/${matchId}/distribute-prizes`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const d = await safeJson(res);
+      if (res.ok) {
+        toast({ title: "🎉 Prizes distributed!", description: `৳${d.totalDistributed?.toFixed(2)} sent in ${d.transactionsCreated} transactions.` });
+        setExpandedPrize((prev) => ({ ...prev, [matchId]: false }));
+        loadMatches();
+      } else if (d.alreadyDistributed) {
+        toast({ title: "Already distributed", description: "Prizes for this match have already been paid out.", variant: "destructive" });
+        loadMatches();
+      } else {
+        toast({ title: "Distribution failed", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    } finally {
+      setDistributing((prev) => ({ ...prev, [matchId]: false }));
     }
   };
 
@@ -1550,6 +1672,18 @@ export default function AdminPage() {
                                 {isExpanded ? "▲ Close" : "▼ Enter Results"}
                               </button>
                               <button
+                                onClick={() => {
+                                  const opening = !expandedPrize[m.id];
+                                  setExpandedPrize((prev) => ({ ...prev, [m.id]: opening }));
+                                  if (opening && !prizeRegData[m.id] && selectedTournament) {
+                                    loadPrizeRegistrations(m.id, selectedTournament);
+                                  }
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${m.prizeDistributed ? "bg-[#00ff88]/10 border-[#00ff88]/30 text-[#00ff88]" : "bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20"}`}
+                              >
+                                {m.prizeDistributed ? "✅ Prizes Paid" : "💰 Prizes"}
+                              </button>
+                              <button
                                 onClick={async () => {
                                   const showing = !showMatchRegPlayers[m.id];
                                   setShowMatchRegPlayers((prev) => ({ ...prev, [m.id]: showing }));
@@ -1808,12 +1942,255 @@ export default function AdminPage() {
                               )}
                             </div>
                           )}
+
+                          {/* Prize Distribution Panel */}
+                          {expandedPrize[m.id] && (
+                            <div className="border-t border-yellow-500/20 bg-[#0d0d16] p-4">
+                              <div className="flex items-center justify-between mb-4">
+                                <h3 className="font-black uppercase text-yellow-400 text-sm flex items-center gap-2">
+                                  💰 Prize Distribution
+                                  {m.prizeDistributed && (
+                                    <span className="text-[#00ff88] text-xs font-bold border border-[#00ff88]/30 bg-[#00ff88]/10 px-2 py-0.5 rounded">✅ Already Distributed</span>
+                                  )}
+                                </h3>
+                                <button onClick={() => setExpandedPrize((prev) => ({ ...prev, [m.id]: false }))} className="text-[#606070] hover:text-white text-xs">▲ Close</button>
+                              </div>
+
+                              {prizeRegData[m.id]?.loading ? (
+                                <div className="text-center py-6 text-[#a0a0b0] text-sm">Loading registrations…</div>
+                              ) : !prizeRegData[m.id] || prizeRegData[m.id].registrations.length === 0 ? (
+                                <div className="text-center py-6 text-[#a0a0b0] text-sm">No approved registrations found for this tournament.</div>
+                              ) : (() => {
+                                const prd = prizeRegData[m.id];
+                                const t = prd.tournament;
+                                const regs = prd.registrations;
+                                const placements = prizePlacements[m.id] ?? {};
+                                const kills = prizeKills[m.id] ?? {};
+                                const preview = prizePreviewData[m.id];
+
+                                return (
+                                  <div>
+                                    {/* Tournament prize info */}
+                                    <div className="flex flex-wrap gap-3 mb-4 p-3 bg-[#12121a] rounded-xl border border-[#2a2a36]">
+                                      <div className="text-xs text-[#a0a0b0]">
+                                        <span className="text-[#606070] uppercase font-bold text-[10px] block mb-0.5">Prize Tiers</span>
+                                        {(t.prizes ?? []).length === 0 ? <span className="text-yellow-400">No prize tiers set</span> : (t.prizes ?? []).map((p: any, i: number) => (
+                                          <span key={i} className="mr-3 text-white font-bold">
+                                            {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} ৳{Number(p.amount).toLocaleString()}
+                                          </span>
+                                        ))}
+                                      </div>
+                                      <div className="text-xs text-[#a0a0b0]">
+                                        <span className="text-[#606070] uppercase font-bold text-[10px] block mb-0.5">Per Kill</span>
+                                        <span className="text-white font-bold">৳{Number(t.perKillReward ?? 0).toLocaleString()}</span>
+                                      </div>
+                                      <div className="text-xs text-[#a0a0b0]">
+                                        <span className="text-[#606070] uppercase font-bold text-[10px] block mb-0.5">Mode</span>
+                                        <span className="text-white font-bold uppercase">{t.mode}</span>
+                                      </div>
+                                    </div>
+
+                                    {/* Teams list */}
+                                    <div className="space-y-3 mb-4">
+                                      {regs.map((reg: any) => {
+                                        const allMembers = [
+                                          { name: reg.playerName, uid: reg.freefireUid, isCapt: true },
+                                          ...(reg.teamMembersArr ?? []).map((m2: any) => ({ name: m2.name, uid: m2.uid, isCapt: false })),
+                                        ];
+                                        return (
+                                          <div key={reg.id} className="bg-[#12121a] border border-[#2a2a36] rounded-xl p-3">
+                                            <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                              <span className="text-white font-bold text-xs truncate max-w-[160px]">{reg.playerName}</span>
+                                              {(reg.teamMembersArr ?? []).length > 0 && (
+                                                <span className="text-[#606070] text-[10px]">+{reg.teamMembersArr.length} members</span>
+                                              )}
+                                              <div className="ml-auto">
+                                                <select
+                                                  value={placements[reg.id] ?? ""}
+                                                  onChange={(e) => setPrizePlacements((prev) => ({
+                                                    ...prev,
+                                                    [m.id]: { ...(prev[m.id] ?? {}), [reg.id]: e.target.value },
+                                                  }))}
+                                                  className="bg-[#0a0a0f] border border-[#2a2a36] text-white text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-yellow-500"
+                                                >
+                                                  <option value="">No Placement</option>
+                                                  <option value="1">🥇 1st Place</option>
+                                                  <option value="2">🥈 2nd Place</option>
+                                                  <option value="3">🥉 3rd Place</option>
+                                                </select>
+                                              </div>
+                                            </div>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                              {allMembers.map((member, mIdx) => (
+                                                <div key={mIdx} className="flex items-center gap-2 bg-[#0a0a0f] border border-[#1a1a24] rounded-lg px-2 py-1.5">
+                                                  <div className="flex-1 min-w-0">
+                                                    <div className="text-[#a0a0b0] text-[10px] truncate">
+                                                      {member.isCapt && <span className="text-yellow-400 mr-1">★</span>}
+                                                      {member.name}
+                                                    </div>
+                                                    {member.uid && <div className="text-[#606070] text-[10px] font-mono truncate">{member.uid}</div>}
+                                                  </div>
+                                                  <div className="shrink-0">
+                                                    <input
+                                                      type="number"
+                                                      min="0"
+                                                      placeholder="0"
+                                                      value={kills[`${reg.id}-${mIdx}`] ?? 0}
+                                                      onChange={(e) => setPrizeKills((prev) => ({
+                                                        ...prev,
+                                                        [m.id]: { ...(prev[m.id] ?? {}), [`${reg.id}-${mIdx}`]: parseInt(e.target.value) || 0 },
+                                                      }))}
+                                                      className="w-14 bg-[#12121a] border border-[#2a2a36] text-white text-xs rounded px-2 py-1 focus:outline-none focus:border-yellow-500 text-center"
+                                                    />
+                                                    <div className="text-[#606070] text-[10px] text-center mt-0.5">kills</div>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+
+                                    {/* Preview results */}
+                                    {preview && (
+                                      <div className="mb-4 bg-[#12121a] border border-yellow-500/20 rounded-xl p-4">
+                                        <p className="text-yellow-400 font-bold text-xs uppercase mb-3">💡 Prize Preview</p>
+                                        <div className="space-y-3">
+                                          {(preview.payouts ?? []).map((payout: any) => (
+                                            <div key={payout.registrationId} className="border border-[#2a2a36] rounded-lg p-3">
+                                              <div className="flex items-center gap-2 mb-2">
+                                                <span className="text-white font-bold text-xs">{payout.teamName}</span>
+                                                {payout.rank && <span className="text-xs">{payout.rank === 1 ? "🥇" : payout.rank === 2 ? "🥈" : "🥉"}</span>}
+                                                <span className="text-[#a0a0b0] text-xs">Rank prize: ৳{Number(payout.rankPrize).toFixed(2)} ÷ {payout.totalMembers} members</span>
+                                              </div>
+                                              <div className="space-y-1">
+                                                {(payout.memberPayouts ?? []).map((mp: any, mpi: number) => (
+                                                  <div key={mpi} className={`flex items-center justify-between text-xs px-2 py-1 rounded ${mp.userFound ? "bg-[#0a0a0f]" : "bg-[#ff2244]/5 border border-[#ff2244]/10"}`}>
+                                                    <span className={mp.userFound ? "text-[#a0a0b0]" : "text-[#ff6060]"}>
+                                                      {mp.isCapt && "★ "}{mp.name}
+                                                      {!mp.userFound && <span className="text-[#ff2244] ml-1">(no account)</span>}
+                                                    </span>
+                                                    <span className="text-[#00ff88] font-bold">
+                                                      ৳{Number(mp.totalReward).toFixed(2)}
+                                                      <span className="text-[#606070] font-normal ml-1">({mp.kills} kills)</span>
+                                                    </span>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                        <div className="mt-3 pt-3 border-t border-[#2a2a36] flex items-center justify-between">
+                                          <span className="text-[#a0a0b0] text-xs">Total to distribute</span>
+                                          <span className="text-[#00ff88] font-black text-sm">৳{Number(preview.totalDistributed).toFixed(2)}</span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Action buttons */}
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                      <button
+                                        onClick={() => previewPrizes(m.id)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold text-xs uppercase rounded-xl hover:text-white hover:border-yellow-500/30 transition-colors"
+                                      >
+                                        🔍 Preview Prizes
+                                      </button>
+                                      <button
+                                        onClick={() => distributePrizes(m.id)}
+                                        disabled={distributing[m.id] || m.prizeDistributed}
+                                        className="flex items-center gap-2 px-5 py-2 bg-yellow-500 text-[#0a0a0f] font-black text-xs uppercase rounded-xl hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                      >
+                                        {distributing[m.id] ? "Distributing…" : m.prizeDistributed ? "✅ Already Distributed" : "🏆 Distribute Prizes"}
+                                      </button>
+                                      {m.prizeDistributedAt && (
+                                        <span className="text-[#606070] text-xs">Paid: {new Date(m.prizeDistributedAt).toLocaleString()}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
                   </div>
                 </>
               )}
+
+              {/* ─── Prize Distribution Report ─────────────────────────── */}
+              <div className="mt-8 border border-[#2a2a36] rounded-xl overflow-hidden">
+                <button
+                  onClick={() => {
+                    const opening = !showPrizeReport;
+                    setShowPrizeReport(opening);
+                    if (opening && prizeReport.length === 0) loadPrizeReport();
+                  }}
+                  className="w-full flex items-center justify-between px-5 py-4 bg-[#0e0e18] hover:bg-[#12121a] transition-colors text-left"
+                >
+                  <span className="font-black uppercase text-sm text-[#a0a0b0] flex items-center gap-2">
+                    📊 Prize Distribution History
+                    {prizeReport.length > 0 && <span className="text-yellow-400 font-bold text-xs">({prizeReport.length} matches)</span>}
+                  </span>
+                  <span className="text-[#606070] text-xs">{showPrizeReport ? "▲ Collapse" : "▼ Expand"}</span>
+                </button>
+                {showPrizeReport && (
+                  <div className="p-4 border-t border-[#2a2a36] bg-[#0a0a0f]">
+                    {prizeReportLoading ? (
+                      <div className="text-center py-6 text-[#a0a0b0] text-sm">Loading report…</div>
+                    ) : prizeReport.length === 0 ? (
+                      <div className="text-center py-6 text-[#a0a0b0] text-sm">No prizes distributed yet.</div>
+                    ) : (
+                      <div className="space-y-3">
+                        {prizeReport.map((item: any) => (
+                          <div key={item.matchId} className="bg-[#12121a] border border-[#2a2a36] rounded-xl overflow-hidden">
+                            <button
+                              onClick={() => setExpandedReportMatch((prev) => ({ ...prev, [item.matchId]: !prev[item.matchId] }))}
+                              className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#1a1a24] transition-colors text-left"
+                            >
+                              <div>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-white font-bold text-xs">Match #{item.matchNumber}</span>
+                                  {item.serialNumber && <span className="text-[#ff6b00] text-[10px] font-mono">{item.serialNumber}</span>}
+                                  <span className="text-[#a0a0b0] text-xs">— {item.tournamentName}</span>
+                                  <span className="text-[10px] font-bold text-yellow-400 uppercase border border-yellow-400/20 bg-yellow-400/5 px-1.5 py-0.5 rounded">{item.tournamentMode}</span>
+                                </div>
+                                <div className="text-[#606070] text-xs mt-0.5">
+                                  Distributed: {item.distributedAt ? new Date(item.distributedAt).toLocaleString() : "—"} · ৳{Number(item.totalAmount).toFixed(2)} total · {item.transactions?.length ?? 0} transactions
+                                </div>
+                              </div>
+                              <span className="text-[#00ff88] font-black text-sm shrink-0 ml-3">৳{Number(item.totalAmount).toFixed(2)}</span>
+                            </button>
+                            {expandedReportMatch[item.matchId] && (
+                              <div className="border-t border-[#2a2a36] p-3">
+                                {(item.transactions ?? []).length === 0 ? (
+                                  <div className="text-xs text-[#606070] text-center py-3">No transactions found.</div>
+                                ) : (
+                                  <div className="space-y-1">
+                                    {item.transactions.map((tx: any) => (
+                                      <div key={tx.id} className="flex items-center justify-between text-xs py-1.5 px-2 bg-[#0a0a0f] rounded-lg">
+                                        <div>
+                                          <span className="text-white font-bold">{tx.userName ?? tx.username ?? tx.userId}</span>
+                                          <span className="text-[#606070] ml-2">{tx.notes}</span>
+                                        </div>
+                                        <span className="text-[#00ff88] font-bold shrink-0 ml-3">+৳{Number(tx.amount).toFixed(2)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        <div className="flex justify-end">
+                          <button onClick={loadPrizeReport} className="text-xs text-[#a0a0b0] hover:text-white transition-colors">↻ Refresh</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

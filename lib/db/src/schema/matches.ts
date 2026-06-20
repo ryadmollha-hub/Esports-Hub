@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -21,6 +21,8 @@ export const matchesTable = pgTable("matches", {
   roomPassword: text("room_password"),
   roomReleaseAt: timestamp("room_release_at"), // when room details become visible to players
   roomHideAt: timestamp("room_hide_at"),       // when to stop showing room (null = auto-hide at scheduledAt)
+  prizeDistributed: boolean("prize_distributed").notNull().default(false),
+  prizeDistributedAt: timestamp("prize_distributed_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
