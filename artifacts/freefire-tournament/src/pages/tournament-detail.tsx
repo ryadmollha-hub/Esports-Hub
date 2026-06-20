@@ -13,6 +13,7 @@ import { useGetTournament, getGetTournamentQueryKey } from "@workspace/api-clien
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { apiBase } from "@/lib/apiBase";
 
 const modeColors: Record<string, string> = {
   solo: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -114,8 +115,7 @@ export default function TournamentDetailPage() {
     if (!id) return;
     setLoadingPart(true);
     try {
-      const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const res = await fetch(`${BASE}/api/tournaments/${id}/participants`);
+      const res = await fetch(`${apiBase}/api/tournaments/${id}/participants`);
       if (res.ok) setParticipants(await res.json());
     } catch {} finally { setLoadingPart(false); }
   }, [id]);
@@ -123,8 +123,7 @@ export default function TournamentDetailPage() {
   const loadResults = useCallback(async () => {
     if (!id) return;
     try {
-      const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const res = await fetch(`${BASE}/api/tournaments/${id}/results`);
+      const res = await fetch(`${apiBase}/api/tournaments/${id}/results`);
       if (res.ok) {
         const data = await res.json();
         setResults(data.results ?? []);
@@ -135,8 +134,7 @@ export default function TournamentDetailPage() {
   const loadRules = useCallback(async () => {
     if (!id) return;
     try {
-      const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const res = await fetch(`${BASE}/api/tournaments/${id}/rules`);
+      const res = await fetch(`${apiBase}/api/tournaments/${id}/rules`);
       if (res.ok) setRules(await res.json());
     } catch {}
   }, [id]);
@@ -144,8 +142,7 @@ export default function TournamentDetailPage() {
   const loadMatches = useCallback(async () => {
     if (!id) return;
     try {
-      const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-      const res = await fetch(`${BASE}/api/tournaments/${id}/matches`);
+      const res = await fetch(`${apiBase}/api/tournaments/${id}/matches`);
       if (res.ok) setMatches(await res.json());
     } catch {}
   }, [id]);

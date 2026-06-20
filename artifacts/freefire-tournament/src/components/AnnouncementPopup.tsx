@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { X, Megaphone, Bell, AlertTriangle, CheckCircle, Info } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 const DISMISSED_KEY = "ff_dismissed_announcements";
 
 interface Announcement {

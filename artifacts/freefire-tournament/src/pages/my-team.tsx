@@ -15,7 +15,7 @@ import {
 } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 const createSchema = z.object({
   name: z.string().min(2, "Team name must be at least 2 characters"),

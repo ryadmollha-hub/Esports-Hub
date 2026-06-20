@@ -1,0 +1,18 @@
+[build]
+  base      = "."
+  command   = "corepack enable pnpm && pnpm install --frozen-lockfile && pnpm --filter @workspace/freefire-tournament run build"
+  publish   = "artifacts/freefire-tournament/dist/public"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Set VITE_API_URL to your deployed backend URL, e.g.:
+  # VITE_API_URL = "https://your-api-server.onrender.com"
+
+# API proxy — forward /api/* to the backend when VITE_API_URL is NOT used
+# (leave this as a fallback; set VITE_API_URL in the Netlify dashboard instead)
+
+# SPA redirect — all unknown paths serve index.html so client-side routing works
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200

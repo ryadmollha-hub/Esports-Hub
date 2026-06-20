@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Flame, MessageCircle, Send, Facebook } from "lucide-react";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 function useSupportSettings() {
   const [settings, setSettings] = useState({ whatsapp_number: "01768177772", telegram_link: "https://t.me/ayman990" });

@@ -8,6 +8,7 @@ import {
 import Navbar from "@/components/Navbar";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { apiBase } from "@/lib/apiBase";
 
 async function safeJson(res: Response): Promise<any> {
   try {
@@ -93,8 +94,7 @@ export default function WalletPage() {
   }, [isLoading, user]);
 
   useEffect(() => {
-    const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-    fetch(`${BASE}/api/payment-settings`)
+    fetch(`${apiBase}/api/payment-settings`)
       .then(async (r) => {
         if (!r.ok) return;
         const d = await safeJson(r);

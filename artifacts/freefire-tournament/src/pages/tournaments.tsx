@@ -4,6 +4,7 @@ import { Trophy, ChevronRight, RefreshCw, Swords, Users, Zap } from "lucide-reac
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
+import { apiBase } from "@/lib/apiBase";
 
 // ─── Shared category definitions (exported for use in category pages) ─────────
 
@@ -88,7 +89,7 @@ export default function TournamentsPage() {
 
   const fetchCounts = () => {
     setLoading(true);
-    fetch("/api/tournaments?limit=200")
+    fetch(`${apiBase}/api/tournaments?limit=200`)
       .then((r) => r.json())
       .then((d: any) => {
         const all: any[] = d?.tournaments ?? (Array.isArray(d) ? d : []);
@@ -106,7 +107,7 @@ export default function TournamentsPage() {
 
   const fetchCommunity = () => {
     setCmLoading(true);
-    fetch("/api/user-matches")
+    fetch(`${apiBase}/api/user-matches`)
       .then((r) => r.json())
       .then((d: any) => {
         const all = Array.isArray(d) ? d : [];

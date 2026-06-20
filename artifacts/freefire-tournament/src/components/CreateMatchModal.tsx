@@ -4,6 +4,7 @@ import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateMatch } from "@/lib/CreateMatchContext";
 import { useLocation } from "wouter";
+import { apiBase } from "@/lib/apiBase";
 
 const MATCH_TYPES: { key: string; label: string; sub: string; icon: string; slots: number }[] = [
   { key: "BR",        label: "BR Match",    sub: "Battle Royale",   icon: "🔥", slots: 48 },
@@ -54,7 +55,7 @@ export default function CreateMatchModal() {
   useEffect(() => {
     if (open) {
       setRulesLoading(true);
-      fetch("/api/settings/community-match-rules")
+      fetch(`${apiBase}/api/settings/community-match-rules`)
         .then((r) => r.ok ? r.json() : null)
         .then((d) => setRules(d?.rules ?? ""))
         .catch(() => {})

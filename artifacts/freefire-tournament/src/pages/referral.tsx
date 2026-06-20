@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 interface ReferralData {
   referralCode: string;

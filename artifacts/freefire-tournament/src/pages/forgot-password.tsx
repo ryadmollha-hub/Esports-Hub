@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "wouter";
 import { Flame, Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle, ArrowLeft } from "lucide-react";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 export default function ForgotPasswordPage() {
   const [step, setStep] = useState<"email" | "reset" | "done">("email");

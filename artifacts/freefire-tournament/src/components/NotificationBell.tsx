@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Bell, Check, CheckCheck, X } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 interface Notification {
   id: number;

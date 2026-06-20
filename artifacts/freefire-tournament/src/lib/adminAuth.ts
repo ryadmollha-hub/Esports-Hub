@@ -39,7 +39,7 @@ export function getAdminToken(): string | null {
   return getAdminSession()?.token ?? null;
 }
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 export function adminFetch(path: string, init: RequestInit = {}): Promise<Response> {
   const token = getAdminToken();

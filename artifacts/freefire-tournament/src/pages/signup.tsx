@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Flame, Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle, RefreshCw, Shield } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 interface Captcha { token: string; question: string; }
 

@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { Flame, Lock, User, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { setAdminSession } from "@/lib/adminAuth";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 export default function AdminLoginPage() {
   const [, setLocation] = useLocation();

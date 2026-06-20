@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 const POLL_INTERVAL = 30_000;
 const FETCH_TIMEOUT_MS = 4_000;
 

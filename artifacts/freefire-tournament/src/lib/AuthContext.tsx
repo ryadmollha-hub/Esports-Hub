@@ -3,7 +3,7 @@ import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { useInactivityLogout } from "./useInactivityLogout";
 
 const TOKEN_KEY = "ff_auth_token";
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 export interface AuthUser {
   id: number;

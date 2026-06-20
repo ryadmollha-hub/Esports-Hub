@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { apiBase } from "@/lib/apiBase";
 
 // ─── Meta ─────────────────────────────────────────────────────────────────────
 
@@ -98,7 +99,7 @@ export default function MatchCategoryPage() {
 
   const fetchMatches = () => {
     setLoading(true);
-    fetch("/api/user-matches")
+    fetch(`${apiBase}/api/user-matches`)
       .then((r) => r.json())
       .then((d) => {
         const all = Array.isArray(d) ? d : [];

@@ -9,6 +9,7 @@ import CountdownTimer from "@/components/CountdownTimer";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateMatch } from "@/lib/CreateMatchContext";
+import { apiBase } from "@/lib/apiBase";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -265,7 +266,7 @@ export default function CommunityMatchesPage() {
 
   const fetchMatches = () => {
     setLoading(true);
-    fetch("/api/user-matches")
+    fetch(`${apiBase}/api/user-matches`)
       .then((r) => r.json())
       .then((d) => {
         const all = Array.isArray(d) ? d : [];

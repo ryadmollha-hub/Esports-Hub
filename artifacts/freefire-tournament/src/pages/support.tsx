@@ -6,7 +6,7 @@ import Footer from "@/components/Footer";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 const CATEGORIES = [
   { value: "payment_issue", label: "Payment Issue" },

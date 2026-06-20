@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import TournamentCard from "@/components/TournamentCard";
 import CountdownTimer from "@/components/CountdownTimer";
 import { useGetFeaturedTournaments, useListAnnouncements, useGetGlobalLeaderboard } from "@workspace/api-client-react";
+import { apiBase } from "@/lib/apiBase";
 
 const announcementTypeColors: Record<string, string> = {
   info: "border-l-blue-400 bg-blue-400/5",
@@ -28,7 +29,7 @@ export default function Home() {
   const [communityMatches, setCommunityMatches] = useState<any[]>([]);
   const [loadingCommunity, setLoadingCommunity] = useState(true);
   useEffect(() => {
-    fetch("/api/user-matches")
+    fetch(`${apiBase}/api/user-matches`)
       .then((r) => r.json())
       .then((d) => setCommunityMatches(Array.isArray(d) ? d : []))
       .catch(() => setCommunityMatches([]))

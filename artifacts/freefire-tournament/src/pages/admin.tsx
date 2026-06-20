@@ -10,7 +10,7 @@ import {
 import { isAdminAuthenticated, clearAdminSession, adminFetch } from "@/lib/adminAuth";
 import { useToast } from "@/hooks/use-toast";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { apiBase as BASE } from "@/lib/apiBase";
 
 async function safeJson(res: Response): Promise<any> {
   try {
@@ -227,7 +227,7 @@ export default function AdminPage() {
   const loadCommunityRules = useCallback(async () => {
     setCommunityRulesLoading(true);
     try {
-      const res = await fetch("/api/settings/community-match-rules");
+      const res = await fetch(`${BASE}/api/settings/community-match-rules`);
       if (res.ok) { const d = await res.json(); setCommunityRules(d.rules ?? ""); }
     } catch {} finally {
       setCommunityRulesLoading(false);
