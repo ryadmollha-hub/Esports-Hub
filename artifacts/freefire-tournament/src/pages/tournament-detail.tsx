@@ -844,9 +844,10 @@ export default function TournamentDetailPage() {
                       <div className="w-full text-center py-3.5 bg-purple-500/10 border border-purple-500/30 text-purple-400 font-black uppercase rounded-xl text-sm">
                         Results Published
                       </div>
-                    ) : isLive ? (
-                      <div className="w-full text-center py-3.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase rounded-xl text-sm">
-                        Registration Closed
+                    ) : (isLive || liveMatches.length > 0) ? (
+                      <div className="w-full text-center py-3.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-black uppercase rounded-xl text-sm flex items-center justify-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#ff2244] animate-pulse inline-block" />
+                        Match Live — Registration Closed
                       </div>
                     ) : isEnded ? (
                       <div className="w-full text-center py-3.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase rounded-xl text-sm">

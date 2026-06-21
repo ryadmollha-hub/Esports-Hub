@@ -16,9 +16,9 @@ export function useRole(): RoleState {
   const { user, isLoading } = useAuthContext();
 
   const isAdminSession = isAdminAuthenticated();
-  const isClerkAdmin = user?.isAdmin === true;
+  const isClerkAdmin = false; // JWT isAdmin flag no longer grants panel access
   const isBanned = user?.isBanned === true;
-  const isAdmin = isAdminSession || isClerkAdmin;
+  const isAdmin = isAdminSession;
   const isUser = !!user && !isBanned;
 
   return {
