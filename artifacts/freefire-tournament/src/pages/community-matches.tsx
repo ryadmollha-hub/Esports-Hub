@@ -10,6 +10,7 @@ import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateMatch } from "@/lib/CreateMatchContext";
 import { apiBase } from "@/lib/apiBase";
+import { useLanguage } from "@/lib/LanguageContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -80,6 +81,7 @@ function MatchCard({
   myJoin?: { adminRoomId: string | null; adminRoomPassword: string | null; status: string };
   onJoin: () => void;
 }) {
+  const { t } = useLanguage();
   const color       = TYPE_COLOR[m.matchType] ?? "#ff6b00";
   const effStatus   = getEffectiveStatus(m);
   const isLive      = !!m.credentialsReleased;
@@ -120,13 +122,13 @@ function MatchCard({
               {/* Live badge */}
               {isLive && (
                 <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/25 px-1.5 py-0.5 rounded-full shrink-0">
-                  <span className="w-1 h-1 rounded-full bg-[#00ff88] animate-pulse" /> LIVE
+                  <span className="w-1 h-1 rounded-full bg-[#00ff88] animate-pulse" /> {t("cm_live")}
                 </span>
               )}
               {/* Full badge */}
               {isFull && !isEnded && (
                 <span className="text-[9px] font-black uppercase text-[#ff2244] bg-[#ff2244]/10 border border-[#ff2244]/20 px-1.5 py-0.5 rounded-full shrink-0">
-                  FULL
+                  {t("cm_full")}
                 </span>
               )}
               {/* Mode badge */}
@@ -143,7 +145,7 @@ function MatchCard({
               by <span className="text-[#a0a0b0]">{m.creatorName ?? "Player"}</span>
               {m.isPrivate && (
                 <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] text-yellow-500">
-                  <Lock className="w-2.5 h-2.5" /> Private
+                  <Lock className="w-2.5 h-2.5" /> {t("cm_private")}
                 </span>
               )}
             </p>
@@ -154,22 +156,22 @@ function MatchCard({
         <div className="grid grid-cols-3 gap-2 mb-3 text-center">
           <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5">
             <div className="text-white font-black text-xs">
-              {Number(m.entryFee) === 0 ? "FREE" : `৳${Number(m.entryFee).toLocaleString()}`}
+              {Number(m.entryFee) === 0 ? t("cm_free_entry") : `৳${Number(m.entryFee).toLocaleString()}`}
             </div>
-            <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">Entry</div>
+            <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">{t("cm_entry")}</div>
           </div>
           <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5">
             <div className="text-[#ff6b00] font-black text-xs">
               ৳{Number(m.prizePool).toLocaleString()}
             </div>
-            <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">Prize</div>
+            <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">{t("cm_prize")}</div>
           </div>
           <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5">
             <div className="text-white font-black text-xs flex items-center justify-center gap-1">
               <Users className="w-2.5 h-2.5 text-[#606070]" />
               {m.filledSlots}/{m.maxSlots}
             </div>
-            <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">Slots</div>
+            <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">{t("cm_slots")}</div>
           </div>
         </div>
 
@@ -198,20 +200,20 @@ function MatchCard({
 
           {/* Action */}
           {isEnded ? (
-            <span className="text-[10px] text-[#3a3a46] font-bold uppercase">Ended</span>
+            <span className="text-[10px] text-[#3a3a46] font-bold uppercase">{t("cm_ended")}</span>
           ) : roomReady ? (
             <div className="text-right">
-              <div className="text-[9px] text-[#00ff88] font-black uppercase mb-0.5">Room Ready</div>
+              <div className="text-[9px] text-[#00ff88] font-black uppercase mb-0.5">{t("cm_room_ready")}</div>
               <div className="text-[10px] text-white font-mono">
                 {myJoin?.adminRoomId || m.roomId}
               </div>
             </div>
           ) : hasJoined ? (
             myJoin?.status === "pending"
-              ? <span className="text-[10px] text-yellow-400 font-bold uppercase">Request Sent</span>
-              : <span className="text-[10px] text-[#00ff88] font-bold uppercase">Joined ✓</span>
+              ? <span className="text-[10px] text-yellow-400 font-bold uppercase">{t("cm_request_sent")}</span>
+              : <span className="text-[10px] text-[#00ff88] font-bold uppercase">{t("cm_joined")}</span>
           ) : m.credentialsReleased ? (
-            <span className="text-[10px] text-[#ff2244]/70 font-bold uppercase">🔒 Locked</span>
+            <span className="text-[10px] text-[#ff2244]/70 font-bold uppercase">{t("cm_locked")}</span>
           ) : (
             <button
               onClick={onJoin}
@@ -223,7 +225,7 @@ function MatchCard({
                 boxShadow: `0 4px 14px ${color}33`,
               }}
             >
-              {isLive ? <><Zap className="w-3.5 h-3.5" /> Join Live</> : "JOIN →"}
+              {isLive ? <><Zap className="w-3.5 h-3.5" /> {t("cm_join_live")}</> : t("cm_join")}
             </button>
           )}
         </div>
@@ -380,7 +382,8 @@ export default function CommunityMatchesPage() {
     (joinMatch?.isPasswordProtected && !joinPassword.trim()) ||
     (walletBalance !== null && Number(joinMatch?.entryFee ?? 0) > 0 && walletBalance < Number(joinMatch?.entryFee ?? 0));
 
-  const activeTabMeta = TABS.find((t) => t.key === activeTab) ?? TABS[0];
+  const { t } = useLanguage();
+  const activeTabMeta = TABS.find((tb) => tb.key === activeTab) ?? TABS[0];
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
@@ -398,7 +401,7 @@ export default function CommunityMatchesPage() {
                 Player Created
               </div>
               <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight leading-tight">
-                Community <span className="text-[#ff6b00]">Matches</span>
+                {t("cm_title").split(" ")[0]} <span className="text-[#ff6b00]">{t("cm_title").split(" ").slice(1).join(" ")}</span>
               </h1>
               <p className="text-[#606070] text-sm mt-1">
                 Rooms created by players — join or create your own
@@ -411,7 +414,7 @@ export default function CommunityMatchesPage() {
                 onClick={openCreateMatch}
                 className="flex items-center gap-2 px-5 py-3 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black uppercase text-sm rounded-xl transition-all shadow-[0_4px_20px_rgba(255,107,0,0.35)] hover:shadow-[0_6px_28px_rgba(255,107,0,0.45)] hover:-translate-y-0.5 active:translate-y-0 shrink-0"
               >
-                <Plus className="w-4 h-4" /> Create a Match
+                <Plus className="w-4 h-4" /> {t("cm_create")}
               </button>
             ) : (
               <Link href="/sign-in">
@@ -428,7 +431,7 @@ export default function CommunityMatchesPage() {
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse" />
                 <h2 className="text-xs font-black uppercase text-[#a0a0b0] tracking-wider">
-                  My Messages
+                  {t("cm_my_matches")}
                   <span className="ml-2 text-[#4a4a5a]">({myJoinedMatches.length})</span>
                 </h2>
                 <button onClick={fetchMyJoins} className="ml-auto text-[#4a4a5a] hover:text-[#a0a0b0] transition-colors">

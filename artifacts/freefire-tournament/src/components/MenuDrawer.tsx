@@ -7,11 +7,9 @@ import {
 import { useAuthContext } from "@/lib/AuthContext";
 import { clearAdminSession, isAdminAuthenticated } from "@/lib/adminAuth";
 import { useTheme } from "@/lib/ThemeContext";
+import { useLanguage } from "@/lib/LanguageContext";
 
-interface MenuDrawerProps {
-  open: boolean;
-  onClose: () => void;
-}
+interface MenuDrawerProps { open: boolean; onClose: () => void; }
 
 export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
   const { user, logout } = useAuthContext();
@@ -19,13 +17,10 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
   const isAdminSession = isAdminAuthenticated();
   const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
   const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
 
   useEffect(() => {
-    if (open) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    document.body.style.overflow = open ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
@@ -38,53 +33,35 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
 
   const menuItems = [
     ...(user ? [
-      { href: "/profile", icon: User, label: "Profile", desc: "View & edit your profile" },
-      { href: "/wallet", icon: Wallet, label: "Wallet", desc: "Manage your balance" },
-      { href: "/my-matches", icon: Swords, label: "My Matches", desc: "Manage matches & requests" },
-      { href: "/dashboard", icon: Trophy, label: "My Tournaments", desc: "Your tournament history" },
-      { href: "/teams/my", icon: Shield, label: "My Team", desc: "Manage your squad" },
-      { href: "/referral", icon: Gift, label: "Referral", desc: "Invite friends, earn rewards" },
+      { href: "/profile",    icon: User,           label: t("menu_profile"),    desc: t("menu_profile_desc") },
+      { href: "/wallet",     icon: Wallet,          label: t("menu_wallet"),     desc: t("menu_wallet_desc") },
+      { href: "/my-matches", icon: Swords,          label: t("menu_my_matches"), desc: t("menu_my_matches_desc") },
+      { href: "/dashboard",  icon: Trophy,          label: t("menu_tournaments"),desc: t("menu_tournaments_desc") },
+      { href: "/teams/my",   icon: Shield,          label: t("menu_team"),       desc: t("menu_team_desc") },
+      { href: "/referral",   icon: Gift,            label: t("menu_referral"),   desc: t("menu_referral_desc") },
     ] : []),
-    { href: "/leaderboard", icon: History, label: "Leaderboard", desc: "Global rankings" },
-    { href: "/support", icon: HeadphonesIcon, label: "Support", desc: "Get help from our team" },
+    { href: "/leaderboard", icon: History,         label: t("menu_leaderboard"), desc: t("menu_leaderboard_desc") },
+    { href: "/support",     icon: HeadphonesIcon,  label: t("menu_support"),     desc: t("menu_support_desc") },
   ];
 
   if (!open) return null;
 
   return (
     <>
-      <div
-        className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-[70] bg-[#0d0d16] border-t border-[#ff6b00]/20 rounded-t-3xl transition-transform duration-300 ${
-          open ? "translate-y-0" : "translate-y-full"
-        }`}
-        style={{ maxHeight: "90vh", overflowY: "auto" }}
-      >
+      <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className={`fixed bottom-0 left-0 right-0 z-[70] bg-[#0d0d16] border-t border-[#ff6b00]/20 rounded-t-3xl transition-transform duration-300 ${open ? "translate-y-0" : "translate-y-full"}`} style={{ maxHeight: "90vh", overflowY: "auto" }}>
         <div className="w-12 h-1 bg-[#2a2a36] rounded-full mx-auto mt-3 mb-2" />
-
         <div className="px-4 pb-4">
           <div className="flex items-center justify-between py-3 border-b border-[#ff6b00]/10 mb-3">
             <div className="flex items-center gap-2">
               <Flame className="w-5 h-5 text-[#ff6b00]" />
-              <span className="font-black uppercase text-white tracking-wider">
-                FF <span className="text-[#ff6b00]">Arena</span>
-              </span>
+              <span className="font-black uppercase text-white tracking-wider">FF <span className="text-[#ff6b00]">Arena</span></span>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={toggleTheme}
-                className="w-8 h-8 rounded-full bg-[#1a1a24] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors"
-                title={theme === "dark" ? "Light mode" : "Dark mode"}
-              >
+              <button onClick={toggleTheme} className="w-8 h-8 rounded-full bg-[#1a1a24] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors">
                 {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
-              <button
-                onClick={onClose}
-                className="w-8 h-8 rounded-full bg-[#1a1a24] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors"
-              >
+              <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#1a1a24] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -96,9 +73,7 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
                 <User className="w-6 h-6 text-[#ff6b00]" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-black text-white truncate">
-                  {user.displayName ?? user.username ?? "Player"}
-                </div>
+                <div className="font-black text-white truncate">{user.displayName ?? user.username ?? "Player"}</div>
                 <div className="text-[#a0a0b0] text-xs truncate">{user.email}</div>
                 {user.isAdmin && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#ff6b00] bg-[#ff6b00]/10 px-2 py-0.5 rounded-full mt-0.5">
@@ -111,31 +86,14 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
 
           {!user && !isAdminSession && (
             <div className="flex gap-3 mb-4">
-              <Link
-                href="/sign-in"
-                onClick={onClose}
-                className="flex-1 text-center py-3 rounded-2xl border border-[#2a2a36] text-white font-bold text-sm uppercase"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/sign-up"
-                onClick={onClose}
-                className="flex-1 text-center py-3 rounded-2xl bg-[#ff6b00] text-white font-bold text-sm uppercase"
-              >
-                Register
-              </Link>
+              <Link href="/sign-in" onClick={onClose} className="flex-1 text-center py-3 rounded-2xl border border-[#2a2a36] text-white font-bold text-sm uppercase">{t("menu_sign_in")}</Link>
+              <Link href="/sign-up" onClick={onClose} className="flex-1 text-center py-3 rounded-2xl bg-[#ff6b00] text-white font-bold text-sm uppercase">{t("nav_register")}</Link>
             </div>
           )}
 
           <div className="space-y-1">
             {menuItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onClose}
-                className="flex items-center gap-3 p-3.5 rounded-2xl hover:bg-[#1a1a24] transition-colors group"
-              >
+              <Link key={item.href} href={item.href} onClick={onClose} className="flex items-center gap-3 p-3.5 rounded-2xl hover:bg-[#1a1a24] transition-colors group">
                 <div className="w-10 h-10 rounded-xl bg-[#12121a] border border-[#2a2a36] flex items-center justify-center group-hover:border-[#ff6b00]/30 transition-colors shrink-0">
                   <item.icon className="w-5 h-5 text-[#ff6b00]" />
                 </div>
@@ -148,17 +106,13 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
             ))}
 
             {(user?.isAdmin || isAdminSession) && (
-              <Link
-                href="/admin"
-                onClick={onClose}
-                className="flex items-center gap-3 p-3.5 rounded-2xl hover:bg-[#ff6b00]/5 transition-colors group border border-[#ff6b00]/10"
-              >
+              <Link href="/admin" onClick={onClose} className="flex items-center gap-3 p-3.5 rounded-2xl hover:bg-[#ff6b00]/5 transition-colors group border border-[#ff6b00]/10">
                 <div className="w-10 h-10 rounded-xl bg-[#ff6b00]/10 flex items-center justify-center shrink-0">
                   <Shield className="w-5 h-5 text-[#ff6b00]" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-[#ff6b00] font-bold text-sm">Admin Panel</div>
-                  <div className="text-[#606070] text-xs">Manage platform</div>
+                  <div className="text-[#ff6b00] font-bold text-sm">{t("menu_admin_panel")}</div>
+                  <div className="text-[#606070] text-xs">{t("menu_admin_desc")}</div>
                 </div>
                 <ChevronRight className="w-4 h-4 text-[#ff6b00]/60" />
               </Link>
@@ -166,15 +120,11 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
           </div>
 
           {(user || isAdminSession) && (
-            <button
-              onClick={handleLogout}
-              className="w-full mt-4 flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-[#ff2244]/20 text-[#ff2244] font-bold text-sm uppercase hover:bg-[#ff2244]/5 transition-colors"
-            >
-              <LogOut className="w-4 h-4" /> Sign Out
+            <button onClick={handleLogout} className="w-full mt-4 flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-[#ff2244]/20 text-[#ff2244] font-bold text-sm uppercase hover:bg-[#ff2244]/5 transition-colors">
+              <LogOut className="w-4 h-4" /> {t("menu_sign_out")}
             </button>
           )}
         </div>
-
         <div className="h-safe-area-inset-bottom h-6" />
       </div>
     </>
