@@ -1,0 +1,32 @@
+Act as a Principal Full-Stack Developer. Our platform has critical runtime crashes, authentication locks, and missing logic blocks that need a clean, parallel rewrite across frontend files and backend api-server controllers. Follow these strict directives to fix EVERYTHING without breaking anything else:
+
+==================================================
+1. FIX ADMIN AUTHENTICATION & LOGIN LOCK (CRITICAL)
+==================================================
+- We are suddenly getting "Invalid credentials" on the Admin Login page (/admin-login). 
+- Verify the backend authentication controller (`/api/admin/login` or similar). Ensure it cleanly queries the database, handles password hashing correctly, and returns a valid authorization token.
+- If the admin user account was wiped during a database sync, automatically seed a default admin user block securely into the collection so we can log back in immediately.
+
+==================================================
+2. ELIMINATE ALL NULL 'toUpperCase' CRASHES
+==================================================
+- Fix the severe "Cannot read properties of null (reading 'toUpperCase')" page crash affecting both the User Dashboard and Admin Panel tables (Deposits/Withdrawals sections).
+- Locate every single instance across `src/pages/admin.tsx` and all transactional components where `.toUpperCase()` is executed (e.g., `tx.status.toUpperCase()`, `deposit.method.toUpperCase()`).
+- Wrap every instance with safe fallbacks: Use `(tx.status || 'PENDING').toUpperCase()` or `tx.method?.toUpperCase() || 'BKASH'`. Never let a null database value trigger a purple screen crash.
+
+==================================================
+3. LIVE COUNTDOWN TIMERS & CARD AUTOMATION
+==================================================
+- Add live count-downs to all main Tournament Cards utilizing standard `setInterval` and `useEffect` with clean unmounter clear-intervals to prevent memory leaks. Styling: "STARTS IN" label with bright orange digits (`text-orange-500`) and muted gray spacers (`00D : 05H : 57M : 04S`).
+- Implement Match Automation lifecycle metrics:
+  * 10 Minutes Before Match Start: Change text badge from "UPCOMING" to "LIVE / ROOM RELEASED".
+  * Exactly 1 Hour After Match Start Time: Force-hide/mask the Room ID and Password values on the client frontend entirely for security.
+  * Results Stage: When the admin distributed scores, automatically mark badge as "COMPLETED".
+
+==================================================
+4. SECURE MATCH JOINING LOGIC & DEPOSIT VALIDATION
+==================================================
+- Clicking to register/join a Community match must launch a dynamic user Modal asking for Free Fire In-Game UID and Name (IGN). Enforce rule check blocks: SOLO (1 player info), DUO (2 players info), SQUAD (4 players info). Post arrays cleanly to the database without field structure issues.
+- Sanitize frontend deposits and withdrawals: enforce safe casting via `Number(amount)` and clean whitespace using `trxId.trim().toUpperCase()`. Handle database transactions using resilient try-catch blocks returning neat JSON messages instead of throwing server exceptions.
+
+Run a thorough code audit, clean up any messy layouts inside `src/pages/admin.tsx`, and let me know when all systems are fully synced and working.

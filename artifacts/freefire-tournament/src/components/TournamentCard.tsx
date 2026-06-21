@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Users, Trophy, Clock, ChevronRight, Zap } from "lucide-react";
 import CountdownTimer from "./CountdownTimer";
@@ -24,23 +25,52 @@ const modeColors: Record<string, string> = {
   squad: "bg-[#ff6b00]/20 text-[#ff6b00] border-[#ff6b00]/30",
 };
 
+type StatusKey = "upcoming" | "starting_soon" | "live" | "ongoing" | "ended" | "completed" | "cancelled";
+
 const statusConfig: Record<string, { color: string; dot?: string; label: string }> = {
-  upcoming:  { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", label: "Soon" },
-  live:      { color: "bg-green-500/20 text-green-400 border-green-500/30", dot: "bg-green-400 animate-pulse", label: "LIVE" },
-  ongoing:   { color: "bg-green-500/20 text-green-400 border-green-500/30", dot: "bg-green-400 animate-pulse", label: "LIVE" },
-  ended:     { color: "bg-gray-500/20 text-gray-400 border-gray-500/30", label: "Ended" },
-  completed: { color: "bg-gray-500/20 text-gray-400 border-gray-500/30", label: "Ended" },
-  cancelled: { color: "bg-red-500/20 text-red-400 border-red-500/30", label: "Off" },
+  upcoming:      { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", label: "Soon" },
+  starting_soon: { color: "bg-[#ff6b00]/20 text-[#ff6b00] border-[#ff6b00]/40", dot: "bg-[#ff6b00] animate-pulse", label: "STARTING SOON" },
+  live:          { color: "bg-green-500/20 text-green-400 border-green-500/30", dot: "bg-green-400 animate-pulse", label: "LIVE" },
+  ongoing:       { color: "bg-green-500/20 text-green-400 border-green-500/30", dot: "bg-green-400 animate-pulse", label: "LIVE" },
+  ended:         { color: "bg-gray-500/20 text-gray-400 border-gray-500/30", label: "Ended" },
+  completed:     { color: "bg-gray-500/20 text-gray-400 border-gray-500/30", label: "Completed" },
+  cancelled:     { color: "bg-red-500/20 text-red-400 border-red-500/30", label: "Off" },
 };
 
+function useClientStatus(serverStatus: string, startDate: string): StatusKey {
+  const computeStatus = (): StatusKey => {
+    if (serverStatus !== "upcoming") return serverStatus as StatusKey;
+    const now = Date.now();
+    const start = new Date(startDate).getTime();
+    if (now >= start + 60 * 60 * 1000) return "completed";
+    if (now >= start) return "live";
+    if (now >= start - 10 * 60 * 1000) return "starting_soon";
+    return "upcoming";
+  };
+
+  const [status, setStatus] = useState<StatusKey>(computeStatus);
+
+  useEffect(() => {
+    setStatus(computeStatus());
+    const id = setInterval(() => setStatus(computeStatus()), 15000);
+    return () => clearInterval(id);
+  }, [serverStatus, startDate]);
+
+  return status;
+}
+
 export default function TournamentCard({ t, featured = false }: { t: Tournament; featured?: boolean }) {
-  const slotPct = Math.min((t.filledSlots / t.maxSlots) * 100, 100);
-  const slotsLeft = t.maxSlots - t.filledSlots;
-  const isFull = slotsLeft === 0;
-  const isLive = t.status === "live" || t.status === "ongoing";
-  const entryFee = Number(t.entryFee);
-  const perKill = Number(t.perKillReward ?? 0);
-  const sc = statusConfig[t.status] ?? statusConfig.upcoming;
+  const slotPct    = Math.min((t.filledSlots / t.maxSlots) * 100, 100);
+  const slotsLeft  = t.maxSlots - t.filledSlots;
+  const isFull     = slotsLeft === 0;
+  const entryFee   = Number(t.entryFee);
+  const perKill    = Number(t.perKillReward ?? 0);
+
+  const clientStatus = useClientStatus(t.status, t.startDate);
+  const isLive       = clientStatus === "live" || clientStatus === "ongoing" || clientStatus === "starting_soon";
+  const sc           = statusConfig[clientStatus] ?? statusConfig.upcoming;
+
+  const targetDate: string = (t.countdownTo ?? t.startDate)!;
 
   if (featured) {
     return (
@@ -65,7 +95,8 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e17] via-[#0e0e17]/20 to-transparent" />
           {isLive && <div className="absolute inset-0 bg-[#00ff88]/3" />}
-          {/* Status badge overlay */}
+
+          {/* Badges overlay */}
           <div className="absolute top-3 left-3 flex items-center gap-1.5">
             <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-wide ${modeColors[t.mode] ?? modeColors.squad}`} data-testid={`badge-mode-${t.id}`}>
               {t.mode}
@@ -75,7 +106,8 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
               {sc.label}
             </span>
           </div>
-          {/* Prize badge overlay */}
+
+          {/* Prize overlay */}
           <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 border border-[#ffd700]/20">
             <Trophy className="w-3.5 h-3.5 text-[#ffd700]" />
             <span className="text-[#ffd700] text-xs font-black" data-testid={`text-prize-${t.id}`}>
@@ -110,11 +142,13 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
             </div>
           </div>
 
-          {/* Countdown */}
-          {t.status === "upcoming" && (t.countdownTo || t.startDate) && (
-            <div className="mb-3">
-              <div className="text-[9px] uppercase tracking-widest text-[#606070] font-bold mb-1">Starts In</div>
-              <CountdownTimer targetDate={(t.countdownTo ?? t.startDate)!} className="text-[10px] gap-1" />
+          {/* Countdown — shown for upcoming AND starting_soon states */}
+          {(clientStatus === "upcoming" || clientStatus === "starting_soon") && (
+            <div className="mb-3 bg-[#0a0a0f] rounded-xl px-3 py-2 border border-[#1e1e2e]">
+              <div className="text-[9px] uppercase tracking-widest text-[#606070] font-bold mb-1.5">
+                {clientStatus === "starting_soon" ? "⚡ Starting Soon" : "Starts In"}
+              </div>
+              <CountdownTimer targetDate={targetDate} className="text-[11px] gap-1.5" />
             </div>
           )}
 
@@ -171,7 +205,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
 
       {/* Main content */}
       <div className="flex-1 min-w-0">
-        {/* Name + badges row */}
+        {/* Badges row */}
         <div className="flex items-center gap-1.5 mb-1 flex-wrap">
           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wide ${modeColors[t.mode] ?? modeColors.squad}`} data-testid={`badge-mode-${t.id}`}>
             {t.mode}
@@ -186,7 +220,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
           {t.name}
         </h3>
 
-        {/* Prize + Entry + Kill reward */}
+        {/* Prize + Entry */}
         <div className="flex items-center gap-2 flex-wrap mb-1.5">
           <div className="flex items-center gap-1">
             <Trophy className="w-3 h-3 text-[#ffd700]" />
@@ -208,37 +242,37 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
           )}
         </div>
 
-        {/* Slots + time row */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 flex-1">
-            <div className="flex items-center gap-1 text-[#606070]">
-              <Users className="w-2.5 h-2.5" />
-              <span className="text-[10px]">{t.filledSlots}<span className="text-[#3a3a48]">/{t.maxSlots}</span></span>
-            </div>
-            <div className="flex-1 h-0.5 bg-[#1a1a24] rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${
-                  isFull ? "bg-[#ff2244]" :
-                  slotPct >= 80 ? "bg-gradient-to-r from-[#ff6b00] to-[#ff2244]" :
-                  "bg-gradient-to-r from-[#00ff88] to-[#ff6b00]"
-                }`}
-                style={{ width: `${slotPct}%` }}
-                data-testid={`bar-slots-${t.id}`}
-              />
-            </div>
-            <span data-testid={`text-slots-left-${t.id}`} className={`font-bold text-[9px] uppercase shrink-0 ${isFull ? "text-[#ff2244]" : slotsLeft <= 5 ? "text-yellow-400" : "text-[#606070]"}`}>
-              {isFull ? "FULL" : `${slotsLeft} left`}
-            </span>
+        {/* Slots bar */}
+        <div className="flex items-center gap-1.5 flex-1">
+          <div className="flex items-center gap-1 text-[#606070]">
+            <Users className="w-2.5 h-2.5" />
+            <span className="text-[10px]">{t.filledSlots}<span className="text-[#3a3a48]">/{t.maxSlots}</span></span>
           </div>
+          <div className="flex-1 h-0.5 bg-[#1a1a24] rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${
+                isFull ? "bg-[#ff2244]" :
+                slotPct >= 80 ? "bg-gradient-to-r from-[#ff6b00] to-[#ff2244]" :
+                "bg-gradient-to-r from-[#00ff88] to-[#ff6b00]"
+              }`}
+              style={{ width: `${slotPct}%` }}
+              data-testid={`bar-slots-${t.id}`}
+            />
+          </div>
+          <span data-testid={`text-slots-left-${t.id}`} className={`font-bold text-[9px] uppercase shrink-0 ${isFull ? "text-[#ff2244]" : slotsLeft <= 5 ? "text-yellow-400" : "text-[#606070]"}`}>
+            {isFull ? "FULL" : `${slotsLeft} left`}
+          </span>
         </div>
       </div>
 
-      {/* Right: time + chevron */}
+      {/* Right: countdown + chevron */}
       <div className="flex flex-col items-end gap-1 shrink-0">
-        {t.status === "upcoming" && (t.countdownTo || t.startDate) ? (
+        {(clientStatus === "upcoming" || clientStatus === "starting_soon") ? (
           <div className="flex flex-col items-end gap-0.5">
-            <span className="text-[8px] uppercase tracking-widest text-[#606070] font-bold">Starts In</span>
-            <CountdownTimer targetDate={(t.countdownTo ?? t.startDate)!} className="text-[9px] gap-0.5" />
+            <span className={`text-[8px] uppercase tracking-widest font-bold ${clientStatus === "starting_soon" ? "text-[#ff6b00]" : "text-[#606070]"}`}>
+              {clientStatus === "starting_soon" ? "⚡ Soon" : "Starts In"}
+            </span>
+            <CountdownTimer targetDate={targetDate} className="text-[9px] gap-0.5" />
           </div>
         ) : (
           <div className="flex items-center gap-0.5 text-[#606070] text-[10px]">
