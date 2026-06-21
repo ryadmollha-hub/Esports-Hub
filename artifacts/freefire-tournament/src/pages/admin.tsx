@@ -119,6 +119,9 @@ export default function AdminPage() {
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [rulesModalTournamentId, setRulesModalTournamentId] = useState<number | null>(null);
 
+  // Manage Room modal state: { tournamentId, matchId } or null
+  const [manageRoomModal, setManageRoomModal] = useState<{ tournamentId: number; matchId: number } | null>(null);
+
   // Admin community match creation form
   const [showAdminMatchForm, setShowAdminMatchForm] = useState(false);
   const [adminMatchForm, setAdminMatchForm] = useState({ matchType: "", matchName: "", prizePool: "", entryFee: "", perKill: "", mapName: "", scheduledAt: "", description: "", roomReleaseTime: "", roomHideTime: "" });
@@ -2176,105 +2179,48 @@ export default function AdminPage() {
                               <div className="p-8 text-center text-[#a0a0b0] text-sm">
                                 No matches yet — add matches in <span className="text-[#ff6b00] font-bold">Create &amp; Manage Tournaments</span>.
                               </div>
-                            ) : matches.map((m: any) => (
-                              <div key={m.id} className="p-6">
-                                <div className="flex items-center gap-3 mb-4">
-                                  <div className="w-8 h-8 bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-xl flex items-center justify-center">
-                                    <span className="text-[#ff6b00] font-black text-xs">#{m.matchNumber}</span>
+                            ) : matches.map((m: any) => {
+                              const now = Date.now();
+                              const rel = m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null;
+                              const hid = m.roomHideAt ? new Date(m.roomHideAt).getTime() : null;
+                              const statusBadge = m.roomId
+                                ? rel && now >= rel && (!hid || now < hid)
+                                  ? <span className="text-[#00ff88] text-[10px] font-black border border-[#00ff88]/30 bg-[#00ff88]/5 px-2 py-0.5 rounded-full">🟢 LIVE</span>
+                                  : rel && now < rel
+                                    ? <span className="text-yellow-400 text-[10px] font-black border border-yellow-400/20 bg-yellow-400/5 px-2 py-0.5 rounded-full">⏳ Scheduled</span>
+                                    : <span className="text-[#ff2244] text-[10px] font-black border border-[#ff2244]/20 bg-[#ff2244]/5 px-2 py-0.5 rounded-full">🔴 Hidden</span>
+                                : <span className="text-[#505060] text-[10px] font-black border border-[#2a2a36] bg-[#0d0d16] px-2 py-0.5 rounded-full">No Room Set</span>;
+                              return (
+                                <div key={m.id} className="flex items-center gap-3 px-5 py-3.5 flex-wrap">
+                                  <div className="w-7 h-7 bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-lg flex items-center justify-center shrink-0">
+                                    <span className="text-[#ff6b00] font-black text-[10px]">#{m.matchNumber}</span>
                                   </div>
-                                  <div>
-                                    <div className="text-white font-bold text-sm">Match #{m.matchNumber}{m.mapName ? ` — ${m.mapName}` : ""}</div>
-                                    {m.scheduledAt && <div className="text-[#a0a0b0] text-xs">{new Date(m.scheduledAt).toLocaleString()}</div>}
-                                  </div>
-                                  {m.roomId && (
-                                    <div className="ml-auto flex items-center gap-2">
-                                      {(() => {
-                                        const now = Date.now();
-                                        const rel = m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null;
-                                        const hid = m.roomHideAt ? new Date(m.roomHideAt).getTime() : null;
-                                        if (rel && now >= rel && (!hid || now < hid)) return <span className="text-[#00ff88] text-[10px] font-black border border-[#00ff88]/30 bg-[#00ff88]/5 px-2 py-0.5 rounded-full">🟢 LIVE</span>;
-                                        if (rel && now < rel) return <span className="text-yellow-400 text-[10px] font-black border border-yellow-400/20 bg-yellow-400/5 px-2 py-0.5 rounded-full">⏳ Scheduled</span>;
-                                        return <span className="text-[#ff2244] text-[10px] font-black border border-[#ff2244]/20 bg-[#ff2244]/5 px-2 py-0.5 rounded-full">🔴 Hidden</span>;
-                                      })()}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="text-white font-bold text-sm truncate">
+                                      Match #{m.matchNumber}{m.mapName ? ` — ${m.mapName}` : ""}
                                     </div>
-                                  )}
+                                    {m.scheduledAt && (
+                                      <div className="text-[#a0a0b0] text-xs">{new Date(m.scheduledAt).toLocaleString()}</div>
+                                    )}
+                                  </div>
+                                  {statusBadge}
+                                  <button
+                                    onClick={() => {
+                                      if (!tournamentMatchRoomForms[m.id]) {
+                                        setTournamentMatchRoomForms((prev) => ({
+                                          ...prev,
+                                          [m.id]: { releaseMode: "before10", hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "" },
+                                        }));
+                                      }
+                                      setManageRoomModal({ tournamentId: t.id, matchId: m.id });
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] font-black text-xs uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors shrink-0"
+                                  >
+                                    <Settings className="w-3 h-3" /> ⚙️ Manage Room
+                                  </button>
                                 </div>
-
-                                {/* Room form */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                  <div>
-                                    <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Room ID *</label>
-                                    <input
-                                      placeholder="Enter Room ID"
-                                      value={tournamentMatchRoomForms[m.id]?.roomId ?? m.roomId ?? ""}
-                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({
-                                        ...prev,
-                                        [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: "", roomPassword: "" }), roomId: e.target.value },
-                                      }))}
-                                      className="admin-input w-full"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Room Password</label>
-                                    <input
-                                      placeholder="Enter Password"
-                                      value={tournamentMatchRoomForms[m.id]?.roomPassword ?? m.roomPassword ?? ""}
-                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({
-                                        ...prev,
-                                        [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: "", roomPassword: "" }), roomPassword: e.target.value },
-                                      }))}
-                                      className="admin-input w-full"
-                                    />
-                                  </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                                  <div>
-                                    <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Release Timing</label>
-                                    <div className="flex gap-2">
-                                      {(["now", "before10"] as const).map((mode) => (
-                                        <button
-                                          key={mode}
-                                          onClick={() => setTournamentMatchRoomForms((prev) => ({
-                                            ...prev,
-                                            [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "" }), releaseMode: mode },
-                                          }))}
-                                          className={`flex-1 px-3 py-2 text-xs font-black uppercase rounded-xl border transition-colors ${
-                                            (tournamentMatchRoomForms[m.id]?.releaseMode ?? "before10") === mode
-                                              ? "bg-[#ff6b00] border-[#ff6b00] text-white"
-                                              : "bg-[#0d0d16] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"
-                                          }`}
-                                        >
-                                          {mode === "now" ? "⚡ Now" : "⏱ 10min Before"}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Auto-hide (min after start)</label>
-                                    <input
-                                      type="number" min="0" max="120" placeholder="5"
-                                      value={tournamentMatchRoomForms[m.id]?.hideMinutesAfter ?? "5"}
-                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({
-                                        ...prev,
-                                        [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "" }), hideMinutesAfter: e.target.value },
-                                      }))}
-                                      className="admin-input w-full"
-                                    />
-                                  </div>
-                                </div>
-
-                                <button
-                                  onClick={() => setTournamentMatchRoomCredentials(t.id, m.id)}
-                                  disabled={settingTournamentMatchRoom[m.id]}
-                                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#ff6b00] text-white font-black text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 shadow-lg shadow-[#ff6b00]/20"
-                                >
-                                  {settingTournamentMatchRoom[m.id]
-                                    ? <><RefreshCw className="w-4 h-4 animate-spin" /> Saving…</>
-                                    : "🔑 Save Room Credentials & Timing"}
-                                </button>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         )}
                       </div>
@@ -2284,6 +2230,119 @@ export default function AdminPage() {
               )}
             </div>
           )}
+
+          {/* ── Manage Room Modal ── */}
+          {manageRoomModal && (() => {
+            const { tournamentId, matchId } = manageRoomModal;
+            const allMatches = Object.values(tournamentMatchesList).flat() as any[];
+            const match = allMatches.find((m: any) => m.id === matchId);
+            const form = tournamentMatchRoomForms[matchId] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: match?.roomId ?? "", roomPassword: match?.roomPassword ?? "" };
+            const updateForm = (patch: Partial<typeof form>) =>
+              setTournamentMatchRoomForms((prev) => ({ ...prev, [matchId]: { ...form, ...patch } }));
+            return (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-2xl shadow-2xl w-full max-w-md flex flex-col">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-[#ff6b00]/10">
+                    <div>
+                      <h2 className="font-black text-white text-sm uppercase flex items-center gap-2">
+                        <Key className="w-4 h-4 text-[#ff6b00]" /> Manage Room Credentials
+                      </h2>
+                      {match && (
+                        <p className="text-[#606070] text-xs mt-0.5">
+                          Match #{match.matchNumber}{match.mapName ? ` — ${match.mapName}` : ""}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setManageRoomModal(null)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#1a1a24] text-[#a0a0b0] hover:text-white hover:bg-[#2a2a34] transition-colors text-sm"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Body */}
+                  <div className="p-5 space-y-4">
+                    {/* Room ID & Password */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Room ID *</label>
+                        <input
+                          placeholder="Enter Room ID"
+                          value={form.roomId}
+                          onChange={(e) => updateForm({ roomId: e.target.value })}
+                          className="admin-input w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Password</label>
+                        <input
+                          placeholder="Enter Password"
+                          value={form.roomPassword}
+                          onChange={(e) => updateForm({ roomPassword: e.target.value })}
+                          className="admin-input w-full"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Release Timing */}
+                    <div>
+                      <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Release Timing</label>
+                      <div className="flex gap-2">
+                        {(["now", "before10"] as const).map((mode) => (
+                          <button
+                            key={mode}
+                            onClick={() => updateForm({ releaseMode: mode })}
+                            className={`flex-1 py-2 text-xs font-black uppercase rounded-xl border transition-colors ${
+                              form.releaseMode === mode
+                                ? "bg-[#ff6b00] border-[#ff6b00] text-white"
+                                : "bg-[#0d0d16] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"
+                            }`}
+                          >
+                            {mode === "now" ? "⚡ Now" : "⏱ 10 min Before"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Auto-hide */}
+                    <div>
+                      <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Auto-hide (minutes after match start)</label>
+                      <input
+                        type="number" min="0" max="120" placeholder="5"
+                        value={form.hideMinutesAfter}
+                        onChange={(e) => updateForm({ hideMinutesAfter: e.target.value })}
+                        className="admin-input w-32"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="flex gap-3 px-5 pb-5">
+                    <button
+                      onClick={() => setManageRoomModal(null)}
+                      className="flex-1 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-xs uppercase rounded-xl hover:text-white transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await setTournamentMatchRoomCredentials(tournamentId, matchId);
+                        setManageRoomModal(null);
+                      }}
+                      disabled={settingTournamentMatchRoom[matchId]}
+                      className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-[#ff6b00] text-white font-black text-xs uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50"
+                    >
+                      {settingTournamentMatchRoom[matchId]
+                        ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…</>
+                        : "🔑 Save & Close"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* REGISTRATIONS */}
           {activeTab === "registrations" && (() => {
