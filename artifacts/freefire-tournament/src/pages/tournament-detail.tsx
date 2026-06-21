@@ -75,6 +75,8 @@ interface MatchInfo {
   roomId?: string | null;
   roomPassword?: string | null;
   roomVisible?: boolean;
+  roomReleaseAt?: string | null;
+  roomHideAt?: string | null;
 }
 
 export default function TournamentDetailPage() {
@@ -514,12 +516,18 @@ export default function TournamentDetailPage() {
                 <div className="space-y-2">
                   {upcomingMatches.map(match => {
                     const scheduledMs = new Date(match.scheduledAt).getTime();
-                    const releaseMs = scheduledMs - 10 * 60 * 1000;
-                    const hideMs = scheduledMs + 60 * 60 * 1000;
+                    // Use actual release time from backend; fall back to 10 min before start
+                    const releaseMs = match.roomReleaseAt
+                      ? new Date(match.roomReleaseAt).getTime()
+                      : scheduledMs - 10 * 60 * 1000;
+                    // Use actual hide time from backend; fall back to 60 min after start
+                    const hideMs = match.roomHideAt
+                      ? new Date(match.roomHideAt).getTime()
+                      : scheduledMs + 60 * 60 * 1000;
                     const nowMs = Date.now();
                     const minsToRelease = Math.ceil((releaseMs - nowMs) / 60000);
                     const roomClosed = nowMs >= hideMs;
-                    const roomSoon = !roomClosed && minsToRelease <= 30 && minsToRelease > 0;
+                    const roomSoon = !roomClosed && minsToRelease <= 60 && minsToRelease > 0;
                     return (
                       <div key={match.id} className="flex items-center justify-between py-2.5 border-b border-[#1a1a24] last:border-0">
                         <div className="flex items-center gap-3">
