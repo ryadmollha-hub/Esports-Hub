@@ -1,0 +1,21 @@
+Act as an expert Full-Stack React (TypeScript) & Node.js Developer. I need you to fix a critical page crash on the Deposit page, clean up the messy Admin Tournament Management UI, and implement an automated Room Release/Match Status system based on the following detailed requirements:
+
+==================================================
+TASK 1: FIX DEPOSIT PAGE CRASH (toUpperCase Error)
+==================================================
+1. In the Frontend Deposit/Transaction tracking component or page, locate where `.toUpperCase()` is being called (e.g., `method.toUpperCase()` or `status.toUpperCase()`).
+2. The page is currently throwing a hard crash: "Cannot read properties of null (reading 'toUpperCase')" because it evaluates a null/undefined value from the database.
+3. Fix this by adding a safe optional chaining and fallback: Ensure it safely checks the value first, like: `(status || '').toUpperCase()` or `status?.toUpperCase() || 'PENDING'`. Never let a null value break the render.
+
+==================================================
+TASK 2: CLEAN ADMIN TOURNAMENT UI & MATCH AUTOMATION
+==================================================
+1. Locate the Admin Tournament Panel component (`src/pages/admin.tsx` or similar). Clean up the layout to make it visually professional. Group the main tournament metadata neatly and separate the match management actions using clear borders, compact padding, and aligned forms.
+2. Implement automated Match Lifecycle States based on the Match Scheduled Time (e.g., if match is at 7:00 PM):
+   - UPCOMING (Default): Shown when the current time is well before the match start time.
+   - ROOM RELEASED / LIVE: Automatically transition the status text on the card/row to "LIVE" or "ROOM RELEASED" exactly 10 minutes before the match starts (e.g., at 6:50 PM if the match is at 7:00 PM) so users know they can now fetch credentials.
+   - COMPLETED: Once the admin inputs results, or after a specific expiration buffer, update the badge status smoothly to "COMPLETED".
+3. Implement Auto-Hide Room Credentials:
+   - For security, enforce a rule where the Room ID and Password automatically become hidden (masked or completely un-renderable on the frontend client) exactly 1 hour after the match's scheduled start time (e.g., at 8:00 PM if the match was at 7:00 PM).
+
+Please review the frontend UI structures, secure the toUpperCase null-checks, and write clean, structured intervals or timestamp comparisons to compute these lifecycle changes smoothly without lagging the interface. Let me know once complete!

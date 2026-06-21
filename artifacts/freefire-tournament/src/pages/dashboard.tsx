@@ -323,7 +323,7 @@ export default function DashboardPage() {
                   <div key={tx.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex items-center gap-4">
                     <ArrowDownCircle className="w-8 h-8 text-[#00ff88] shrink-0" />
                     <div className="flex-1">
-                      <div className="font-bold text-white">৳{Number(tx.amount).toLocaleString()} via {tx.method.toUpperCase()}</div>
+                      <div className="font-bold text-white">৳{Number(tx.amount).toLocaleString()}{tx.method ? ` via ${tx.method.toUpperCase()}` : ""}</div>
                       <div className="text-[#a0a0b0] text-xs font-mono">{tx.accountNumber} {tx.transactionId ? `· TX: ${tx.transactionId}` : ""}</div>
                       <div className="text-[#a0a0b0] text-xs">{new Date(tx.createdAt).toLocaleString()}</div>
                     </div>
@@ -353,7 +353,7 @@ export default function DashboardPage() {
                   <div key={tx.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex items-center gap-4">
                     <ArrowUpCircle className="w-8 h-8 text-[#ff6b00] shrink-0" />
                     <div className="flex-1">
-                      <div className="font-bold text-white">৳{Number(tx.amount).toLocaleString()} via {tx.method.toUpperCase()}</div>
+                      <div className="font-bold text-white">৳{Number(tx.amount).toLocaleString()}{tx.method ? ` via ${tx.method.toUpperCase()}` : ""}</div>
                       <div className="text-[#a0a0b0] text-xs font-mono">{tx.accountNumber}</div>
                       <div className="text-[#a0a0b0] text-xs">{new Date(tx.createdAt).toLocaleString()}</div>
                       {tx.adminNote && <div className="text-[#ff2244] text-xs mt-0.5">Note: {tx.adminNote}</div>}

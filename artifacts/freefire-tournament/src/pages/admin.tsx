@@ -48,6 +48,8 @@ export default function AdminPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [, setTick] = useState(0);
+  useEffect(() => { const id = setInterval(() => setTick((n) => n + 1), 30000); return () => clearInterval(id); }, []);
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [tournaments, setTournaments] = useState<any[]>([]);
@@ -1049,6 +1051,22 @@ export default function AdminPage() {
     return `inline-flex items-center px-2 py-0.5 rounded border text-xs font-bold uppercase ${cls[status] ?? cls.pending}`;
   };
 
+  const matchLifecycle = (m: any) => {
+    if (!m.scheduledAt) return null;
+    const now = Date.now();
+    const scheduledMs = new Date(m.scheduledAt).getTime();
+    const releaseMs = scheduledMs - 10 * 60 * 1000;
+    const hideMs = scheduledMs + 60 * 60 * 1000;
+    if (now >= hideMs) return { label: "ENDED", cls: "text-[#a0a0b0] bg-[#a0a0b0]/10 border-[#a0a0b0]/30", dot: false };
+    if (now >= releaseMs) return { label: "ROOM LIVE", cls: "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30", dot: true };
+    const minsToRelease = Math.ceil((releaseMs - now) / 60000);
+    return {
+      label: minsToRelease <= 120 ? `${minsToRelease}m to room` : "UPCOMING",
+      cls: "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
+      dot: false,
+    };
+  };
+
   const deposits = walletTxs.filter((t) => t.type === "deposit");
   const withdrawals = walletTxs.filter((t) => t.type === "withdraw");
 
@@ -1751,6 +1769,16 @@ export default function AdminPage() {
                                     <span className="text-white text-sm font-bold">Match #{m.matchNumber}</span>
                                     {m.mapName && <span className="text-[#a0a0b0] text-xs">— {m.mapName}</span>}
                                     <span className={statusBadge(m.status)}>{m.status}</span>
+                                    {(() => {
+                                      const lc = matchLifecycle(m);
+                                      if (!lc) return null;
+                                      return (
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-black uppercase ${lc.cls}`}>
+                                          {lc.dot && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse shrink-0" />}
+                                          {lc.label}
+                                        </span>
+                                      );
+                                    })()}
                                   </div>
                                   {m.scheduledAt && (
                                     <div className="text-[#a0a0b0] text-xs mt-0.5">{new Date(m.scheduledAt).toLocaleString()}</div>
@@ -1899,6 +1927,16 @@ export default function AdminPage() {
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className={statusBadge(m.status)}>{m.status}</span>
+                              {(() => {
+                                const lc = matchLifecycle(m);
+                                if (!lc) return null;
+                                return (
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-black uppercase ${lc.cls}`}>
+                                    {lc.dot && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse shrink-0" />}
+                                    {lc.label}
+                                  </span>
+                                );
+                              })()}
                               {m.status === "scheduled" && (
                                 <button
                                   onClick={() => updateMatchStatus(m.id, "live")}

@@ -166,6 +166,11 @@ export default function TournamentDetailPage() {
   }, [loadParticipants, loadRules, loadMatches, t?.resultsPublished]);
 
   useEffect(() => {
+    const id = setInterval(() => loadMatches(), 60000);
+    return () => clearInterval(id);
+  }, [loadMatches]);
+
+  useEffect(() => {
     if (user) loadBalance();
   }, [user, loadBalance]);
 
@@ -490,21 +495,35 @@ export default function TournamentDetailPage() {
                   <Calendar className="w-4 h-4 text-[#ff6b00]" /> Scheduled Matches
                 </h3>
                 <div className="space-y-2">
-                  {upcomingMatches.map(match => (
-                    <div key={match.id} className="flex items-center justify-between py-2 border-b border-[#1a1a24] last:border-0">
-                      <div className="flex items-center gap-3">
-                        <span className="text-[#a0a0b0] text-xs uppercase bg-[#1a1a24] px-2 py-0.5 rounded font-bold">#{match.matchNumber}</span>
-                        <div>
-                          <div className="text-white text-sm font-bold">Match #{match.matchNumber}</div>
-                          {match.mapName && <div className="text-[#a0a0b0] text-xs">{match.mapName}</div>}
+                  {upcomingMatches.map(match => {
+                    const scheduledMs = new Date(match.scheduledAt).getTime();
+                    const releaseMs = scheduledMs - 10 * 60 * 1000;
+                    const hideMs = scheduledMs + 60 * 60 * 1000;
+                    const nowMs = Date.now();
+                    const minsToRelease = Math.ceil((releaseMs - nowMs) / 60000);
+                    const roomClosed = nowMs >= hideMs;
+                    const roomSoon = !roomClosed && minsToRelease <= 30 && minsToRelease > 0;
+                    return (
+                      <div key={match.id} className="flex items-center justify-between py-2.5 border-b border-[#1a1a24] last:border-0">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[#a0a0b0] text-xs uppercase bg-[#1a1a24] px-2 py-0.5 rounded font-bold">#{match.matchNumber}</span>
+                          <div>
+                            <div className="text-white text-sm font-bold">Match #{match.matchNumber}</div>
+                            {match.mapName && <div className="text-[#a0a0b0] text-xs">{match.mapName}</div>}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-white text-sm font-bold">{new Date(match.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                          <div className="text-[#a0a0b0] text-xs">{new Date(match.scheduledAt).toLocaleDateString()}</div>
+                          {roomClosed ? (
+                            <div className="text-[#a0a0b0] text-[10px] font-bold mt-0.5">🔴 Room closed</div>
+                          ) : roomSoon ? (
+                            <div className="text-yellow-400 text-[10px] font-bold mt-0.5 animate-pulse">⏳ Room in {minsToRelease}m</div>
+                          ) : null}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-white text-sm font-bold">{new Date(match.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-                        <div className="text-[#a0a0b0] text-xs">{new Date(match.scheduledAt).toLocaleDateString()}</div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
