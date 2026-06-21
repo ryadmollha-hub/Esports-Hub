@@ -4,6 +4,7 @@ import { isAdminAuthenticated } from "@/lib/adminAuth";
 import { useAuthContext } from "@/lib/AuthContext";
 import { Flame, Ban } from "lucide-react";
 
+
 function LoadingScreen() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center gap-4">
@@ -50,19 +51,15 @@ export function UserRoute({ component: Component }: { component: React.Component
 
 export function AdminRoute({ component: Component }: { component: React.ComponentType }) {
   const [, setLocation] = useLocation();
-  const { user, isLoading } = useAuthContext();
 
-  const isAdminSession = isAdminAuthenticated();
-  const isJwtAdmin = user?.isAdmin === true;
-  const isAdmin = isAdminSession || isJwtAdmin;
+  const isAdmin = isAdminAuthenticated();
 
   useEffect(() => {
-    if (!isLoading && !isAdmin) {
-      setLocation("/admin-login");
+    if (!isAdmin) {
+      setLocation("/");
     }
-  }, [isLoading, isAdmin]);
+  }, [isAdmin]);
 
-  if (isLoading && !isAdminSession) return <LoadingScreen />;
   if (!isAdmin) return null;
   return <Component />;
 }
