@@ -22,13 +22,14 @@ async function safeJson(res: Response): Promise<any> {
   }
 }
 
-type Tab = "overview" | "tournaments" | "matches" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "rules" | "payment-settings" | "maintenance" | "support" | "user-matches" | "reports" | "activity" | "search";
+type Tab = "overview" | "tournaments" | "matches" | "room-release" | "rules" | "users" | "registrations" | "announcements" | "deposits" | "withdrawals" | "promo-codes" | "payment-settings" | "maintenance" | "support" | "user-matches" | "reports" | "activity" | "search";
 
-const tabs: { id: Tab; label: string; icon: any }[] = [
+const tabs: { id: Tab; label: string; icon: any; group?: string }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
-  { id: "tournaments", label: "Tournaments", icon: Trophy },
-  { id: "matches", label: "Matches", icon: Swords },
-  { id: "rules", label: "Game Rules", icon: BookOpen },
+  { id: "tournaments", label: "Create & Manage Tournaments", icon: Trophy, group: "tournament" },
+  { id: "matches", label: "Manage Matches", icon: Swords, group: "tournament" },
+  { id: "room-release", label: "Room Release Settings", icon: Key, group: "tournament" },
+  { id: "rules", label: "Match Rules Config", icon: Settings, group: "tournament" },
   { id: "registrations", label: "Registrations", icon: CheckCircle },
   { id: "users", label: "Users", icon: Users },
   { id: "announcements", label: "Announcements", icon: Megaphone },
@@ -113,6 +114,10 @@ export default function AdminPage() {
   // Match form (tournament matches)
   const [matchForm, setMatchForm] = useState({ matchNumber: "", scheduledAt: "", mapName: "", roomId: "", roomPassword: "", roomReleaseMinutes: "10" });
   const [showMatchForm, setShowMatchForm] = useState(false);
+
+  // Rules modal state
+  const [showRulesModal, setShowRulesModal] = useState(false);
+  const [rulesModalTournamentId, setRulesModalTournamentId] = useState<number | null>(null);
 
   // Admin community match creation form
   const [showAdminMatchForm, setShowAdminMatchForm] = useState(false);
@@ -251,11 +256,12 @@ export default function AdminPage() {
     }
     setCreatingTournamentMatch((prev) => ({ ...prev, [tournamentId]: true }));
     try {
+      const scheduledAtISO = new Date(form.scheduledAt).toISOString();
       const res = await apiFetch(`/tournaments/${tournamentId}/matches`, {
         method: "POST",
         body: JSON.stringify({
           matchNumber: parseInt(form.matchNumber),
-          scheduledAt: form.scheduledAt,
+          scheduledAt: scheduledAtISO,
           mapName: form.mapName || undefined,
         }),
       });
@@ -449,11 +455,11 @@ export default function AdminPage() {
     if (activeTab === "registrations") loadRegistrations();
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "deposits" || activeTab === "withdrawals") loadWallet();
-    if (activeTab === "matches") { loadTournaments(); }
+    if (activeTab === "matches" || activeTab === "room-release") { loadTournaments(); }
     if (activeTab === "user-matches") { loadUserMatches(); loadCommunityRules(); }
     if (activeTab === "maintenance") loadMaintenance();
     if (activeTab === "reports") loadReports(reportsFilter);
-    if (activeTab === "activity") { /* activity loads from stats */ loadStats(); }
+    if (activeTab === "activity") { loadStats(); }
   }, [activeTab]);
 
   useEffect(() => {
@@ -487,7 +493,8 @@ export default function AdminPage() {
         body: JSON.stringify({
           name: tForm.name, description: tForm.description, mode: tForm.mode,
           gameMode: tForm.gameMode,
-          startDate: tForm.startDate, endDate: tForm.endDate || undefined,
+          startDate: tForm.startDate ? new Date(tForm.startDate).toISOString() : undefined,
+          endDate: tForm.endDate ? new Date(tForm.endDate).toISOString() : undefined,
           maxSlots: parseInt(tForm.maxSlots), prizePool,
           entryFee: parseFloat(tForm.entryFee),
           perKillReward: parseFloat(tForm.perKillReward),
@@ -1089,35 +1096,51 @@ export default function AdminPage() {
         </div>
 
         <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
-                activeTab === tab.id
-                  ? "bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/20"
-                  : "text-[#a0a0b0] hover:text-white hover:bg-[#ff6b00]/5"
-              }`}
-            >
-              <tab.icon className="w-4 h-4" />
-              {tab.label}
-              {tab.id === "registrations" && stats?.pendingRegistrations > 0 && (
-                <span className="ml-auto bg-[#ff6b00] text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                  {stats.pendingRegistrations}
-                </span>
-              )}
-              {(tab.id === "deposits" || tab.id === "withdrawals") && stats?.pendingWalletRequests > 0 && (
-                <span className="ml-auto bg-yellow-500 text-black text-xs font-bold px-1.5 py-0.5 rounded-full">
-                  !
-                </span>
-              )}
-              {tab.id === "reports" && stats?.pendingReports > 0 && (
-                <span className="ml-auto bg-[#ff2244] text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-                  {stats.pendingReports}
-                </span>
-              )}
-            </button>
-          ))}
+          {(() => {
+            const items: React.ReactNode[] = [];
+            let lastGroup: string | undefined = undefined;
+            tabs.forEach((tab) => {
+              if (tab.group && tab.group !== lastGroup) {
+                items.push(
+                  <p key={`group-${tab.group}`} className="text-[10px] font-black uppercase tracking-widest text-[#505060] px-3 pt-3 pb-1">
+                    Tournament Management
+                  </p>
+                );
+                lastGroup = tab.group;
+              } else if (!tab.group && lastGroup) {
+                items.push(<div key="group-sep" className="h-px bg-[#1a1a24] my-2" />);
+                lastGroup = undefined;
+              }
+              items.push(
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors text-left ${
+                    activeTab === tab.id
+                      ? "bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/20"
+                      : "text-[#a0a0b0] hover:text-white hover:bg-[#ff6b00]/5"
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4 shrink-0" />
+                  <span className="truncate text-xs leading-tight">{tab.label}</span>
+                  {tab.id === "registrations" && stats?.pendingRegistrations > 0 && (
+                    <span className="ml-auto bg-[#ff6b00] text-white text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                      {stats.pendingRegistrations}
+                    </span>
+                  )}
+                  {(tab.id === "deposits" || tab.id === "withdrawals") && stats?.pendingWalletRequests > 0 && (
+                    <span className="ml-auto bg-yellow-500 text-black text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0">!</span>
+                  )}
+                  {tab.id === "reports" && stats?.pendingReports > 0 && (
+                    <span className="ml-auto bg-[#ff2244] text-white text-xs font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                      {stats.pendingReports}
+                    </span>
+                  )}
+                </button>
+              );
+            });
+            return items;
+          })()}
         </nav>
 
         <div className="p-4 border-t border-[#ff6b00]/10 space-y-2">
@@ -1459,219 +1482,6 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Room ID & Password */}
-                    {/* Room Details */}
-                    <div className="mt-4 pt-4 border-t border-[#ff6b00]/5">
-                      <p className="text-xs text-[#a0a0b0] uppercase tracking-wider mb-2 font-bold">Room Details</p>
-                      {t.roomId ? (
-                        <div className="flex items-center gap-4 text-sm mb-3">
-                          <span className="text-[#a0a0b0]">Room ID: <span className="text-white font-mono font-bold">{t.roomId}</span></span>
-                          <span className="text-[#a0a0b0]">Password:
-                            <span className="text-white font-mono font-bold ml-1">
-                              {showRoomPass[t.id] ? t.roomPassword : "••••••"}
-                            </span>
-                            <button onClick={() => setShowRoomPass({ ...showRoomPass, [t.id]: !showRoomPass[t.id] })} className="ml-2 text-[#a0a0b0] hover:text-white">
-                              {showRoomPass[t.id] ? <EyeOff className="w-3 h-3 inline" /> : <Eye className="w-3 h-3 inline" />}
-                            </button>
-                          </span>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-[#a0a0b0] mb-3">No room details set yet.</p>
-                      )}
-                      <div className="flex gap-2 flex-wrap">
-                        <input
-                          placeholder="Room ID"
-                          value={roomForm[t.id]?.roomId ?? ""}
-                          onChange={(e) => setRoomForm({ ...roomForm, [t.id]: { ...roomForm[t.id], roomId: e.target.value } })}
-                          className="admin-input-sm w-36"
-                        />
-                        <input
-                          placeholder="Password"
-                          value={roomForm[t.id]?.roomPassword ?? ""}
-                          onChange={(e) => setRoomForm({ ...roomForm, [t.id]: { ...roomForm[t.id], roomPassword: e.target.value } })}
-                          className="admin-input-sm w-32"
-                        />
-                        <button onClick={() => updateRoom(t.id)} className="px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-xs uppercase rounded-lg hover:bg-[#e66000] transition-colors">
-                          Set Room
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Participants + Results + Winner Panel */}
-                    <div className="mt-4 pt-4 border-t border-[#ff6b00]/5">
-                      {/* Status badges */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {t.winnerId && (
-                            <span className="flex items-center gap-1 text-xs text-[#ffd700] bg-[#ffd700]/10 border border-[#ffd700]/20 px-2 py-0.5 rounded-full font-bold">
-                              <Crown className="w-3 h-3" /> {t.winnerName}
-                            </span>
-                          )}
-                          {t.resultsPublished && (
-                            <span className="text-xs text-purple-400 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-full font-bold">
-                              ✅ Results Published
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => {
-                            const newState = !expandedWinner[t.id];
-                            setExpandedWinner((prev) => ({ ...prev, [t.id]: newState }));
-                            if (newState && !tournamentParticipants[t.id]) loadTournamentParticipants(t.id);
-                          }}
-                          className="text-xs text-[#a0a0b0] hover:text-white flex items-center gap-1 transition-colors"
-                        >
-                          <Users className="w-3 h-3" />
-                          {expandedWinner[t.id] ? "Hide" : `Players & Results (${t.filledSlots})`}
-                        </button>
-                      </div>
-
-                      {expandedWinner[t.id] && (
-                        <div className="bg-[#0d0d16] rounded-xl border border-[#ff6b00]/10 p-4 space-y-4">
-                          {/* Mode switcher */}
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setResultMode((prev) => ({ ...prev, [t.id]: "winner" }))}
-                              className={`flex-1 py-1.5 text-xs font-bold uppercase rounded-lg transition-colors ${
-                                (resultMode[t.id] ?? "winner") === "winner"
-                                  ? "bg-[#ffd700]/20 text-[#ffd700] border border-[#ffd700]/30"
-                                  : "bg-[#1a1a24] text-[#a0a0b0] hover:text-white"
-                              }`}
-                            >
-                              👑 Quick Winner
-                            </button>
-                            <button
-                              onClick={() => {
-                                setResultMode((prev) => ({ ...prev, [t.id]: "results" }));
-                                loadTournamentParticipants(t.id);
-                              }}
-                              className={`flex-1 py-1.5 text-xs font-bold uppercase rounded-lg transition-colors ${
-                                resultMode[t.id] === "results"
-                                  ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
-                                  : "bg-[#1a1a24] text-[#a0a0b0] hover:text-white"
-                              }`}
-                            >
-                              📊 Publish Results
-                            </button>
-                          </div>
-
-                          {/* Refresh */}
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs text-[#a0a0b0]">
-                              {loadingParticipants[t.id] ? "Loading..." : `${tournamentParticipants[t.id]?.length ?? 0} participants`}
-                            </span>
-                            <button onClick={() => loadTournamentParticipants(t.id)} className="text-[#a0a0b0] hover:text-white">
-                              <RefreshCw className="w-3 h-3" />
-                            </button>
-                          </div>
-
-                          {loadingParticipants[t.id] ? (
-                            <div className="space-y-2">
-                              {[1,2,3].map((i) => <div key={i} className="h-10 bg-[#1a1a24] rounded-lg animate-pulse" />)}
-                            </div>
-                          ) : !tournamentParticipants[t.id] || tournamentParticipants[t.id].length === 0 ? (
-                            <p className="text-[#a0a0b0] text-sm text-center py-4">No participants yet</p>
-                          ) : (resultMode[t.id] ?? "winner") === "winner" ? (
-                            /* ── Quick Winner Mode ── */
-                            <div className="space-y-2">
-                              <div className="flex justify-end gap-2 mb-1">
-                                <button
-                                  onClick={() => autoWinner(t.id)}
-                                  disabled={winnerLoading[t.id]}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-500/20 border border-purple-500/30 text-purple-400 font-bold text-xs uppercase rounded-lg hover:bg-purple-500/30 disabled:opacity-50"
-                                >
-                                  <Shuffle className="w-3 h-3" /> Auto Pick
-                                </button>
-                                {t.winnerId && (
-                                  <button onClick={() => clearWinner(t.id)} className="text-xs text-[#ff2244]/70 hover:text-[#ff2244] px-2">
-                                    Clear
-                                  </button>
-                                )}
-                              </div>
-                              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                                {tournamentParticipants[t.id].map((p: any) => (
-                                  <div key={p.id} className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg ${
-                                    p.userId === t.winnerId ? "bg-[#ffd700]/10 border border-[#ffd700]/30" : "bg-[#1a1a24]"
-                                  }`}>
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-1.5">
-                                        {p.userId === t.winnerId && <Crown className="w-3 h-3 text-[#ffd700]" />}
-                                        <span className="text-white text-sm font-bold truncate">{p.playerName}</span>
-                                      </div>
-                                      <span className="text-[#a0a0b0] text-xs font-mono">UID: {p.freefireUid}</span>
-                                    </div>
-                                    {p.userId !== t.winnerId ? (
-                                      <button
-                                        onClick={() => setWinner(t.id, p.userId, p.playerName)}
-                                        disabled={winnerLoading[t.id]}
-                                        className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 bg-[#ffd700]/15 border border-[#ffd700]/30 text-[#ffd700] font-bold text-xs rounded-lg hover:bg-[#ffd700]/25 disabled:opacity-50"
-                                      >
-                                        <Crown className="w-3 h-3" /> Set
-                                      </button>
-                                    ) : (
-                                      <span className="text-[10px] font-black uppercase text-[#ffd700] bg-[#ffd700]/10 px-2 py-1 rounded border border-[#ffd700]/30">Winner</span>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : (
-                            /* ── Publish Results Mode ── */
-                            <div className="space-y-3">
-                              <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-3 text-xs text-purple-300">
-                                Enter kills for each player. Set rank (1/2/3) for top 3 placements. Click Publish to distribute prizes and end the tournament.
-                              </div>
-                              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                                {/* Table header */}
-                                <div className="grid grid-cols-[1fr_80px_80px] gap-2 px-2 text-xs text-[#a0a0b0] uppercase font-bold">
-                                  <span>Player</span>
-                                  <span className="text-center">Kills</span>
-                                  <span className="text-center">Rank</span>
-                                </div>
-                                {tournamentParticipants[t.id].map((p: any) => (
-                                  <div key={p.id} className="grid grid-cols-[1fr_80px_80px] gap-2 items-center bg-[#1a1a24] rounded-lg px-3 py-2">
-                                    <div className="min-w-0">
-                                      <div className="text-white text-xs font-bold truncate">{p.playerName}</div>
-                                      <div className="text-[#a0a0b0] text-[10px] font-mono">{p.freefireUid}</div>
-                                    </div>
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      placeholder="0"
-                                      value={resultInputs[t.id]?.[p.id]?.kills ?? ""}
-                                      onChange={(e) => updateResultInput(t.id, p.id, "kills", e.target.value)}
-                                      className="w-full bg-[#0d0d16] border border-[#2a2a36] rounded-lg px-2 py-1.5 text-white text-xs text-center focus:outline-none focus:border-[#ff6b00]"
-                                    />
-                                    <select
-                                      value={resultInputs[t.id]?.[p.id]?.rank ?? ""}
-                                      onChange={(e) => updateResultInput(t.id, p.id, "rank", e.target.value)}
-                                      className="w-full bg-[#0d0d16] border border-[#2a2a36] rounded-lg px-1 py-1.5 text-white text-xs text-center focus:outline-none focus:border-[#ff6b00]"
-                                    >
-                                      <option value="">—</option>
-                                      <option value="1">🥇 1st</option>
-                                      <option value="2">🥈 2nd</option>
-                                      <option value="3">🥉 3rd</option>
-                                    </select>
-                                  </div>
-                                ))}
-                              </div>
-                              <button
-                                onClick={() => publishResults(t.id)}
-                                disabled={publishingResults[t.id]}
-                                className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                              >
-                                {publishingResults[t.id] ? (
-                                  <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Publishing...</>
-                                ) : (
-                                  <>🏆 Publish Results & Distribute Prizes</>
-                                )}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
                     {/* ── Tournament Matches ── */}
                     <div className="mt-4 pt-4 border-t border-[#ff6b00]/5">
                       <div className="flex items-center justify-between mb-3">
@@ -1792,127 +1602,14 @@ export default function AdminPage() {
                                 </div>
                               </div>
 
-                              {/* ── Room Password Release Panel ── */}
-                              <div className="mt-3 pt-3 border-t border-[#2a2a36]">
-                                <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3 flex items-center gap-2">
-                                  <Key className="w-3 h-3" /> Room Password Release
-                                </p>
-
-                                {/* Current saved status */}
-                                {m.roomId && (
-                                  <div className="flex items-center gap-3 text-xs mb-3 p-2.5 bg-[#080810] border border-[#2a2a36] rounded-xl flex-wrap">
-                                    <span className="text-[#00ff88] font-bold flex items-center gap-1.5">
-                                      <Key className="w-3 h-3" /> <span className="font-mono">{m.roomId}</span>
-                                    </span>
-                                    {m.roomPassword && <span className="text-[#a0a0b0]">Pass: <span className="font-mono text-white">{m.roomPassword}</span></span>}
-                                    {(() => {
-                                      const now = Date.now();
-                                      const rel = m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null;
-                                      const hid = m.roomHideAt ? new Date(m.roomHideAt).getTime() : null;
-                                      if (rel && now >= rel && (!hid || now < hid)) return <span className="text-[#00ff88] text-[10px] font-black border border-[#00ff88]/30 bg-[#00ff88]/5 px-2 py-0.5 rounded-full">🟢 LIVE</span>;
-                                      if (rel && now < rel) return <span className="text-yellow-400 text-[10px] font-black border border-yellow-400/20 bg-yellow-400/5 px-2 py-0.5 rounded-full">⏳ Opens {new Date(rel).toLocaleTimeString()}</span>;
-                                      return <span className="text-[#ff2244] text-[10px] font-black border border-[#ff2244]/20 bg-[#ff2244]/5 px-2 py-0.5 rounded-full">🔴 Hidden</span>;
-                                    })()}
-                                  </div>
-                                )}
-
-                                {/* Release timing toggles */}
-                                <div className="mb-3">
-                                  <p className="text-[#606070] text-[10px] uppercase font-bold mb-2">Release Timing</p>
-                                  <div className="flex gap-2 flex-wrap">
-                                    {(["now", "before10"] as const).map((mode) => (
-                                      <button
-                                        key={mode}
-                                        onClick={() => setTournamentMatchRoomForms((prev) => ({
-                                          ...prev,
-                                          [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "" }), releaseMode: mode },
-                                        }))}
-                                        className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg border transition-colors ${
-                                          (tournamentMatchRoomForms[m.id]?.releaseMode ?? "before10") === mode
-                                            ? "bg-[#ff6b00] border-[#ff6b00] text-white shadow-lg shadow-[#ff6b00]/20"
-                                            : "bg-[#0d0d16] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"
-                                        }`}
-                                      >
-                                        {mode === "now" ? "⚡ Manually (now)" : "⏱ 10 min before"}
-                                      </button>
-                                    ))}
-                                  </div>
+                              {/* Room status indicator (read-only in this tab) */}
+                              {m.roomId && (
+                                <div className="mt-2 flex items-center gap-2 text-xs">
+                                  <Key className="w-3 h-3 text-[#00ff88]" />
+                                  <span className="text-[#00ff88] font-mono font-bold">{m.roomId}</span>
+                                  <span className="text-[#a0a0b0]">· Manage in <span className="text-[#ff6b00] font-bold">Room Release Settings</span></span>
                                 </div>
-
-                                {/* Room ID & Password inputs */}
-                                <div className="grid grid-cols-2 gap-3 mb-3">
-                                  <div>
-                                    <label className="text-[#606070] text-[10px] uppercase block mb-1">Room ID *</label>
-                                    <input
-                                      placeholder="Enter Room ID"
-                                      value={tournamentMatchRoomForms[m.id]?.roomId ?? m.roomId ?? ""}
-                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({
-                                        ...prev,
-                                        [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: "", roomPassword: "" }), roomId: e.target.value },
-                                      }))}
-                                      className="admin-input-sm w-full"
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="text-[#606070] text-[10px] uppercase block mb-1">Room Password</label>
-                                    <input
-                                      placeholder="Enter Password"
-                                      value={tournamentMatchRoomForms[m.id]?.roomPassword ?? m.roomPassword ?? ""}
-                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({
-                                        ...prev,
-                                        [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: "", roomPassword: "" }), roomPassword: e.target.value },
-                                      }))}
-                                      className="admin-input-sm w-full"
-                                    />
-                                  </div>
-                                </div>
-
-                                {/* Timing preview */}
-                                {(() => {
-                                  const form = tournamentMatchRoomForms[m.id];
-                                  const relMode = form?.releaseMode ?? "before10";
-                                  const scheduledMs = m.scheduledAt ? new Date(m.scheduledAt).getTime() : null;
-                                  const hideAfterMin = parseInt(form?.hideMinutesAfter ?? "5") || 5;
-                                  const opensAt = scheduledMs ? (relMode === "now" ? new Date() : new Date(scheduledMs - 10 * 60 * 1000)) : null;
-                                  const hidesAt = scheduledMs ? new Date(scheduledMs + hideAfterMin * 60 * 1000) : null;
-                                  return (
-                                    <div className="flex flex-col gap-1.5 mb-3 px-3 py-2.5 bg-[#060610] border border-[#1a1a28] rounded-xl">
-                                      <div className="flex items-center justify-between text-[10px]">
-                                        <span className="text-[#505060] uppercase font-bold tracking-wider">Visible from</span>
-                                        <span className="text-[#00ff88] font-bold">{opensAt ? (relMode === "now" ? "Immediately upon save" : opensAt.toLocaleString()) : "—"}</span>
-                                      </div>
-                                      <div className="flex items-center justify-between text-[10px]">
-                                        <span className="text-[#505060] uppercase font-bold tracking-wider">Auto-expires</span>
-                                        <span className="text-[#ff4444] font-bold">{hidesAt ? hidesAt.toLocaleString() : "—"}</span>
-                                      </div>
-                                    </div>
-                                  );
-                                })()}
-
-                                {/* Hide after N minutes */}
-                                <div className="mb-3">
-                                  <label className="text-[#606070] text-[10px] uppercase block mb-1">Room Closes At (min after match start)</label>
-                                  <input
-                                    type="number" min="0" max="120" placeholder="5"
-                                    value={tournamentMatchRoomForms[m.id]?.hideMinutesAfter ?? "5"}
-                                    onChange={(e) => setTournamentMatchRoomForms((prev) => ({
-                                      ...prev,
-                                      [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "" }), hideMinutesAfter: e.target.value },
-                                    }))}
-                                    className="admin-input-sm w-24"
-                                  />
-                                </div>
-
-                                <button
-                                  onClick={() => setTournamentMatchRoomCredentials(t.id, m.id)}
-                                  disabled={settingTournamentMatchRoom[m.id]}
-                                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#ff6b00] text-white font-black text-xs uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 shadow-lg shadow-[#ff6b00]/20"
-                                >
-                                  {settingTournamentMatchRoom[m.id]
-                                    ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…</>
-                                    : "🔑 Save Credentials & Timing"}
-                                </button>
-                              </div>
+                              )}
                             </div>
                           ))}
                           <button
@@ -2429,6 +2126,165 @@ export default function AdminPage() {
           )}
 
 
+          {/* ROOM RELEASE SETTINGS */}
+          {activeTab === "room-release" && (
+            <div>
+              <div className="mb-6">
+                <h1 className="text-2xl font-black uppercase">Room Release <span className="text-[#ff6b00]">Settings</span></h1>
+                <p className="text-[#a0a0b0] text-sm mt-1">Set room credentials and release timing for each tournament match.</p>
+              </div>
+
+              {tournamentsLoading ? (
+                <div className="space-y-4">
+                  {[1,2,3].map((i) => <div key={i} className="h-20 bg-[#12121a] rounded-xl border border-[#ff6b00]/10 animate-pulse" />)}
+                </div>
+              ) : tournaments.length === 0 ? (
+                <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center text-[#a0a0b0] text-sm">
+                  <div className="text-4xl mb-3">🔑</div>
+                  <div className="font-black text-white mb-1">No Tournaments Yet</div>
+                  <div>Create a tournament first, then add matches to set room credentials.</div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {tournaments.map((t: any) => {
+                    const matches = tournamentMatchesList[t.id] ?? [];
+                    return (
+                      <div key={t.id} className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/10 overflow-hidden">
+                        <button
+                          onClick={() => {
+                            const open = !expandedTournamentMatches[t.id];
+                            setExpandedTournamentMatches((prev) => ({ ...prev, [t.id]: open }));
+                            if (open && !tournamentMatchesList[t.id]) loadTournamentMatchesById(t.id);
+                          }}
+                          className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#ff6b00]/5 transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Trophy className="w-5 h-5 text-[#ff6b00]" />
+                            <div>
+                              <div className="font-black text-white">{t.name}</div>
+                              <div className="text-xs text-[#a0a0b0]">{matches.length} match{matches.length !== 1 ? "es" : ""} · {t.status}</div>
+                            </div>
+                          </div>
+                          <span className="text-[#606070] text-xs">{expandedTournamentMatches[t.id] ? "▲ Collapse" : "▼ Expand"}</span>
+                        </button>
+
+                        {expandedTournamentMatches[t.id] && (
+                          <div className="border-t border-[#ff6b00]/10 divide-y divide-[#1a1a24]">
+                            {tournamentMatchesLoading[t.id] ? (
+                              <div className="p-6 text-center text-[#a0a0b0] text-sm">Loading matches…</div>
+                            ) : matches.length === 0 ? (
+                              <div className="p-8 text-center text-[#a0a0b0] text-sm">
+                                No matches yet — add matches in <span className="text-[#ff6b00] font-bold">Create &amp; Manage Tournaments</span>.
+                              </div>
+                            ) : matches.map((m: any) => (
+                              <div key={m.id} className="p-6">
+                                <div className="flex items-center gap-3 mb-4">
+                                  <div className="w-8 h-8 bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-xl flex items-center justify-center">
+                                    <span className="text-[#ff6b00] font-black text-xs">#{m.matchNumber}</span>
+                                  </div>
+                                  <div>
+                                    <div className="text-white font-bold text-sm">Match #{m.matchNumber}{m.mapName ? ` — ${m.mapName}` : ""}</div>
+                                    {m.scheduledAt && <div className="text-[#a0a0b0] text-xs">{new Date(m.scheduledAt).toLocaleString()}</div>}
+                                  </div>
+                                  {m.roomId && (
+                                    <div className="ml-auto flex items-center gap-2">
+                                      {(() => {
+                                        const now = Date.now();
+                                        const rel = m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null;
+                                        const hid = m.roomHideAt ? new Date(m.roomHideAt).getTime() : null;
+                                        if (rel && now >= rel && (!hid || now < hid)) return <span className="text-[#00ff88] text-[10px] font-black border border-[#00ff88]/30 bg-[#00ff88]/5 px-2 py-0.5 rounded-full">🟢 LIVE</span>;
+                                        if (rel && now < rel) return <span className="text-yellow-400 text-[10px] font-black border border-yellow-400/20 bg-yellow-400/5 px-2 py-0.5 rounded-full">⏳ Scheduled</span>;
+                                        return <span className="text-[#ff2244] text-[10px] font-black border border-[#ff2244]/20 bg-[#ff2244]/5 px-2 py-0.5 rounded-full">🔴 Hidden</span>;
+                                      })()}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Room form */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                  <div>
+                                    <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Room ID *</label>
+                                    <input
+                                      placeholder="Enter Room ID"
+                                      value={tournamentMatchRoomForms[m.id]?.roomId ?? m.roomId ?? ""}
+                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({
+                                        ...prev,
+                                        [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: "", roomPassword: "" }), roomId: e.target.value },
+                                      }))}
+                                      className="admin-input w-full"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Room Password</label>
+                                    <input
+                                      placeholder="Enter Password"
+                                      value={tournamentMatchRoomForms[m.id]?.roomPassword ?? m.roomPassword ?? ""}
+                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({
+                                        ...prev,
+                                        [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: "", roomPassword: "" }), roomPassword: e.target.value },
+                                      }))}
+                                      className="admin-input w-full"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                                  <div>
+                                    <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Release Timing</label>
+                                    <div className="flex gap-2">
+                                      {(["now", "before10"] as const).map((mode) => (
+                                        <button
+                                          key={mode}
+                                          onClick={() => setTournamentMatchRoomForms((prev) => ({
+                                            ...prev,
+                                            [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "" }), releaseMode: mode },
+                                          }))}
+                                          className={`flex-1 px-3 py-2 text-xs font-black uppercase rounded-xl border transition-colors ${
+                                            (tournamentMatchRoomForms[m.id]?.releaseMode ?? "before10") === mode
+                                              ? "bg-[#ff6b00] border-[#ff6b00] text-white"
+                                              : "bg-[#0d0d16] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"
+                                          }`}
+                                        >
+                                          {mode === "now" ? "⚡ Now" : "⏱ 10min Before"}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Auto-hide (min after start)</label>
+                                    <input
+                                      type="number" min="0" max="120" placeholder="5"
+                                      value={tournamentMatchRoomForms[m.id]?.hideMinutesAfter ?? "5"}
+                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({
+                                        ...prev,
+                                        [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "" }), hideMinutesAfter: e.target.value },
+                                      }))}
+                                      className="admin-input w-full"
+                                    />
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={() => setTournamentMatchRoomCredentials(t.id, m.id)}
+                                  disabled={settingTournamentMatchRoom[m.id]}
+                                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#ff6b00] text-white font-black text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 shadow-lg shadow-[#ff6b00]/20"
+                                >
+                                  {settingTournamentMatchRoom[m.id]
+                                    ? <><RefreshCw className="w-4 h-4 animate-spin" /> Saving…</>
+                                    : "🔑 Save Room Credentials & Timing"}
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* REGISTRATIONS */}
           {activeTab === "registrations" && (() => {
             const filteredRegs = regStatusFilter === "all" ? registrations : registrations.filter((r: any) => r.status === regStatusFilter);
@@ -2866,9 +2722,69 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* GAME RULES */}
+          {/* MATCH RULES CONFIG */}
           {activeTab === "rules" && (
-            <RulesTab apiFetch={apiFetch} toast={toast} tournaments={tournaments} />
+            <div>
+              <div className="mb-6">
+                <h1 className="text-2xl font-black uppercase">Match Rules <span className="text-[#ff6b00]">Configuration</span></h1>
+                <p className="text-[#a0a0b0] text-sm mt-1">Configure in-game rules displayed to players for each tournament.</p>
+              </div>
+
+              {tournamentsLoading ? (
+                <div className="space-y-3">
+                  {[1,2,3].map((i) => <div key={i} className="h-16 bg-[#12121a] rounded-xl border border-[#ff6b00]/10 animate-pulse" />)}
+                </div>
+              ) : tournaments.length === 0 ? (
+                <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center text-[#a0a0b0] text-sm">
+                  <div className="text-4xl mb-3">⚙️</div>
+                  <div className="font-black text-white mb-1">No Tournaments Yet</div>
+                  <div>Create a tournament first to configure its match rules.</div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {tournaments.map((t: any) => (
+                    <div key={t.id} className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/10 px-6 py-4 flex items-center justify-between gap-4">
+                      <div>
+                        <div className="font-black text-white">{t.name}</div>
+                        <div className="text-xs text-[#a0a0b0] mt-0.5">{t.mode} · {t.status}</div>
+                      </div>
+                      <button
+                        onClick={() => { setRulesModalTournamentId(t.id); setShowRulesModal(true); }}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] font-black text-xs uppercase rounded-xl hover:bg-[#ff6b00]/20 transition-colors shrink-0"
+                      >
+                        <Settings className="w-3.5 h-3.5" /> ⚙️ Configure Match Rules
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Rules Modal Overlay */}
+              {showRulesModal && rulesModalTournamentId !== null && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                  <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-[#ff6b00]/10">
+                      <div>
+                        <h2 className="font-black text-white text-base uppercase">⚙️ Configure Match Rules</h2>
+                        <p className="text-[#a0a0b0] text-xs mt-0.5">
+                          {tournaments.find((t: any) => t.id === rulesModalTournamentId)?.name}
+                        </p>
+                      </div>
+                      <button onClick={() => setShowRulesModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#1a1a24] text-[#a0a0b0] hover:text-white hover:bg-[#2a2a34] transition-colors">
+                        ✕
+                      </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                      <RulesTab
+                        apiFetch={apiFetch}
+                        toast={toast}
+                        tournaments={tournaments.filter((t: any) => t.id === rulesModalTournamentId)}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
 
           {/* PROMO CODES */}

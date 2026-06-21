@@ -1,0 +1,35 @@
+Act as a Senior Full-Stack React (TypeScript) and Node.js Developer. I need to fully restructure the Admin Dashboard architecture to clean up the layout, create distinct feature segments, and fix a critical database submission crash. 
+
+Please perform a comprehensive rewrite based on these strict requirements:
+
+==================================================
+1. RESTRUCTURE ADMIN DASHBOARD INTO 4 CLEAN SECTIONS
+==================================================
+Modify the admin routing/tabs structure inside `src/pages/admin.tsx` into 4 clean sections:
+
+- TAB 1: "Create & Manage Tournaments"
+  * Dedicated ONLY to creating new tournaments and displaying a clean, simplified vertical list of existing tournaments at the bottom.
+  * Completely REMOVE all Room ID, Password, Release modes, and results elements from this tab.
+
+- TAB 2: "Manage Matches"
+  * Dedicated ONLY to handling post-match operations for created tournaments.
+  * Contains the simplified UI for "Result Publish" and the "Prize Distribution" grid (to update player ranks, kills, and automatically credit wallets).
+
+- TAB 3: "Room Release Settings" (NEW DECOMMITTED SECTION)
+  * Create a brand new tab utilizing the spacious, high-fidelity card design seen in the User Maintenance / Community template.
+  * Include large fields for: Room ID, Room Password.
+  * Include RELEASE MODES: Toggle buttons for "Manually (now)" and "10 min before".
+  * Include Time Inputs: "ROOM OPENS AT (15 min before)" and "ROOM CLOSES AT (5 min after)".
+  * Include User Information / Registered player meta-data tracking logs under this view.
+
+- TAB 4: "Match Rules Configuration"
+  * Instead of displaying the massive rules description block directly on the page layout, compress it into a single clean button called "⚙️ Configure Match Rules".
+  * Clicking this button must trigger an overlay Popup/Modal containing a text editor/textarea. The Admin can seamlessly view, modify, and click "Save Rules", updating the database safely.
+
+==================================================
+2. FIX TOURNAMENT/MATCH CREATION CRASH (3rd Image Error)
+==================================================
+- Inspect the creation/submission handler in the frontend form and backend API controller (throwing the backend crash seen in the 3rd image console).
+- Ensure all datetime inputs are cleanly formatted into ISO strings before sending, and wrap the database insert queries inside secure try/catch blocks. Ensure default fallback parameters exist for optional fields so the server never returns an unhandled exception response.
+
+Please restructure the interface components beautifully, ensuring no states leak across tabs and the layout looks highly professional. Let me know when you are ready to begin.
