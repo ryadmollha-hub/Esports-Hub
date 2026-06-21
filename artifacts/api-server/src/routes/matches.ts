@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { matchesTable, matchResultsTable, tournamentsTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { matchesTable, matchResultsTable, tournamentsTable, registrationsTable } from "@workspace/db";
+import { eq, desc, and } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import { logger } from "../lib/logger";
 import { nextMatchSerial } from "../lib/matchSerial";
+import { bulkCreateNotifications } from "../lib/notificationHelper";
 
 const router: IRouter = Router();
 
@@ -249,10 +250,47 @@ router.patch("/matches/:id/room", async (req, res) => {
         roomPassword: roomPassword ?? null,
         roomReleaseAt: releaseAt,
         roomHideAt: hideAt,
+        // Reset notification guard whenever room credentials are re-saved
+        // so the scheduler can re-fire if the room was updated
+        roomNotifiedAt: null,
       })
       .where(eq(matchesTable.id, id))
       .returning();
+
     res.json({ success: true, match: updated });
+
+    // ── Trigger A: immediate notification when room is released right now ──
+    // (minutesBefore === -1 means "Now" — release time is already in the past)
+    if (minutesBefore === -1 && updated.roomId) {
+      try {
+        const now = new Date();
+        // Mark as notified immediately so the scheduler skips this match
+        await db.update(matchesTable)
+          .set({ roomNotifiedAt: now })
+          .where(and(eq(matchesTable.id, id)));
+
+        const registrants = await db
+          .select({ userId: registrationsTable.userId })
+          .from(registrationsTable)
+          .where(and(
+            eq(registrationsTable.tournamentId, updated.tournamentId),
+            eq(registrationsTable.status, "approved"),
+          ));
+
+        const userIds = [...new Set(registrants.map((r) => r.userId))];
+        if (userIds.length > 0) {
+          await bulkCreateNotifications(
+            userIds,
+            "রুম আইডি ও পাসওয়ার্ড রেডি! ⚡",
+            `আপনার টুর্নামেন্ট Match #${updated.matchNumber} এর রুম আইডি ও পাসওয়ার্ড রিলিজ করা হয়েছে। জলদি চেক করে কাস্টম রুমে জয়েন করুন!`,
+            "success",
+          );
+          logger.info({ matchId: id, userCount: userIds.length }, "Immediate room-open notifications sent");
+        }
+      } catch (err) {
+        logger.error({ err }, "Failed to send immediate room notifications");
+      }
+    }
   } catch {
     res.status(500).json({ error: "Failed to update room details." });
   }

@@ -1,0 +1,33 @@
+Act as an expert Full-Stack Developer & Software Architect. Implement a robust, error-free, and automated In-App Notification System with a dynamic UI Notification Bell (🔔). Follow these exact backend and frontend structural instructions carefully to ensure zero crashes and complete database safety:
+
+### 1. DATABASE MODEL & BACKEND SCHEMA
+Create a clean Database Schema/Collection named `Notification` with the following strict fields:
+- `userId`: Relation/ID of the target user (ObjectId/String, required).
+- `matchId`: Relation/ID of the associated match (ObjectId/String, optional).
+- `title`: String (e.g., "Room ID Released!" or "Match Warning!").
+- `message`: String (the main body content).
+- `isRead`: Boolean (default: false).
+- `createdAt`: Date (default: Date.now).
+
+### 2. AUTOMATION TRIGGERS & TIMER LOGIC (CRON/JOB)
+Implement two automated triggers safely linked with the match timing flow:
+- TRIGGER A (Room Credentials Release): Inside the room credentials saving logic (where Custom Mins / Now / 10 Mins before are handled), whenever the Room ID/Password becomes active and visible, find ALL users who have joined that specific match (`matchId`). Automatically bulk-create a notification for each joined user with:
+  * Title: "রুম আইডি ও পাসওয়ার্ড রেডি! ⚡"
+  * Message: "আপনার টুর্নামেন্ট Match #{matchNumber} এর রুম আইডি ও পাসওয়ার্ড রিলিজ করা হয়েছে। জলদি চেক করে কাস্টম রুমে জয়েন করুন!"
+- TRIGGER B (5-Minute Match Start Warning): Implement a lightweight server background task (using node-cron, dynamic timeouts, or the existing background loop safely). Every 1 minute, check for matches starting in EXACTLY 5 minutes. Fetch all registered users for those matches, and bulk-create a notification:
+  * Title: "ম্যাচ শুরু হতে ৫ মিনিট বাকি! ⚠️"
+  * Message: "তাড়াতাড়ি রুমে প্রবেশ করুন! ৫ মিনিট পর ম্যাচ স্টার্ট হয়ে যাবে এবং রুম আইডি হাইড হয়ে যাবে।"
+
+### 3. BACKEND API ENDPOINTS
+Create highly secure, admin-authenticated, and user-authenticated REST API routes under `/api/notifications`:
+- `GET /api/notifications` -> Fetches the latest 20 notifications for the logged-in user, sorted by `createdAt` descending.
+- `PUT /api/notifications/read-all` -> Marks all unread notifications as `isRead: true` for the current user.
+
+### 4. FRONTEND UI INTEGRATION (BELL ICON & TOAST ALERTS)
+- Header/Navbar Component: Add a clean, responsive Notification Bell Icon (🔔) in the user dashboard header next to the user profile or wallet balance.
+- If there are unread notifications (`isRead: false`), display a dynamic red numerical badge count (e.g., 🔴 2) over the bell icon.
+- Clicking the bell icon must open a smooth, scrollable dropdown/modal showing the user's notifications. Unread notifications should have a subtle background highlight. Clicking anywhere inside should trigger the `read-all` API to clear the badge count.
+- Real-time Alert (Optional/Bonus): If the user is active on the website when a new notification is generated, trigger a beautiful animated toast message/popup alert on their screen instantly.
+
+### CRITICAL SAFETY REQUIREMENT:
+Write defensive code. Do NOT break existing user schemas, wallet features, or tournament matching structures. Ensure all database operations use safe error handling (try/catch blocks) and add indexes to `userId` and `createdAt` for fast query performance.
