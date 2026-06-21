@@ -7,7 +7,7 @@ import { useCreateMatch } from "@/lib/CreateMatchContext";
 import { useLanguage } from "@/lib/LanguageContext";
 
 export default function BottomNav() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const { user } = useAuthContext();
   const { openCreateMatch } = useCreateMatch();
@@ -21,13 +21,13 @@ export default function BottomNav() {
   const NavLink = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
     const active = isActive(href);
     return (
-      <Link href={href} className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all min-w-[44px] ${active ? "text-[#ff6b00]" : "text-[#606070] hover:text-[#a0a0b0]"}`}>
+      <button onClick={() => setLocation(href)} className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all min-w-[44px] ${active ? "text-[#ff6b00]" : "text-[#606070] hover:text-[#a0a0b0]"}`}>
         <div className={`p-1 rounded-xl transition-all ${active ? "bg-[#ff6b00]/15" : ""}`}>
           <Icon className={`w-4 h-4 ${active ? "stroke-[2.5]" : "stroke-[1.8]"}`} />
         </div>
         <span className={`text-[9px] font-bold uppercase tracking-wide ${active ? "text-[#ff6b00]" : ""}`}>{label}</span>
         {active ? <div className="w-1 h-0.5 rounded-full bg-[#ff6b00]" /> : <div className="w-1 h-0.5 rounded-full opacity-0" />}
-      </Link>
+      </button>
     );
   };
 

@@ -165,7 +165,7 @@ export default function AdminPage() {
   const [showTournamentMatchForm, setShowTournamentMatchForm] = useState<Record<number, boolean>>({});
   const [tournamentMatchForms, setTournamentMatchForms] = useState<Record<number, { matchNumber: string; scheduledAt: string; mapName: string }>>({});
   const [creatingTournamentMatch, setCreatingTournamentMatch] = useState<Record<number, boolean>>({});
-  const [tournamentMatchRoomForms, setTournamentMatchRoomForms] = useState<Record<number, { roomId: string; roomPassword: string; releaseMode: "now" | "before10"; hideMinutesAfter: string }>>({});
+  const [tournamentMatchRoomForms, setTournamentMatchRoomForms] = useState<Record<number, { roomId: string; roomPassword: string; releaseMode: "now" | "before10" | "custom"; hideMinutesAfter: string; customMins: string }>>({});
   const [settingTournamentMatchRoom, setSettingTournamentMatchRoom] = useState<Record<number, boolean>>({});
   const [tournamentsLoading, setTournamentsLoading] = useState(false);
   const [matchesLoading, setMatchesLoading] = useState(false);
@@ -292,7 +292,7 @@ export default function AdminPage() {
       return;
     }
     const relMode = form.releaseMode ?? "before10";
-    const minutesBefore = relMode === "now" ? -1 : 10;
+    const minutesBefore = relMode === "now" ? -1 : relMode === "custom" ? parseInt(form.customMins || "10") : 10;
     const hideAfter = parseInt(form.hideMinutesAfter ?? "5") || 5;
     setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: true }));
     try {
@@ -308,6 +308,8 @@ export default function AdminPage() {
       if (res.ok) {
         const desc = relMode === "now"
           ? "Room credentials are live immediately."
+          : relMode === "custom"
+          ? `Room opens ${minutesBefore} min before match · hides ${hideAfter} min after.`
           : `Room opens 10 min before match · hides ${hideAfter} min after.`;
         toast({ title: "✅ Room saved!", description: desc });
         setTournamentMatchRoomForms((prev) => { const n = { ...prev }; delete n[matchId]; return n; });
@@ -2210,7 +2212,7 @@ export default function AdminPage() {
                                       if (!tournamentMatchRoomForms[m.id]) {
                                         setTournamentMatchRoomForms((prev) => ({
                                           ...prev,
-                                          [m.id]: { releaseMode: "before10", hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "" },
+                                          [m.id]: { releaseMode: "before10", hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "", customMins: "" },
                                         }));
                                       }
                                       setManageRoomModal({ tournamentId: t.id, matchId: m.id });
@@ -2237,7 +2239,7 @@ export default function AdminPage() {
             const { tournamentId, matchId } = manageRoomModal;
             const allMatches = Object.values(tournamentMatchesList).flat() as any[];
             const match = allMatches.find((m: any) => m.id === matchId);
-            const form = tournamentMatchRoomForms[matchId] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: match?.roomId ?? "", roomPassword: match?.roomPassword ?? "" };
+            const form = tournamentMatchRoomForms[matchId] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: match?.roomId ?? "", roomPassword: match?.roomPassword ?? "", customMins: "" };
             const updateForm = (patch: Partial<typeof form>) =>
               setTournamentMatchRoomForms((prev) => ({ ...prev, [matchId]: { ...form, ...patch } }));
             return (
@@ -2290,21 +2292,35 @@ export default function AdminPage() {
                     {/* Release Timing */}
                     <div>
                       <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1.5">Release Timing</label>
-                      <div className="flex gap-2">
-                        {(["now", "before10"] as const).map((mode) => (
+                      <div className="flex gap-2 flex-wrap">
+                        {(["now", "before10", "custom"] as const).map((mode) => (
                           <button
                             key={mode}
                             onClick={() => updateForm({ releaseMode: mode })}
-                            className={`flex-1 py-2 text-xs font-black uppercase rounded-xl border transition-colors ${
+                            className={`py-2 px-3 text-xs font-black uppercase rounded-xl border transition-colors ${
                               form.releaseMode === mode
                                 ? "bg-[#ff6b00] border-[#ff6b00] text-white"
                                 : "bg-[#0d0d16] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"
                             }`}
                           >
-                            {mode === "now" ? "⚡ Now" : "⏱ 10 min Before"}
+                            {mode === "now" ? "⚡ Now" : mode === "before10" ? "🕒 10 Min Before" : "✏️ Custom"}
                           </button>
                         ))}
                       </div>
+                      {form.releaseMode === "custom" && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="1440"
+                            placeholder="e.g. 15"
+                            value={form.customMins ?? ""}
+                            onChange={(e) => updateForm({ customMins: e.target.value })}
+                            className="admin-input w-28"
+                          />
+                          <span className="text-[#a0a0b0] text-xs">mins before match start</span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Auto-hide */}

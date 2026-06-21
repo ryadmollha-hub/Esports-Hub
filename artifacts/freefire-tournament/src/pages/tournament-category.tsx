@@ -195,7 +195,7 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             {tournaments.map((t: any) => (
-              <TournamentCard key={t.id} t={t} featured />
+              <TournamentCard key={t.id} t={t} featured from={slug} />
             ))}
           </div>
         )}

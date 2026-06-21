@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useRoute, Link, useLocation } from "wouter";
+import { useRoute, Link, useLocation, useSearch } from "wouter";
 import {
   Trophy, Users, Calendar, Shield, ChevronLeft, Flame,
   UserPlus, UserMinus, Crown, Swords, CheckCircle, RefreshCw,
@@ -291,6 +291,25 @@ export default function TournamentDetailPage() {
     } finally { setLeaving(false); }
   };
 
+  const searchStr = useSearch();
+  const fromSlug = new URLSearchParams(searchStr).get("from");
+  const backHref = fromSlug ? `/tournaments/${fromSlug}` : "/tournaments";
+  const handleBack = () => {
+    if (window.history.length > 1) window.history.back();
+    else setLocation(backHref);
+  };
+
+  function BackButton() {
+    return (
+      <button
+        onClick={handleBack}
+        className="inline-flex items-center gap-2 text-[#a0a0b0] hover:text-white mb-6 transition-colors"
+      >
+        <ChevronLeft className="w-4 h-4" /> Back to Tournaments
+      </button>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0a0a0f]">
@@ -331,9 +350,7 @@ export default function TournamentDetailPage() {
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
       <div className="max-w-5xl mx-auto px-4 pt-16 pb-20">
-        <Link href="/tournaments" className="inline-flex items-center gap-2 text-[#a0a0b0] hover:text-white mb-6 transition-colors">
-          <ChevronLeft className="w-4 h-4" /> Back to Tournaments
-        </Link>
+        <BackButton />
 
         {/* ── Winner Banner ── */}
         {hasWinner && !t.resultsPublished && (

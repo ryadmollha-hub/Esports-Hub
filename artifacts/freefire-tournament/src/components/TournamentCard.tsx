@@ -260,7 +260,7 @@ function LeaderboardModal({ tournament, onClose }: { tournament: Tournament; onC
   );
 }
 
-export default function TournamentCard({ t, featured = false }: { t: Tournament; featured?: boolean }) {
+export default function TournamentCard({ t, featured = false, from }: { t: Tournament; featured?: boolean; from?: string }) {
   const { t: tx } = useLanguage();
   const slotPct    = Math.min((t.filledSlots / t.maxSlots) * 100, 100);
   const slotsLeft  = t.maxSlots - t.filledSlots;
@@ -290,7 +290,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
           data-testid={`card-tournament-${t.id}`}
           className="group relative rounded-2xl border border-[#ff6b00]/20 bg-[#0e0e17] hover:border-[#ff6b00]/50 hover:shadow-[0_4px_24px_rgba(255,107,0,0.12)] transition-all duration-200 overflow-hidden flex flex-col"
         >
-          <Link href={`/tournaments/${t.id}`} className="flex flex-col flex-1">
+          <Link href={`/tournaments/${t.id}${from ? `?from=${from}` : ""}`} className="flex flex-col flex-1">
             {/* Banner */}
             <div className="relative h-36 w-full bg-gradient-to-br from-[#1a1a24] to-[#0a0a0f] overflow-hidden shrink-0">
               {t.bannerUrl ? (
@@ -417,7 +417,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
         data-testid={`card-tournament-${t.id}`}
         className="group flex flex-col rounded-xl border border-[#ff6b00]/15 bg-[#0e0e17] hover:border-[#ff6b00]/40 hover:shadow-[0_2px_14px_rgba(255,107,0,0.08)] transition-all duration-200 overflow-hidden"
       >
-        <Link href={`/tournaments/${t.id}`} className="flex items-center gap-3 p-3">
+        <Link href={`/tournaments/${t.id}${from ? `?from=${from}` : ""}`} className="flex items-center gap-3 p-3">
           {/* Thumbnail */}
           <div className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-[#1a1a24] to-[#0a0a0f]">
             {t.bannerUrl ? (
