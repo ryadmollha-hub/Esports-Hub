@@ -127,11 +127,25 @@ export default function WalletPage() {
 
   const submitDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsedAmt = parseFloat(depositForm.amount);
+    if (isNaN(parsedAmt) || parsedAmt <= 0) {
+      toast({ title: "Invalid amount", description: "Please enter a valid amount.", variant: "destructive" });
+      return;
+    }
+    if (!depositForm.transactionId.trim()) {
+      toast({ title: "TrxID required", description: "Please enter the transaction ID from your payment.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await authFetch("/wallet/deposit", {
         method: "POST",
-        body: JSON.stringify({ ...depositForm, amount: parseFloat(depositForm.amount) }),
+        body: JSON.stringify({
+          ...depositForm,
+          amount: parsedAmt,
+          transactionId: depositForm.transactionId.trim().toUpperCase(),
+          accountNumber: depositForm.accountNumber.trim(),
+        }),
       });
       const data = await safeJson(res);
       if (res.ok) {
@@ -149,11 +163,24 @@ export default function WalletPage() {
 
   const submitWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsedAmt = parseFloat(withdrawForm.amount);
+    if (isNaN(parsedAmt) || parsedAmt <= 0) {
+      toast({ title: "Invalid amount", description: "Please enter a valid amount.", variant: "destructive" });
+      return;
+    }
+    if (balance && parsedAmt > balance.balance) {
+      toast({ title: "Insufficient balance", description: `Your available balance is ৳${balance.balance.toFixed(2)}.`, variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await authFetch("/wallet/withdraw", {
         method: "POST",
-        body: JSON.stringify({ ...withdrawForm, amount: parseFloat(withdrawForm.amount) }),
+        body: JSON.stringify({
+          ...withdrawForm,
+          amount: parsedAmt,
+          accountNumber: withdrawForm.accountNumber.trim(),
+        }),
       });
       const data = await safeJson(res);
       if (res.ok) {

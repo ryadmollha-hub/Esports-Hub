@@ -94,20 +94,26 @@ router.post("/wallet/deposit", async (req, res) => {
     return res.status(400).json({ error: "Payment method must be BKash, Nagad, or Rocket." });
   }
 
+  const parsedAmount = parseFloat(String(amount));
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400).json({ error: "Invalid amount." });
+  }
+
   try {
     const [tx] = await db.insert(walletTransactionsTable).values({
       userId,
       type: "deposit",
-      amount: String(amount),
-      method,
-      accountNumber,
-      transactionId: transactionId ?? null,
+      amount: parsedAmount.toFixed(2),
+      method: String(method).toLowerCase(),
+      accountNumber: String(accountNumber).trim(),
+      transactionId: transactionId ? String(transactionId).trim().toUpperCase() : null,
       screenshot: screenshot ?? null,
       status: "pending",
     }).returning();
 
     res.status(201).json(tx);
-  } catch {
+  } catch (err) {
+    console.error("[wallet/deposit] DB error:", err);
     res.status(500).json({ error: "Failed to submit deposit request. Please try again." });
   }
 });
@@ -127,24 +133,30 @@ router.post("/wallet/withdraw", async (req, res) => {
     return res.status(400).json({ error: "Payment method must be BKash, Nagad, or Rocket." });
   }
 
+  const parsedAmount = parseFloat(String(amount));
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return res.status(400).json({ error: "Invalid amount." });
+  }
+
   try {
     const balance = await getUserBalance(userId);
 
-    if (parseFloat(amount) > balance) {
+    if (parsedAmount > balance) {
       return res.status(400).json({ error: `Insufficient balance. Your available balance is ৳${balance.toFixed(2)}.` });
     }
 
     const [tx] = await db.insert(walletTransactionsTable).values({
       userId,
       type: "withdraw",
-      amount: String(amount),
-      method,
-      accountNumber,
+      amount: parsedAmount.toFixed(2),
+      method: String(method).toLowerCase(),
+      accountNumber: String(accountNumber).trim(),
       status: "pending",
     }).returning();
 
     res.status(201).json(tx);
-  } catch {
+  } catch (err) {
+    console.error("[wallet/withdraw] DB error:", err);
     res.status(500).json({ error: "Failed to submit withdrawal request. Please try again." });
   }
 });

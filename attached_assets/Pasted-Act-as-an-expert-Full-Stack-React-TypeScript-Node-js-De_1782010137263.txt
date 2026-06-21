@@ -1,0 +1,38 @@
+Act as an expert Full-Stack React (TypeScript) & Node.js Developer. I need you to implement three critical updates: Fix the Community Match joining logic, add countdown timers to Tournament cards, and thoroughly fix the intermittent bugs in our Deposit/Withdrawal systems.
+
+Follow these absolute, step-by-step directions carefully without breaking existing features:
+
+==================================================
+TASK 1: FIX COMMUNITY MATCH JOINING LOGIC & ERRORS
+==================================================
+1. When a user clicks to join a Community Match, intercept the click and show a clean Modal/Form requesting their Free Fire In-Game "UID" and "Name" (IGN).
+2. Dynamically validate inputs based on Match Type:
+   - SOLO: Require 1 UID and 1 Name.
+   - DUO: Require 2 separate UIDs and 2 Names (for both partners).
+   - SQUAD: Require 4 separate UIDs and 4 Names (for the full team).
+3. Update the frontend API payload and backend route (e.g., `/api/matches/join`) to securely accept, parse, and save these arrays/objects of UIDs and Names into the registration row in the database, preventing any null/undefined schema validation crashes.
+
+==================================================
+TASK 2: IMPLEMENT LIVE COUNTDOWN TIMER ON CARDS
+==================================================
+1. Locate the main Tournament Card component (the dashboard grid rendering cards like "TAMIM IQBAL", "TSFD").
+2. Integrate a live, dynamic countdown timer that perfectly matches the styling seen in the "Community Matches" widget:
+   - Format: "00D : 05H : 57M : 04S" with a tiny "STARTS IN" label.
+   - Styling: Use vibrant orange digits (Tailwind `text-orange-500`) with muted gray colons/unit labels (D, H, M, S).
+3. Implement this safely inside a `useEffect` interval updating every 1 second based on `match.startTime` or `tournament.startTime`. Ensure proper `clearInterval` cleanup on unmount to prevent page memory leaks, freezing, or white screen crashes. Place this timer cleanly along the top bar or inside the card metadata wrapper.
+
+==================================================
+TASK 3: BULLETPROOF DEPOSIT & WITHDRAWAL GATEWAYS (FIX ERRORS)
+==================================================
+We are experiencing random "Failed to submit deposit request. Please try again" errors and intermittent withdrawal failures. Fix this by refactoring both frontend forms and backend controllers:
+
+1. Data Parsing & Sanitization:
+   - Ensure the `amount` field is strictly sanitized and converted to a numeric floating/integer value (`Number(amount)`) on the frontend before dispatching the API request. 
+   - Ensure transaction IDs (TrxID) are automatically trimmed of hidden spaces (`trxId.trim()`) and converted to UPPERCASE to prevent strict database matching failures.
+2. Robust Error Handling & Logging:
+   - In the Express backend controllers for deposits and withdrawals, wrap the handler logic inside tight `try/catch` blocks.
+   - If a database insertion or user balance check fails, log the EXACT error on the console (`console.error(error)`) so we can debug it, but return a clean JSON error response (`res.status(500).json({ error: "Detailed message..." })`) rather than failing silently or throwing unhandled rejections that crash the API server.
+3. Balance Checks for Withdrawals:
+   - Double-check that withdrawal requests strictly verify if the user's current `wallet.balance` is greater than or equal to the requested cash-out amount before initiating the record creation. Deduct/Hold the balance properly within a safe database transaction block.
+
+Please audit the current directories, inspect files under frontend components/pages and backend api-server routes, and implement these solutions reliably. Let me know when you are ready to start.

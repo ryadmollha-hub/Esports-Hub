@@ -319,6 +319,7 @@ router.get("/user-matches/:id/details", async (req, res) => {
 
 const PLAYERS_FOR_TYPE: Record<string, number> = {
   "1v1": 1, "2v2": 2, "3v3": 3, "4v4": 4,
+  BR: 1, CS: 4, SOLO: 1, LONE_WOLF: 1, FREE: 1,
 };
 
 router.post("/user-matches/:id/join", async (req, res) => {

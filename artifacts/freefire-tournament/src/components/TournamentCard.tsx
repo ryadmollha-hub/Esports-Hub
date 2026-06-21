@@ -111,9 +111,10 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
           </div>
 
           {/* Countdown */}
-          {t.status === "upcoming" && t.countdownTo && (
+          {t.status === "upcoming" && (t.countdownTo || t.startDate) && (
             <div className="mb-3">
-              <CountdownTimer targetDate={t.countdownTo} className="text-[10px] gap-1" />
+              <div className="text-[9px] uppercase tracking-widest text-[#606070] font-bold mb-1">Starts In</div>
+              <CountdownTimer targetDate={(t.countdownTo ?? t.startDate)!} className="text-[10px] gap-1" />
             </div>
           )}
 
@@ -233,9 +234,12 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
       </div>
 
       {/* Right: time + chevron */}
-      <div className="flex flex-col items-end gap-1.5 shrink-0">
-        {t.status === "upcoming" && t.countdownTo ? (
-          <CountdownTimer targetDate={t.countdownTo} className="text-[9px] gap-0.5" />
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        {t.status === "upcoming" && (t.countdownTo || t.startDate) ? (
+          <div className="flex flex-col items-end gap-0.5">
+            <span className="text-[8px] uppercase tracking-widest text-[#606070] font-bold">Starts In</span>
+            <CountdownTimer targetDate={(t.countdownTo ?? t.startDate)!} className="text-[9px] gap-0.5" />
+          </div>
         ) : (
           <div className="flex items-center gap-0.5 text-[#606070] text-[10px]">
             <Clock className="w-2.5 h-2.5" />
