@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Bell, Check, CheckCheck, X } from "lucide-react";
-import { useAuth } from "@/lib/AuthContext";
-import { apiBase as BASE } from "@/lib/apiBase";
+import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 interface Notification {
@@ -38,46 +37,23 @@ const typeEmoji: Record<string, string> = {
 };
 
 export default function NotificationBell() {
-  const { isSignedIn } = useAuth();
+  const { user, authFetch } = useAuthContext();
   const { toast } = useToast();
 
-  const [open, setOpen]               = useState(false);
-  const [notifications, setNotifs]    = useState<Notification[]>([]);
-  const [unreadCount, setUnread]       = useState(0);
-  const [loading, setLoading]          = useState(false);
+  const [open, setOpen]            = useState(false);
+  const [notifications, setNotifs] = useState<Notification[]>([]);
+  const [unreadCount, setUnread]   = useState(0);
+  const [loading, setLoading]      = useState(false);
 
-  const ref          = useRef<HTMLDivElement>(null);
-  const prevUnread   = useRef(0);
-  const isFirstPoll  = useRef(true);
-  const token        = () => (typeof window !== "undefined" ? localStorage.getItem("ff_auth_token") : null);
+  const ref         = useRef<HTMLDivElement>(null);
+  const prevUnread  = useRef(0);
+  const isFirstPoll = useRef(true);
 
-  const authHeader = useCallback((): HeadersInit => {
-    const t = token();
-    return t ? { Authorization: `Bearer ${t}` } : {};
-  }, []);
-
-  // ── Fetch full notification list ─────────────────────────────────────────
-  const fetchNotifs = useCallback(async () => {
-    if (!isSignedIn) return;
-    setLoading(true);
-    try {
-      const res = await fetch(`${BASE}/api/notifications`, { headers: authHeader() });
-      if (res.ok) {
-        const data: Notification[] = await res.json();
-        setNotifs(data);
-        const count = data.filter((n) => !n.isRead).length;
-        setUnread(count);
-        prevUnread.current = count;
-      }
-    } catch { /* silent */ }
-    setLoading(false);
-  }, [isSignedIn, authHeader]);
-
-  // ── Poll unread count every 30 s; toast on new notifications ────────────
+  // ── Poll unread count every 30 s ──────────────────────────────────────────
   const pollUnread = useCallback(async () => {
-    if (!isSignedIn) return;
+    if (!user) return;
     try {
-      const res = await fetch(`${BASE}/api/notifications/unread-count`, { headers: authHeader() });
+      const res = await authFetch("/notifications/unread-count");
       if (!res.ok) return;
       const { count = 0 } = await res.json();
       if (!isFirstPoll.current && count > prevUnread.current) {
@@ -91,16 +67,57 @@ export default function NotificationBell() {
       setUnread(count);
       isFirstPoll.current = false;
     } catch { /* silent */ }
-  }, [isSignedIn, authHeader, toast]);
+  }, [user, authFetch, toast]);
 
   useEffect(() => {
-    if (!isSignedIn) return;
+    if (!user) return;
     pollUnread();
     const id = setInterval(pollUnread, 30_000);
     return () => clearInterval(id);
-  }, [isSignedIn, pollUnread]);
+  }, [user, pollUnread]);
 
-  // ── Close on outside click ───────────────────────────────────────────────
+  // ── Fetch full list ───────────────────────────────────────────────────────
+  const fetchNotifs = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const res = await authFetch("/notifications");
+      if (res.ok) {
+        const data: Notification[] = await res.json();
+        setNotifs(data.slice(0, 10));
+      }
+    } catch { /* silent */ }
+    finally { setLoading(false); }
+  }, [user, authFetch]);
+
+  // ── Mark all read ─────────────────────────────────────────────────────────
+  const markAllRead = useCallback(async () => {
+    try {
+      await authFetch("/notifications/read-all", { method: "PATCH" });
+      setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnread(0);
+      prevUnread.current = 0;
+    } catch { /* silent */ }
+  }, [authFetch]);
+
+  // ── Mark single read ──────────────────────────────────────────────────────
+  const markRead = useCallback(async (id: number) => {
+    try {
+      await authFetch(`/notifications/${id}/read`, { method: "PATCH" });
+      setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
+      setUnread((c) => Math.max(0, c - 1));
+      prevUnread.current = Math.max(0, prevUnread.current - 1);
+    } catch { /* silent */ }
+  }, [authFetch]);
+
+  // ── Open: fetch + auto-mark all read ─────────────────────────────────────
+  const handleOpen = useCallback(async () => {
+    setOpen(true);
+    await fetchNotifs();
+    if (prevUnread.current > 0) await markAllRead();
+  }, [fetchNotifs, markAllRead]);
+
+  // ── Close on outside click ────────────────────────────────────────────────
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -110,52 +127,19 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  // ── Mark a single notification as read ──────────────────────────────────
-  const markRead = useCallback(async (id: number) => {
-    try {
-      await fetch(`${BASE}/api/notifications/${id}/read`, {
-        method: "PATCH",
-        headers: authHeader(),
-      });
-      setNotifs((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
-      setUnread((c) => Math.max(0, c - 1));
-      prevUnread.current = Math.max(0, prevUnread.current - 1);
-    } catch { /* silent */ }
-  }, [authHeader]);
-
-  // ── Mark all read ────────────────────────────────────────────────────────
-  const markAllRead = useCallback(async () => {
-    try {
-      await fetch(`${BASE}/api/notifications/read-all`, {
-        method: "PATCH",
-        headers: authHeader(),
-      });
-      setNotifs((prev) => prev.map((n) => ({ ...n, isRead: true })));
-      setUnread(0);
-      prevUnread.current = 0;
-    } catch { /* silent */ }
-  }, [authHeader]);
-
-  // ── Open bell: fetch + auto-mark all read ───────────────────────────────
-  const handleOpen = useCallback(async () => {
-    setOpen(true);
-    await fetchNotifs();
-    if (unreadCount > 0) await markAllRead();
-  }, [fetchNotifs, markAllRead, unreadCount]);
-
-  if (!isSignedIn) return null;
+  if (!user) return null;
 
   return (
     <div ref={ref} className="relative">
       {/* Bell button */}
       <button
         onClick={open ? () => setOpen(false) : handleOpen}
-        className="relative w-8 h-8 flex items-center justify-center rounded-full hover:bg-[#ff6b00]/10 transition-all"
+        className="relative w-8 h-8 flex items-center justify-center rounded-lg bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] hover:text-white hover:border-[#ff6b00]/40 transition-all"
         aria-label="Notifications"
       >
-        <Bell className="w-4.5 h-4.5 text-[#a0a0b0] hover:text-white transition-colors" />
+        <Bell className="w-4 h-4" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-[#ff2244] text-white text-[9px] font-black rounded-full px-1 leading-none select-none animate-pulse">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-[#ff2244] text-white text-[10px] font-black leading-none border-2 border-[#0a0a0f] animate-pulse select-none">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -176,7 +160,7 @@ export default function NotificationBell() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              {unreadCount > 0 && (
+              {notifications.some((n) => !n.isRead) && (
                 <button
                   onClick={markAllRead}
                   className="text-[10px] text-[#ff6b00] hover:text-[#e66000] font-bold flex items-center gap-1 transition-colors"
@@ -206,7 +190,9 @@ export default function NotificationBell() {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`px-4 py-3 border-b border-[#ff6b00]/5 last:border-0 transition-colors cursor-pointer group ${n.isRead ? "opacity-55" : "bg-[#ff6b00]/5"}`}
+                  className={`px-4 py-3 border-b border-[#ff6b00]/5 last:border-0 transition-colors cursor-pointer group ${
+                    n.isRead ? "opacity-60" : "bg-[#ff6b00]/5"
+                  }`}
                   onClick={() => { if (!n.isRead) markRead(n.id); }}
                 >
                   <div className="flex items-start gap-2.5">
