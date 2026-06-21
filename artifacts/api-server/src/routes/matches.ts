@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { matchesTable, matchResultsTable, tournamentsTable, registrationsTable } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import { logger } from "../lib/logger";
 import { nextMatchSerial } from "../lib/matchSerial";
@@ -143,10 +143,10 @@ router.post("/tournaments/:id/matches", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
   try {
     const id = parseInt(req.params.id);
-    const { matchNumber, scheduledAt, mapName, status, roomId, roomPassword, roomReleaseAt } = req.body;
+    const { scheduledAt, mapName, status, roomId, roomPassword, roomReleaseAt } = req.body;
 
-    if (!matchNumber || !scheduledAt) {
-      return res.status(400).json({ error: "matchNumber and scheduledAt are required." });
+    if (!scheduledAt) {
+      return res.status(400).json({ error: "scheduledAt is required." });
     }
 
     // Validate that the tournament exists
@@ -170,11 +170,19 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       });
     }
 
+    // Auto-increment matchNumber per tournament: MAX(match_number) + 1
+    // Using MAX instead of COUNT so deleted matches never cause collisions.
+    const [maxRow] = await db
+      .select({ maxNum: sql<number>`COALESCE(MAX(${matchesTable.matchNumber}), 0)` })
+      .from(matchesTable)
+      .where(eq(matchesTable.tournamentId, id));
+    const matchNumber = (maxRow?.maxNum ?? 0) + 1;
+
     // Default roomReleaseAt: 10 minutes before scheduledAt if not provided
     let releaseAt: Date | null = null;
     if (roomReleaseAt) {
       releaseAt = new Date(roomReleaseAt);
-    } else if (roomId && scheduledAt) {
+    } else if (roomId) {
       releaseAt = new Date(scheduledAtDate.getTime() - 10 * 60 * 1000);
     }
 
@@ -185,7 +193,7 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       .insert(matchesTable)
       .values({
         tournamentId: id,
-        matchNumber: parseInt(matchNumber),
+        matchNumber,
         serialNumber,
         scheduledAt: scheduledAtDate,
         status: status ?? "scheduled",

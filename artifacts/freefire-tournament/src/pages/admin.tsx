@@ -163,7 +163,7 @@ export default function AdminPage() {
   const [tournamentMatchesList, setTournamentMatchesList] = useState<Record<number, any[]>>({});
   const [tournamentMatchesLoading, setTournamentMatchesLoading] = useState<Record<number, boolean>>({});
   const [showTournamentMatchForm, setShowTournamentMatchForm] = useState<Record<number, boolean>>({});
-  const [tournamentMatchForms, setTournamentMatchForms] = useState<Record<number, { matchNumber: string; scheduledAt: string; mapName: string }>>({});
+  const [tournamentMatchForms, setTournamentMatchForms] = useState<Record<number, { scheduledAt: string; mapName: string }>>({});
   const [creatingTournamentMatch, setCreatingTournamentMatch] = useState<Record<number, boolean>>({});
   const [tournamentMatchRoomForms, setTournamentMatchRoomForms] = useState<Record<number, { roomId: string; roomPassword: string; releaseMode: "now" | "before10" | "custom"; hideMinutesAfter: string; customMins: string }>>({});
   const [settingTournamentMatchRoom, setSettingTournamentMatchRoom] = useState<Record<number, boolean>>({});
@@ -254,8 +254,8 @@ export default function AdminPage() {
 
   const createMatchForTournament = useCallback(async (tournamentId: number) => {
     const form = tournamentMatchForms[tournamentId];
-    if (!form?.matchNumber || !form?.scheduledAt) {
-      toast({ title: "Match number and date required", variant: "destructive" });
+    if (!form?.scheduledAt) {
+      toast({ title: "Scheduled date is required", variant: "destructive" });
       return;
     }
     setCreatingTournamentMatch((prev) => ({ ...prev, [tournamentId]: true }));
@@ -264,7 +264,6 @@ export default function AdminPage() {
       const res = await apiFetch(`/tournaments/${tournamentId}/matches`, {
         method: "POST",
         body: JSON.stringify({
-          matchNumber: parseInt(form.matchNumber),
           scheduledAt: scheduledAtISO,
           mapName: form.mapName || undefined,
         }),
@@ -272,7 +271,7 @@ export default function AdminPage() {
       if (res.ok) {
         toast({ title: "✅ Match created" });
         setShowTournamentMatchForm((prev) => ({ ...prev, [tournamentId]: false }));
-        setTournamentMatchForms((prev) => ({ ...prev, [tournamentId]: { matchNumber: "", scheduledAt: "", mapName: "" } }));
+        setTournamentMatchForms((prev) => ({ ...prev, [tournamentId]: { scheduledAt: "", mapName: "" } }));
         loadTournamentMatchesById(tournamentId);
       } else {
         const d = await safeJson(res);
@@ -1519,24 +1518,13 @@ export default function AdminPage() {
                       {showTournamentMatchForm[t.id] && (
                         <div className="bg-[#0a0a14] border border-[#ff6b00]/20 rounded-xl p-4 mb-3">
                           <h3 className="text-xs font-black uppercase text-[#ff6b00] mb-3">New Match for {t.name}</h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div>
-                              <label className="text-[#606070] text-[10px] uppercase block mb-1">Match Number *</label>
-                              <input
-                                type="number"
-                                min="1"
-                                placeholder="1"
-                                value={tournamentMatchForms[t.id]?.matchNumber ?? ""}
-                                onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { matchNumber: e.target.value, scheduledAt: prev[t.id]?.scheduledAt ?? "", mapName: prev[t.id]?.mapName ?? "" } }))}
-                                className="admin-input"
-                              />
-                            </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                               <label className="text-[#606070] text-[10px] uppercase block mb-1">Scheduled At *</label>
                               <input
                                 type="datetime-local"
                                 value={tournamentMatchForms[t.id]?.scheduledAt ?? ""}
-                                onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { matchNumber: prev[t.id]?.matchNumber ?? "", scheduledAt: e.target.value, mapName: prev[t.id]?.mapName ?? "" } }))}
+                                onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { scheduledAt: e.target.value, mapName: prev[t.id]?.mapName ?? "" } }))}
                                 className="admin-input"
                               />
                             </div>
@@ -1545,7 +1533,7 @@ export default function AdminPage() {
                               <input
                                 placeholder="Bermuda, Purgatory..."
                                 value={tournamentMatchForms[t.id]?.mapName ?? ""}
-                                onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { matchNumber: prev[t.id]?.matchNumber ?? "", scheduledAt: prev[t.id]?.scheduledAt ?? "", mapName: e.target.value } }))}
+                                onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { scheduledAt: prev[t.id]?.scheduledAt ?? "", mapName: e.target.value } }))}
                                 className="admin-input"
                               />
                             </div>
