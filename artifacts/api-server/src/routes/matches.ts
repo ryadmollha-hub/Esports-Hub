@@ -144,8 +144,30 @@ router.post("/tournaments/:id/matches", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const { matchNumber, scheduledAt, mapName, status, roomId, roomPassword, roomReleaseAt } = req.body;
+
     if (!matchNumber || !scheduledAt) {
       return res.status(400).json({ error: "matchNumber and scheduledAt are required." });
+    }
+
+    // Validate that the tournament exists
+    const [tournament] = await db
+      .select({ id: tournamentsTable.id, startDate: tournamentsTable.startDate })
+      .from(tournamentsTable)
+      .where(eq(tournamentsTable.id, id));
+
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found." });
+    }
+
+    // scheduledAt must be >= tournament.startDate (equal is allowed — match can start exactly when tournament begins)
+    const scheduledAtDate = new Date(scheduledAt);
+    if (isNaN(scheduledAtDate.getTime())) {
+      return res.status(400).json({ error: "Invalid scheduledAt date." });
+    }
+    if (scheduledAtDate < new Date(tournament.startDate)) {
+      return res.status(400).json({
+        error: "Match scheduled time cannot be before the tournament start date.",
+      });
     }
 
     // Default roomReleaseAt: 10 minutes before scheduledAt if not provided
@@ -153,7 +175,7 @@ router.post("/tournaments/:id/matches", async (req, res) => {
     if (roomReleaseAt) {
       releaseAt = new Date(roomReleaseAt);
     } else if (roomId && scheduledAt) {
-      releaseAt = new Date(new Date(scheduledAt).getTime() - 10 * 60 * 1000);
+      releaseAt = new Date(scheduledAtDate.getTime() - 10 * 60 * 1000);
     }
 
     // Auto-generate permanent serial number (T-0001, T-0002, …)
@@ -165,7 +187,7 @@ router.post("/tournaments/:id/matches", async (req, res) => {
         tournamentId: id,
         matchNumber: parseInt(matchNumber),
         serialNumber,
-        scheduledAt: new Date(scheduledAt),
+        scheduledAt: scheduledAtDate,
         status: status ?? "scheduled",
         mapName: mapName ?? null,
         roomId: roomId ?? null,
@@ -174,7 +196,8 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       })
       .returning();
     res.status(201).json(match);
-  } catch {
+  } catch (err) {
+    logger.error({ err }, "Failed to create match");
     res.status(500).json({ error: "Failed to create match." });
   }
 });
