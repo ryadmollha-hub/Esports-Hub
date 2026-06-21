@@ -635,7 +635,7 @@ export default function TournamentDetailPage() {
 
             {/* ── RESULTS SECTION ── */}
             {t.resultsPublished && results !== null && (
-              <div className="space-y-4">
+              <div id="results-section" className="space-y-4">
                 {podiumResults.length > 0 && (
                   <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
                     <div className="flex items-center gap-2 mb-5">
@@ -893,7 +893,22 @@ export default function TournamentDetailPage() {
                   </Link>
                 )}
 
-                {user && isJoined && (
+                {user && isJoined && (isEnded || t.resultsPublished) && (
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById("results-section");
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-purple-500/20 border border-purple-500/40 text-purple-300 font-black uppercase rounded-xl hover:bg-purple-500/30 transition-all text-sm"
+                  >
+                    <Trophy className="w-4 h-4" />
+                    ফলাফল দেখুন
+                  </button>
+                )}
+
+                {user && isJoined && !isEnded && !t.resultsPublished && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-center gap-2 py-2.5 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-xl">
                       <CheckCircle className="w-4 h-4 text-[#00ff88]" />
