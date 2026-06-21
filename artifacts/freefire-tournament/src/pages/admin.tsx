@@ -2848,7 +2848,7 @@ export default function AdminPage() {
                 ) : deposits.map((tx: any) => (
                   <div key={tx.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1">
-                      <div className="font-bold text-white">৳{Number(tx.amount).toLocaleString()} via {tx.method.toUpperCase()}</div>
+                      <div className="font-bold text-white">৳{Number(tx.amount).toLocaleString()} via {(tx.method || 'BKASH').toUpperCase()}</div>
                       <div className="text-[#a0a0b0] text-sm">Account: <span className="font-mono">{tx.accountNumber}</span></div>
                       {tx.transactionId && <div className="text-[#a0a0b0] text-xs font-mono">TX: {tx.transactionId}</div>}
                       <div className="text-[#a0a0b0] text-xs">{new Date(tx.createdAt).toLocaleString()}</div>
@@ -2887,7 +2887,7 @@ export default function AdminPage() {
                 ) : withdrawals.map((tx: any) => (
                   <div key={tx.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1">
-                      <div className="font-bold text-white">৳{Number(tx.amount).toLocaleString()} via {tx.method.toUpperCase()}</div>
+                      <div className="font-bold text-white">৳{Number(tx.amount).toLocaleString()} via {(tx.method || 'BKASH').toUpperCase()}</div>
                       <div className="text-[#a0a0b0] text-sm">To: <span className="font-mono">{tx.accountNumber}</span></div>
                       <div className="text-[#a0a0b0] text-xs">{new Date(tx.createdAt).toLocaleString()}</div>
                       {tx.adminNote && <div className="text-[#ff2244] text-xs mt-1">Note: {tx.adminNote}</div>}
