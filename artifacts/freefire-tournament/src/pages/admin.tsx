@@ -118,6 +118,7 @@ export default function AdminPage() {
   // Rules modal state
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [rulesModalTournamentId, setRulesModalTournamentId] = useState<number | null>(null);
+  const [showCommunityRulesModal, setShowCommunityRulesModal] = useState(false);
 
   // Manage Room modal state: { tournamentId, matchId } or null
   const [manageRoomModal, setManageRoomModal] = useState<{ tournamentId: number; matchId: number } | null>(null);
@@ -3032,38 +3033,58 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* Community Match Rules Editor */}
-              <div className="bg-[#0d0d16] border border-[#ff6b00]/20 rounded-2xl p-5 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 bg-[#ff6b00]/15 rounded-xl flex items-center justify-center">
-                    <BookOpen className="w-4 h-4 text-[#ff6b00]" />
-                  </div>
-                  <div>
-                    <h2 className="font-black text-white text-sm uppercase">Community Match Rules</h2>
-                    <p className="text-[#606070] text-xs">Shown to users before creating a match. One rule per line.</p>
-                  </div>
+              {/* Community Match Rules — compact trigger */}
+              <div className="flex items-center justify-between bg-[#0d0d16] border border-[#ff6b00]/20 rounded-2xl px-4 py-3 mb-6">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-[#ff6b00]" />
+                  <span className="text-white text-sm font-bold">Community Match Rules</span>
                 </div>
-                {communityRulesLoading ? (
-                  <div className="space-y-2 mb-4">
-                    {[1,2,3].map(i => <div key={i} className="h-4 bg-[#1a1a24] rounded animate-pulse" />)}
-                  </div>
-                ) : (
-                  <textarea
-                    value={communityRules}
-                    onChange={(e) => setCommunityRules(e.target.value)}
-                    rows={7}
-                    placeholder={"1. Be respectful to all players.\n2. No cheating or hacking.\n3. Room ID shared before match starts."}
-                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-3 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors resize-none font-mono mb-4"
-                  />
-                )}
                 <button
-                  onClick={saveCommunityRules}
-                  disabled={communityRulesSaving || communityRulesLoading || !communityRules.trim()}
-                  className="px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
+                  onClick={() => { loadCommunityRules(); setShowCommunityRulesModal(true); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors"
                 >
-                  {communityRulesSaving ? "Saving..." : "Save Rules"}
+                  📝 Edit Rules
                 </button>
               </div>
+
+              {/* Community Rules Modal */}
+              {showCommunityRulesModal && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setShowCommunityRulesModal(false); }}>
+                  <div className="w-full max-w-lg bg-[#0e0e17] border border-[#ff6b00]/25 rounded-2xl shadow-[0_0_40px_rgba(255,107,0,0.15)] overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-[#1a1a28]">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="w-4 h-4 text-[#ff6b00]" />
+                        <h2 className="font-black text-white text-sm uppercase">Community Match Rules</h2>
+                      </div>
+                      <button onClick={() => setShowCommunityRulesModal(false)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#1a1a24] text-[#a0a0b0] hover:text-white transition-colors">✕</button>
+                    </div>
+                    <div className="p-5">
+                      <p className="text-[#606070] text-xs mb-3">Shown to users before creating a match. One rule per line.</p>
+                      {communityRulesLoading ? (
+                        <div className="space-y-2 mb-4">{[1,2,3].map(i => <div key={i} className="h-4 bg-[#1a1a24] rounded animate-pulse" />)}</div>
+                      ) : (
+                        <textarea
+                          value={communityRules}
+                          onChange={(e) => setCommunityRules(e.target.value)}
+                          rows={8}
+                          placeholder={"1. Be respectful to all players.\n2. No cheating or hacking.\n3. Room ID shared before match starts."}
+                          className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-3 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors resize-none font-mono mb-4"
+                        />
+                      )}
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => setShowCommunityRulesModal(false)} className="px-4 py-2 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm rounded-xl hover:text-white transition-colors">Cancel</button>
+                        <button
+                          onClick={async () => { await saveCommunityRules(); setShowCommunityRulesModal(false); }}
+                          disabled={communityRulesSaving || communityRulesLoading || !communityRules.trim()}
+                          className="px-5 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
+                        >
+                          {communityRulesSaving ? "Saving…" : "Save Rules"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Category (match type) filter tabs */}
               <div className="flex gap-2 mb-3 flex-wrap">
