@@ -1,0 +1,20 @@
+Act as a Principal Software Engineer & Full-Stack Architect. Do NOT add any new features. Our daily limit is completely exhausted due to repeated errors. You must perform a complete, deep-level codebase audit and fix every single structural and validation issue across the entire repository right now.
+
+Follow these strict debugging and cleanup mandates:
+
+1. ABSOLUTE FIXED MATCH CREATION LOGIC (NO MORE VALIDATION ERRORS):
+- In the Match Schema, completely remove any `unique: true` or restrictive global unique indexes on `matchNumber`.
+- In the match creation backend controller, automatically assign `req.body.matchNumber` by checking the count of existing matches for that specific `tournamentId` (`await Match.countDocuments({ tournamentId }) + 1`).
+- Completely remove the required check constraint for `matchNumber` from the backend request body validation since it is now auto-incremented.
+- Ensure that `match.scheduledAt` can be greater than OR EXACTLY EQUAL to (`>=`) the `tournament.startDate` without failing validation.
+
+2. TIMELINE STATUS & COMPLETED MATCHES FIXED:
+- Ensure the match status ONLY changes to "● LIVE" after the official start time has passed. During the 15-minute credential release window before the match starts, the status must strictly be "● ROOM OPEN" or "JOIN ROOM", while keeping registration closed.
+- On the Tournament/Match Details page, if a match is "COMPLETED", hide the green "✓ YOU'RE IN!" button completely and replace it with the exact functional "ফলাফল দেখুন" button, matching the design and functionality of the tournament list outer cards.
+
+3. REPAIR CORRUPT / MISSING FILES & SYNTAX CLEANUP:
+- Scan all controllers, routes, models, and frontend components for any stray text, accidental duplicate exports, missing imports, or corrupted blocks that were broken in previous iterations.
+- Clean up any messy spacing, broken braces `}`, empty files, or syntactical errors causing build/runtime crashes. 
+- Ensure all environment variables, database connections (Mongoose/MongoDB), and server entry points are 100% stable, fully synced, and restart without a single console warning or error crash.
+
+Perform this total system fix carefully in one comprehensive sweep. Do not break existing user data, wallets, or authentications.
