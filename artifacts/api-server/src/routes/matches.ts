@@ -22,12 +22,16 @@ function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
   if (!isCompleted && match.roomId) {
     if (now < hideAt) {
       if (match.roomReleaseAt) {
-        // Timing explicitly set — respect it strictly, regardless of match status
+        // Timing explicitly set — respect it strictly
         if (now >= new Date(match.roomReleaseAt)) {
           roomVisible = true;
-          if (effectiveStatus === "scheduled") effectiveStatus = "live";
+          // Only flip to "live" when actual match start time is also reached.
+          // Room opening (credentials released early) does NOT make the match live.
+          if (effectiveStatus === "scheduled" && now >= startTime) {
+            effectiveStatus = "live";
+          }
         }
-        // now < roomReleaseAt → keep hidden even if status is "live"
+        // now < roomReleaseAt → keep hidden; or room open but start not reached → stay "scheduled"
       } else if (match.status === "live") {
         // No timing configured + admin manually marked live → show room
         roomVisible = true;

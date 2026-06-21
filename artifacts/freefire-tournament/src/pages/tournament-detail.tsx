@@ -200,6 +200,8 @@ export default function TournamentDetailPage() {
   const liveMatches = matches.filter(m => m.status === "live");
   const upcomingMatches = matches.filter(m => m.status === "scheduled");
   const completedMatches = matches.filter(m => m.status === "completed");
+  // roomOpen: credentials have been released for a scheduled match (NOT yet live)
+  const roomOpen = matches.some(m => m.roomVisible && m.status === "scheduled");
 
   const doJoin = async () => {
     if (!user) { setLocation("/sign-in"); return; }
@@ -509,18 +511,21 @@ export default function TournamentDetailPage() {
 
             {/* Upcoming Matches */}
             {upcomingMatches.length > 0 && (
-              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
+              <div className={`rounded-xl border p-5 ${roomOpen ? "bg-[#ff6b00]/5 border-[#ff6b00]/30" : "bg-[#12121a] border-[#ff6b00]/20"}`}>
                 <h3 className="text-white font-bold uppercase text-sm mb-3 tracking-wider flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#ff6b00]" /> Scheduled Matches
+                  {roomOpen && (
+                    <span className="ml-auto text-[10px] font-black text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse inline-block" /> Room Open
+                    </span>
+                  )}
                 </h3>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {upcomingMatches.map(match => {
                     const scheduledMs = new Date(match.scheduledAt).getTime();
-                    // Use actual release time from backend; fall back to 10 min before start
                     const releaseMs = match.roomReleaseAt
                       ? new Date(match.roomReleaseAt).getTime()
                       : scheduledMs - 10 * 60 * 1000;
-                    // Use actual hide time from backend; fall back to 60 min after start
                     const hideMs = match.roomHideAt
                       ? new Date(match.roomHideAt).getTime()
                       : scheduledMs + 60 * 60 * 1000;
@@ -529,23 +534,58 @@ export default function TournamentDetailPage() {
                     const roomClosed = nowMs >= hideMs;
                     const roomSoon = !roomClosed && minsToRelease <= 60 && minsToRelease > 0;
                     return (
-                      <div key={match.id} className="flex items-center justify-between py-2.5 border-b border-[#1a1a24] last:border-0">
-                        <div className="flex items-center gap-3">
-                          <span className="text-[#a0a0b0] text-xs uppercase bg-[#1a1a24] px-2 py-0.5 rounded font-bold">#{match.matchNumber}</span>
-                          <div>
-                            <div className="text-white text-sm font-bold">Match #{match.matchNumber}</div>
-                            {match.mapName && <div className="text-[#a0a0b0] text-xs">{match.mapName}</div>}
+                      <div key={match.id} className="border-b border-[#1a1a24] last:border-0 pb-3 last:pb-0">
+                        <div className="flex items-center justify-between py-1">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[#a0a0b0] text-xs uppercase bg-[#1a1a24] px-2 py-0.5 rounded font-bold">#{match.matchNumber}</span>
+                            <div>
+                              <div className="text-white text-sm font-bold">Match #{match.matchNumber}</div>
+                              {match.mapName && <div className="text-[#a0a0b0] text-xs">{match.mapName}</div>}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-white text-sm font-bold">{new Date(match.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                            <div className="text-[#a0a0b0] text-xs">{new Date(match.scheduledAt).toLocaleDateString()}</div>
+                            {match.roomVisible ? (
+                              <div className="text-[#ff6b00] text-[10px] font-black mt-0.5 flex items-center justify-end gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse inline-block" /> Room Open
+                              </div>
+                            ) : roomClosed ? (
+                              <div className="text-[#a0a0b0] text-[10px] font-bold mt-0.5">🔴 Room closed</div>
+                            ) : roomSoon ? (
+                              <div className="text-yellow-400 text-[10px] font-bold mt-0.5 animate-pulse">⏳ Room in {minsToRelease}m</div>
+                            ) : null}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-white text-sm font-bold">{new Date(match.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-                          <div className="text-[#a0a0b0] text-xs">{new Date(match.scheduledAt).toLocaleDateString()}</div>
-                          {roomClosed ? (
-                            <div className="text-[#a0a0b0] text-[10px] font-bold mt-0.5">🔴 Room closed</div>
-                          ) : roomSoon ? (
-                            <div className="text-yellow-400 text-[10px] font-bold mt-0.5 animate-pulse">⏳ Room in {minsToRelease}m</div>
-                          ) : null}
-                        </div>
+                        {/* Show credentials when room is open, to joined players only */}
+                        {match.roomVisible && isJoined && (
+                          <div className="grid grid-cols-2 gap-3 mt-2">
+                            <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-[#ff6b00]/20">
+                              <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
+                                <Key className="w-3 h-3" /> Room ID
+                              </div>
+                              <div className="text-white font-mono font-black text-lg">{match.roomId}</div>
+                            </div>
+                            <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-[#ff6b00]/20">
+                              <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
+                                <Lock className="w-3 h-3" /> Password
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-white font-mono font-black text-lg">
+                                  {showRoomPass ? match.roomPassword : "••••••"}
+                                </div>
+                                <button onClick={() => setShowRoomPass(!showRoomPass)} className="text-[#a0a0b0] hover:text-white">
+                                  {showRoomPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        {match.roomVisible && !isJoined && (
+                          <div className="mt-2 text-center text-[#a0a0b0] text-xs py-2 bg-[#1a1a24] rounded-lg">
+                            Join the tournament to view room credentials.
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -856,6 +896,11 @@ export default function TournamentDetailPage() {
                       <div className="w-full text-center py-3.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-black uppercase rounded-xl text-sm flex items-center justify-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[#ff2244] animate-pulse inline-block" />
                         Match Live — Registration Closed
+                      </div>
+                    ) : roomOpen ? (
+                      <div className="w-full text-center py-3.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] font-black uppercase rounded-xl text-sm flex items-center justify-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-[#ff6b00] animate-pulse inline-block" />
+                        Room Open — Registration Closed
                       </div>
                     ) : isEnded ? (
                       <div className="w-full text-center py-3.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase rounded-xl text-sm">
