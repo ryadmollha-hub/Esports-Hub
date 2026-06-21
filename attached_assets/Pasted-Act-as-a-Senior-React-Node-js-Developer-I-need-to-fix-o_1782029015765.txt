@@ -1,0 +1,23 @@
+Act as a Senior React & Node.js Developer. I need to fix our user login routing and implement a dynamic match-specific Leaderboard/Result button on the Tournament Cards. 
+
+Please inspect our frontend pages and components, then implement these two specific tasks:
+
+==================================================
+TASK 1: LOGIN REDIRECTION ROUTING
+==================================================
+1. Locate the Login function component (e.g., `/login` or auth hooks). 
+2. Currently, when a user logs in for the first time or logs back in after logging out, they are redirected to a default home page. Change this behavior completely.
+3. Update the post-login routing logic (using `useNavigate` or router push) to immediately redirect the authenticated user to the "All Tournaments Category" page (the page rendering the main tournament grid).
+
+==================================================
+TASK 2: DYNAMIC MATCH LEADERBOARD BUTTON ON CARDS
+==================================================
+1. Locate the Tournament Card component (rendered in the main grid shown in the 3rd image).
+2. Modify the card component to check the status of the match/tournament. If the Admin has published the results (`tournament.status === 'completed'` or `resultsPublished === true`):
+   - Automatically display a beautifully styled action button named "🏆 View Leaderboard" or "View Result" on the card layout (e.g., positioned clearly in the bottom action row).
+3. When a user clicks this "View Leaderboard" button:
+   - Instead of navigating away or forcing them to go into their profile settings, open a clean, interactive Modal/Popup right over the current page.
+   - Inside this modal, fetch and render the match-specific leaderboard standings (exactly like the layout shown in the 2nd image: Rank, Player Name/UID, Kills, and Prize Amount).
+4. Ensure proper loading indicators are displayed while fetching that specific match's score data from the API.
+
+Please execute these routing and UI updates cleanly, keeping the layouts responsive and professional. Let me know once updated.
