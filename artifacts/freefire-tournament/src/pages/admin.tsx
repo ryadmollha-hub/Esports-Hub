@@ -156,7 +156,7 @@ export default function AdminPage() {
   const [showTournamentMatchForm, setShowTournamentMatchForm] = useState<Record<number, boolean>>({});
   const [tournamentMatchForms, setTournamentMatchForms] = useState<Record<number, { matchNumber: string; scheduledAt: string; mapName: string }>>({});
   const [creatingTournamentMatch, setCreatingTournamentMatch] = useState<Record<number, boolean>>({});
-  const [tournamentMatchRoomForms, setTournamentMatchRoomForms] = useState<Record<number, { roomId: string; roomPassword: string }>>({});
+  const [tournamentMatchRoomForms, setTournamentMatchRoomForms] = useState<Record<number, { roomId: string; roomPassword: string; releaseMode: "now" | "before10"; hideMinutesAfter: string }>>({});
   const [settingTournamentMatchRoom, setSettingTournamentMatchRoom] = useState<Record<number, boolean>>({});
   const [tournamentsLoading, setTournamentsLoading] = useState(false);
   const [matchesLoading, setMatchesLoading] = useState(false);
@@ -281,6 +281,9 @@ export default function AdminPage() {
       toast({ title: "Enter Room ID", variant: "destructive" });
       return;
     }
+    const relMode = form.releaseMode ?? "before10";
+    const minutesBefore = relMode === "now" ? -1 : 10;
+    const hideAfter = parseInt(form.hideMinutesAfter ?? "5") || 5;
     setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: true }));
     try {
       const res = await apiFetch(`/matches/${matchId}/room`, {
@@ -288,12 +291,15 @@ export default function AdminPage() {
         body: JSON.stringify({
           roomId: form.roomId,
           roomPassword: form.roomPassword ?? "",
-          roomReleaseMinutesBefore: 10,
-          roomHideMinutesAfter: 5,
+          roomReleaseMinutesBefore: minutesBefore,
+          roomHideMinutesAfter: hideAfter,
         }),
       });
       if (res.ok) {
-        toast({ title: "✅ Room saved!" });
+        const desc = relMode === "now"
+          ? "Room credentials are live immediately."
+          : `Room opens 10 min before match · hides ${hideAfter} min after.`;
+        toast({ title: "✅ Room saved!", description: desc });
         setTournamentMatchRoomForms((prev) => { const n = { ...prev }; delete n[matchId]; return n; });
         loadTournamentMatchesById(tournamentId);
       } else {
@@ -443,7 +449,7 @@ export default function AdminPage() {
     if (activeTab === "registrations") loadRegistrations();
     if (activeTab === "announcements") loadAnnouncements();
     if (activeTab === "deposits" || activeTab === "withdrawals") loadWallet();
-    if (activeTab === "matches") { loadTournaments(); if (selectedTournament) loadMatches(); }
+    if (activeTab === "matches") { loadTournaments(); }
     if (activeTab === "user-matches") { loadUserMatches(); loadCommunityRules(); }
     if (activeTab === "maintenance") loadMaintenance();
     if (activeTab === "reports") loadReports(reportsFilter);
@@ -1786,53 +1792,126 @@ export default function AdminPage() {
                                 </div>
                               </div>
 
-                              {/* Room credentials for this match */}
-                              <div className="mt-2 pt-2 border-t border-[#2a2a36]">
-                                {m.roomId ? (
-                                  <div className="flex items-center gap-3 text-xs mb-2 flex-wrap">
-                                    <span className="text-[#00ff88] font-bold flex items-center gap-1">
+                              {/* ── Room Password Release Panel ── */}
+                              <div className="mt-3 pt-3 border-t border-[#2a2a36]">
+                                <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3 flex items-center gap-2">
+                                  <Key className="w-3 h-3" /> Room Password Release
+                                </p>
+
+                                {/* Current saved status */}
+                                {m.roomId && (
+                                  <div className="flex items-center gap-3 text-xs mb-3 p-2.5 bg-[#080810] border border-[#2a2a36] rounded-xl flex-wrap">
+                                    <span className="text-[#00ff88] font-bold flex items-center gap-1.5">
                                       <Key className="w-3 h-3" /> <span className="font-mono">{m.roomId}</span>
                                     </span>
-                                    <span className="text-[#a0a0b0]">Pass: <span className="font-mono text-white">{m.roomPassword}</span></span>
+                                    {m.roomPassword && <span className="text-[#a0a0b0]">Pass: <span className="font-mono text-white">{m.roomPassword}</span></span>}
                                     {(() => {
                                       const now = Date.now();
                                       const rel = m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null;
                                       const hid = m.roomHideAt ? new Date(m.roomHideAt).getTime() : null;
-                                      if (rel && now >= rel && (!hid || now < hid)) return <span className="text-[#00ff88] text-[10px] font-bold">🟢 Live</span>;
-                                      if (rel && now < rel) return <span className="text-yellow-400 text-[10px] font-bold">⏳ {new Date(rel).toLocaleTimeString()}</span>;
-                                      return <span className="text-[#ff2244] text-[10px] font-bold">🔴 Hidden</span>;
+                                      if (rel && now >= rel && (!hid || now < hid)) return <span className="text-[#00ff88] text-[10px] font-black border border-[#00ff88]/30 bg-[#00ff88]/5 px-2 py-0.5 rounded-full">🟢 LIVE</span>;
+                                      if (rel && now < rel) return <span className="text-yellow-400 text-[10px] font-black border border-yellow-400/20 bg-yellow-400/5 px-2 py-0.5 rounded-full">⏳ Opens {new Date(rel).toLocaleTimeString()}</span>;
+                                      return <span className="text-[#ff2244] text-[10px] font-black border border-[#ff2244]/20 bg-[#ff2244]/5 px-2 py-0.5 rounded-full">🔴 Hidden</span>;
                                     })()}
                                   </div>
-                                ) : (
-                                  <p className="text-[#606070] text-[10px] mb-2">No room set</p>
                                 )}
-                                <div className="flex gap-2 items-end flex-wrap">
-                                  <div>
-                                    <label className="text-[#606070] text-[10px] uppercase block mb-1">Room ID</label>
-                                    <input
-                                      placeholder="Room ID"
-                                      value={tournamentMatchRoomForms[m.id]?.roomId ?? ""}
-                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({ ...prev, [m.id]: { roomId: e.target.value, roomPassword: prev[m.id]?.roomPassword ?? "" } }))}
-                                      className="admin-input-sm w-28"
-                                    />
+
+                                {/* Release timing toggles */}
+                                <div className="mb-3">
+                                  <p className="text-[#606070] text-[10px] uppercase font-bold mb-2">Release Timing</p>
+                                  <div className="flex gap-2 flex-wrap">
+                                    {(["now", "before10"] as const).map((mode) => (
+                                      <button
+                                        key={mode}
+                                        onClick={() => setTournamentMatchRoomForms((prev) => ({
+                                          ...prev,
+                                          [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "" }), releaseMode: mode },
+                                        }))}
+                                        className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg border transition-colors ${
+                                          (tournamentMatchRoomForms[m.id]?.releaseMode ?? "before10") === mode
+                                            ? "bg-[#ff6b00] border-[#ff6b00] text-white shadow-lg shadow-[#ff6b00]/20"
+                                            : "bg-[#0d0d16] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"
+                                        }`}
+                                      >
+                                        {mode === "now" ? "⚡ Manually (now)" : "⏱ 10 min before"}
+                                      </button>
+                                    ))}
                                   </div>
-                                  <div>
-                                    <label className="text-[#606070] text-[10px] uppercase block mb-1">Password</label>
-                                    <input
-                                      placeholder="Password"
-                                      value={tournamentMatchRoomForms[m.id]?.roomPassword ?? ""}
-                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({ ...prev, [m.id]: { roomId: prev[m.id]?.roomId ?? "", roomPassword: e.target.value } }))}
-                                      className="admin-input-sm w-28"
-                                    />
-                                  </div>
-                                  <button
-                                    onClick={() => setTournamentMatchRoomCredentials(t.id, m.id)}
-                                    disabled={settingTournamentMatchRoom[m.id]}
-                                    className="px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-[10px] uppercase rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50"
-                                  >
-                                    {settingTournamentMatchRoom[m.id] ? "Saving..." : "Set Room"}
-                                  </button>
                                 </div>
+
+                                {/* Room ID & Password inputs */}
+                                <div className="grid grid-cols-2 gap-3 mb-3">
+                                  <div>
+                                    <label className="text-[#606070] text-[10px] uppercase block mb-1">Room ID *</label>
+                                    <input
+                                      placeholder="Enter Room ID"
+                                      value={tournamentMatchRoomForms[m.id]?.roomId ?? m.roomId ?? ""}
+                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({
+                                        ...prev,
+                                        [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: "", roomPassword: "" }), roomId: e.target.value },
+                                      }))}
+                                      className="admin-input-sm w-full"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-[#606070] text-[10px] uppercase block mb-1">Room Password</label>
+                                    <input
+                                      placeholder="Enter Password"
+                                      value={tournamentMatchRoomForms[m.id]?.roomPassword ?? m.roomPassword ?? ""}
+                                      onChange={(e) => setTournamentMatchRoomForms((prev) => ({
+                                        ...prev,
+                                        [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: "", roomPassword: "" }), roomPassword: e.target.value },
+                                      }))}
+                                      className="admin-input-sm w-full"
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Timing preview */}
+                                {(() => {
+                                  const form = tournamentMatchRoomForms[m.id];
+                                  const relMode = form?.releaseMode ?? "before10";
+                                  const scheduledMs = m.scheduledAt ? new Date(m.scheduledAt).getTime() : null;
+                                  const hideAfterMin = parseInt(form?.hideMinutesAfter ?? "5") || 5;
+                                  const opensAt = scheduledMs ? (relMode === "now" ? new Date() : new Date(scheduledMs - 10 * 60 * 1000)) : null;
+                                  const hidesAt = scheduledMs ? new Date(scheduledMs + hideAfterMin * 60 * 1000) : null;
+                                  return (
+                                    <div className="flex flex-col gap-1.5 mb-3 px-3 py-2.5 bg-[#060610] border border-[#1a1a28] rounded-xl">
+                                      <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-[#505060] uppercase font-bold tracking-wider">Visible from</span>
+                                        <span className="text-[#00ff88] font-bold">{opensAt ? (relMode === "now" ? "Immediately upon save" : opensAt.toLocaleString()) : "—"}</span>
+                                      </div>
+                                      <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-[#505060] uppercase font-bold tracking-wider">Auto-expires</span>
+                                        <span className="text-[#ff4444] font-bold">{hidesAt ? hidesAt.toLocaleString() : "—"}</span>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+
+                                {/* Hide after N minutes */}
+                                <div className="mb-3">
+                                  <label className="text-[#606070] text-[10px] uppercase block mb-1">Room Closes At (min after match start)</label>
+                                  <input
+                                    type="number" min="0" max="120" placeholder="5"
+                                    value={tournamentMatchRoomForms[m.id]?.hideMinutesAfter ?? "5"}
+                                    onChange={(e) => setTournamentMatchRoomForms((prev) => ({
+                                      ...prev,
+                                      [m.id]: { ...(prev[m.id] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "" }), hideMinutesAfter: e.target.value },
+                                    }))}
+                                    className="admin-input-sm w-24"
+                                  />
+                                </div>
+
+                                <button
+                                  onClick={() => setTournamentMatchRoomCredentials(t.id, m.id)}
+                                  disabled={settingTournamentMatchRoom[m.id]}
+                                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#ff6b00] text-white font-black text-xs uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 shadow-lg shadow-[#ff6b00]/20"
+                                >
+                                  {settingTournamentMatchRoom[m.id]
+                                    ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…</>
+                                    : "🔑 Save Credentials & Timing"}
+                                </button>
                               </div>
                             </div>
                           ))}
@@ -1856,619 +1935,499 @@ export default function AdminPage() {
             <div>
               <div className="mb-6">
                 <h1 className="text-2xl font-black uppercase">Manage <span className="text-[#ff6b00]">Matches</span></h1>
-                <p className="text-[#a0a0b0] text-sm mt-1">Results entry &amp; prize distribution. Create matches or set room details in the <span className="text-[#ff6b00] font-bold">Tournaments</span> tab.</p>
+                <p className="text-[#a0a0b0] text-sm mt-1">Results entry &amp; prize distribution for all tournament matches. Room details are managed in the <span className="text-[#ff6b00] font-bold">Tournaments</span> tab.</p>
               </div>
-              <div className="mb-6">
-                <label className="label-sm mb-2 block">Select Tournament</label>
-                <select
-                  value={selectedTournament ?? ""}
-                  onChange={(e) => setSelectedTournament(e.target.value ? parseInt(e.target.value) : null)}
-                  className="admin-input max-w-sm"
-                >
-                  <option value="">-- Select a tournament --</option>
-                  {tournaments.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
+
+              {tournamentsLoading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-20 bg-[#12121a] rounded-xl border border-[#ff6b00]/10 animate-pulse" />
                   ))}
-                </select>
-              </div>
-
-              {selectedTournament && (
+                </div>
+              ) : tournaments.length === 0 ? (
+                <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center text-[#a0a0b0] text-sm">
+                  <div className="text-4xl mb-3">🏆</div>
+                  <div className="font-black text-white mb-1">No Tournaments Yet</div>
+                  <div>Create a tournament in the <strong className="text-[#ff6b00]">Manage Tournaments</strong> tab first.</div>
+                </div>
+              ) : (
                 <>
-                  <div className="bg-[#0d0d16] border border-[#ff6b00]/10 rounded-xl px-4 py-3 mb-4 flex items-start gap-3">
-                    <span className="text-[#ff6b00] text-lg mt-0.5">ℹ️</span>
-                    <p className="text-xs text-[#a0a0b0] leading-relaxed">
-                      To <strong className="text-white">create matches</strong> or <strong className="text-white">set room credentials</strong>, go to the <strong className="text-[#ff6b00]">Manage Tournaments</strong> tab and expand the tournament's <em>Matches</em> section. This tab is dedicated to match results and prize distribution only.
-                    </p>
-                  </div>
-
                   <div className="space-y-4">
-                    {matchesLoading ? (
-                      [1, 2, 3].map((i) => (
-                        <div key={i} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 overflow-hidden animate-pulse">
-                          <div className="p-4 flex gap-3">
-                            <div className="flex-1 space-y-2">
-                              <div className="h-5 bg-[#1a1a24] rounded w-48" />
-                              <div className="h-4 bg-[#1a1a24] rounded w-32" />
-                            </div>
-                            <div className="flex gap-2">
-                              <div className="h-8 w-20 bg-[#1a1a24] rounded-lg" />
-                              <div className="h-8 w-24 bg-[#1a1a24] rounded-lg" />
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : matches.length === 0 ? (
-                      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-8 text-center text-[#a0a0b0] text-sm">
-                        <div className="text-3xl mb-2">🎮</div>
-                        No matches yet — go to the <strong className="text-[#ff6b00]">Tournaments</strong> tab to create matches for this tournament.
-                      </div>
-                    ) : matches.map((m: any) => {
-                      const isExpanded = expandedMatchResult[m.id];
-                      const rows = matchResultRows[m.id] ?? [];
-                      const hasResults = m.results && m.results.length > 0;
+                    {tournaments.map((t: any) => {
+                      const isOpen = expandedTournamentMatches[t.id] ?? false;
+                      const tMatches = tournamentMatchesList[t.id];
                       return (
-                        <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 overflow-hidden">
-                          {/* Match header */}
-                          <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                            <div className="flex-1">
-                              <div className="font-bold text-white text-base flex items-center gap-2 flex-wrap">
-                                {m.serialNumber && <span className="text-[#ff6b00] font-mono text-xs bg-[#ff6b00]/10 border border-[#ff6b00]/20 px-1.5 py-0.5 rounded">{m.serialNumber}</span>}
-                                Match #{m.matchNumber} — {m.mapName ?? "TBD"}
-                              </div>
-                              {m.scheduledAt && <div className="text-[#a0a0b0] text-sm">{new Date(m.scheduledAt).toLocaleString()}</div>}
-                              {m.roomId && (
-                                <div className="text-[#00ff88] text-xs mt-1 font-bold flex items-center gap-1">
-                                  <Key className="w-3 h-3" /> Room: {m.roomId} · Pass: {m.roomPassword}
+                        <div key={t.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 overflow-hidden">
+                          {/* Tournament accordion header */}
+                          <button
+                            onClick={() => {
+                              const open = !isOpen;
+                              setExpandedTournamentMatches((prev) => ({ ...prev, [t.id]: open }));
+                              if (open && !tMatches) loadTournamentMatchesById(t.id);
+                            }}
+                            className="w-full flex items-center justify-between px-5 py-4 hover:bg-[#16161e] transition-colors text-left"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="text-[#ff6b00] text-xl shrink-0">🏆</span>
+                              <div className="min-w-0">
+                                <div className="font-black text-white text-sm truncate">{t.name}</div>
+                                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                  <span className="text-[10px] text-[#a0a0b0] uppercase tracking-wider">{t.mode}</span>
+                                  <span className={statusBadge(t.status)}>{t.status}</span>
+                                  {tMatches && (
+                                    <span className="text-[10px] bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/20 px-1.5 py-0.5 rounded-full font-black">
+                                      {tMatches.length} match{tMatches.length !== 1 ? "es" : ""}
+                                    </span>
+                                  )}
+                                  {t.prizePool > 0 && (
+                                    <span className="text-[10px] text-yellow-400 font-bold">৳{Number(t.prizePool).toLocaleString()} pool</span>
+                                  )}
                                 </div>
-                              )}
-                              {hasResults && (
-                                <div className="text-[#00ff88] text-xs mt-1 font-bold">✓ {m.results.length} players ranked</div>
-                              )}
+                              </div>
                             </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className={statusBadge(m.status)}>{m.status}</span>
-                              {(() => {
-                                const lc = matchLifecycle(m);
-                                if (!lc) return null;
+                            <span className="text-[#606070] text-xs ml-3 shrink-0">{isOpen ? "▲ Collapse" : "▼ Expand"}</span>
+                          </button>
+
+                          {isOpen && (
+                            <div className="border-t border-[#ff6b00]/10 p-4 space-y-4">
+                              {tournamentMatchesLoading[t.id] ? (
+                                [1, 2, 3].map((i) => (
+                                  <div key={i} className="h-20 bg-[#1a1a24] rounded-xl animate-pulse" />
+                                ))
+                              ) : !tMatches || tMatches.length === 0 ? (
+                                <div className="text-center py-7 text-[#606070] text-xs border border-dashed border-[#2a2a36] rounded-xl">
+                                  🎮 No matches for this tournament yet. Go to <strong className="text-[#ff6b00]">Manage Tournaments</strong> → expand this tournament → "Add Match".
+                                </div>
+                              ) : tMatches.map((m: any) => {
+                                const isExpanded = expandedMatchResult[m.id];
+                                const rows = matchResultRows[m.id] ?? [];
+                                const hasResults = m.results && m.results.length > 0;
                                 return (
-                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-black uppercase ${lc.cls}`}>
-                                    {lc.dot && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse shrink-0" />}
-                                    {lc.label}
-                                  </span>
-                                );
-                              })()}
-                              {m.status === "scheduled" && (
-                                <button
-                                  onClick={() => updateMatchStatus(m.id, "live")}
-                                  disabled={updatingMatchStatus[m.id]}
-                                  className="flex items-center gap-1 px-2.5 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-xs font-bold hover:bg-green-500/20 transition-colors disabled:opacity-50"
-                                >
-                                  <Radio className="w-3 h-3" /> Go Live
-                                </button>
-                              )}
-                              {m.status === "live" && (
-                                <button
-                                  onClick={() => updateMatchStatus(m.id, "completed")}
-                                  disabled={updatingMatchStatus[m.id]}
-                                  className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-500/10 border border-gray-500/20 rounded-lg text-gray-400 text-xs font-bold hover:bg-gray-500/20 transition-colors disabled:opacity-50"
-                                >
-                                  <CheckCircle className="w-3 h-3" /> Complete
-                                </button>
-                              )}
-                              <button
-                                onClick={() => {
-                                  setExpandedMatchResult((prev) => ({ ...prev, [m.id]: !prev[m.id] }));
-                                  if (!matchResultRows[m.id]) {
-                                    if (hasResults) {
-                                      setMatchResultRows((prev) => ({
-                                        ...prev,
-                                        [m.id]: m.results.map((r: any) => ({
-                                          playerName: r.playerName,
-                                          rank: String(r.rank),
-                                          kills: String(r.kills),
-                                          prizeMoney: String(r.prizeMoney ?? r.points ?? ""),
-                                        })),
-                                      }));
-                                    } else {
-                                      setMatchResultRows((prev) => ({ ...prev, [m.id]: [] }));
-                                    }
-                                  }
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-lg text-[#ff6b00] text-xs font-bold hover:bg-[#ff6b00]/20 transition-colors"
-                              >
-                                {isExpanded ? "▲ Close" : "▼ Enter Results"}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  const opening = !expandedPrize[m.id];
-                                  setExpandedPrize((prev) => ({ ...prev, [m.id]: opening }));
-                                  if (opening && !prizeRegData[m.id] && selectedTournament) {
-                                    loadPrizeRegistrations(m.id, selectedTournament);
-                                  }
-                                }}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${m.prizeDistributed ? "bg-[#00ff88]/10 border-[#00ff88]/30 text-[#00ff88]" : "bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20"}`}
-                              >
-                                {m.prizeDistributed ? "✅ Prizes Paid" : "💰 Prizes"}
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  const showing = !showMatchRegPlayers[m.id];
-                                  setShowMatchRegPlayers((prev) => ({ ...prev, [m.id]: showing }));
-                                  if (showing && matchRegPlayers.length === 0 && selectedTournament) {
-                                    setLoadingMatchRegPlayers(true);
-                                    try {
-                                      const res = await apiFetch(`/tournaments/${selectedTournament}/registrations`);
-                                      if (res.ok) setMatchRegPlayers(await res.json());
-                                    } catch {} finally { setLoadingMatchRegPlayers(false); }
-                                  }
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-lg text-blue-400 text-xs font-bold hover:bg-blue-500/20 transition-colors"
-                              >
-                                👥 Players
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Players Panel */}
-                          {showMatchRegPlayers[m.id] && (
-                            <div className="border-t border-[#ff6b00]/5 px-4 py-3 bg-[#0a0a16]/40">
-                              <p className="text-xs text-[#a0a0b0] uppercase font-bold mb-2">👥 Registered Players</p>
-                              {loadingMatchRegPlayers ? (
-                                <div className="text-xs text-[#a0a0b0]">Loading...</div>
-                              ) : matchRegPlayers.filter((p: any) => p.status === "approved").length === 0 ? (
-                                <div className="text-xs text-[#a0a0b0]">No approved registrations yet.</div>
-                              ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1 max-h-40 overflow-y-auto">
-                                  {matchRegPlayers.filter((p: any) => p.status === "approved").map((p: any, i: number) => (
-                                    <div key={p.id} className="text-xs bg-[#0a0a0f] border border-[#2a2a36] rounded px-2 py-1 flex items-center gap-1.5">
-                                      <span className="text-[#a0a0b0] shrink-0">#{i + 1}</span>
-                                      <span className="text-white truncate">{p.playerName ?? p.username ?? p.userId}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Result entry panel */}
-                          {isExpanded && (
-                            <div className="border-t border-[#ff6b00]/10 bg-[#0d0d16] p-4">
-                              <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-black uppercase text-[#ff6b00] text-sm">Enter Rankings</h3>
-                                <button
-                                  onClick={() => addMatchResultRow(m.id)}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00] text-white font-bold text-xs uppercase rounded-lg hover:bg-[#e66000] transition-colors"
-                                >
-                                  <Plus className="w-3.5 h-3.5" /> Add Row
-                                </button>
-                              </div>
-
-                              {rows.length === 0 ? (
-                                <div className="text-center py-6 text-[#a0a0b0] text-sm">
-                                  Click "Add Row" to enter player results, or pre-fill from existing results above.
-                                </div>
-                              ) : (
-                                <div className="space-y-2 mb-4">
-                                  {/* Header */}
-                                  <div className="grid grid-cols-12 gap-2 text-[#606070] text-[10px] uppercase px-1">
-                                    <div className="col-span-4">Player Name *</div>
-                                    <div className="col-span-2">Rank *</div>
-                                    <div className="col-span-2">Kills</div>
-                                    <div className="col-span-2">Prize ৳</div>
-                                    <div className="col-span-2" />
-                                  </div>
-                                  {rows.map((row, idx) => (
-                                    <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-                                      <div className="col-span-4">
-                                        <input
-                                          value={row.playerName}
-                                          onChange={(e) => updateMatchResultRow(m.id, idx, "playerName", e.target.value)}
-                                          placeholder="Player / Team"
-                                          className="w-full bg-[#12121a] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff6b00] transition-colors"
-                                        />
+                                  <div key={m.id} className="bg-[#0d0d18] rounded-xl border border-[#2a2a36] overflow-hidden">
+                                    {/* Match header */}
+                                    <div className="p-4 flex flex-col sm:flex-row sm:items-start gap-3">
+                                      <div className="flex-1">
+                                        <div className="font-bold text-white text-base flex items-center gap-2 flex-wrap">
+                                          {m.serialNumber && (
+                                            <span className="text-[#ff6b00] font-mono text-xs bg-[#ff6b00]/10 border border-[#ff6b00]/20 px-1.5 py-0.5 rounded">{m.serialNumber}</span>
+                                          )}
+                                          Match #{m.matchNumber}
+                                          {m.mapName && <span className="text-[#a0a0b0] font-normal text-sm">— {m.mapName}</span>}
+                                        </div>
+                                        {m.scheduledAt && <div className="text-[#a0a0b0] text-xs mt-0.5">{new Date(m.scheduledAt).toLocaleString()}</div>}
+                                        {m.roomId && (
+                                          <div className="text-[#00ff88] text-xs mt-1 font-bold flex items-center gap-1">
+                                            <Key className="w-3 h-3" /> Room: {m.roomId} · Pass: {m.roomPassword}
+                                          </div>
+                                        )}
+                                        {hasResults && <div className="text-[#00ff88] text-xs mt-1 font-bold">✓ {m.results.length} players ranked</div>}
                                       </div>
-                                      <div className="col-span-2">
-                                        <input
-                                          type="number"
-                                          value={row.rank}
-                                          onChange={(e) => updateMatchResultRow(m.id, idx, "rank", e.target.value)}
-                                          placeholder={String(idx + 1)}
-                                          min="1"
-                                          className="w-full bg-[#12121a] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff6b00] transition-colors"
-                                        />
-                                      </div>
-                                      <div className="col-span-2">
-                                        <input
-                                          type="number"
-                                          value={row.kills}
-                                          onChange={(e) => updateMatchResultRow(m.id, idx, "kills", e.target.value)}
-                                          placeholder="0"
-                                          min="0"
-                                          className="w-full bg-[#12121a] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff6b00] transition-colors"
-                                        />
-                                      </div>
-                                      <div className="col-span-2">
-                                        <input
-                                          type="number"
-                                          value={row.prizeMoney}
-                                          onChange={(e) => updateMatchResultRow(m.id, idx, "prizeMoney", e.target.value)}
-                                          placeholder="0"
-                                          min="0"
-                                          className="w-full bg-[#12121a] border border-[#2a2a36] rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-[#ff6b00] transition-colors"
-                                        />
-                                      </div>
-                                      <div className="col-span-2 flex justify-center">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className={statusBadge(m.status)}>{m.status}</span>
+                                        {(() => {
+                                          const lc = matchLifecycle(m);
+                                          if (!lc) return null;
+                                          return (
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-black uppercase ${lc.cls}`}>
+                                              {lc.dot && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse shrink-0" />}
+                                              {lc.label}
+                                            </span>
+                                          );
+                                        })()}
+                                        {m.status === "scheduled" && (
+                                          <button
+                                            onClick={() => updateMatchStatus(m.id, "live")}
+                                            disabled={updatingMatchStatus[m.id]}
+                                            className="flex items-center gap-1 px-2.5 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-xs font-bold hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                                          >
+                                            <Radio className="w-3 h-3" /> Go Live
+                                          </button>
+                                        )}
+                                        {m.status === "live" && (
+                                          <button
+                                            onClick={() => updateMatchStatus(m.id, "completed")}
+                                            disabled={updatingMatchStatus[m.id]}
+                                            className="flex items-center gap-1 px-2.5 py-1.5 bg-gray-500/10 border border-gray-500/20 rounded-lg text-gray-400 text-xs font-bold hover:bg-gray-500/20 transition-colors disabled:opacity-50"
+                                          >
+                                            <CheckCircle className="w-3 h-3" /> Complete
+                                          </button>
+                                        )}
                                         <button
-                                          onClick={() => removeMatchResultRow(m.id, idx)}
-                                          className="w-8 h-8 rounded-lg bg-[#ff2244]/10 text-[#ff2244] hover:bg-[#ff2244]/20 flex items-center justify-center transition-colors"
+                                          onClick={() => {
+                                            setExpandedMatchResult((prev) => ({ ...prev, [m.id]: !prev[m.id] }));
+                                            if (!matchResultRows[m.id]) {
+                                              setMatchResultRows((prev) => ({
+                                                ...prev,
+                                                [m.id]: hasResults
+                                                  ? m.results.map((r: any) => ({ playerName: r.playerName, rank: String(r.rank), kills: String(r.kills), prizeMoney: String(r.prizeMoney ?? r.points ?? "") }))
+                                                  : [],
+                                              }));
+                                            }
+                                          }}
+                                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-lg text-[#ff6b00] text-xs font-bold hover:bg-[#ff6b00]/20 transition-colors"
                                         >
-                                          <Trash2 className="w-3.5 h-3.5" />
+                                          {isExpanded ? "▲ Close" : "▼ Publish Results"}
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            const opening = !expandedPrize[m.id];
+                                            setExpandedPrize((prev) => ({ ...prev, [m.id]: opening }));
+                                            if (opening && !prizeRegData[m.id]) loadPrizeRegistrations(m.id, t.id);
+                                          }}
+                                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors border ${m.prizeDistributed ? "bg-[#00ff88]/10 border-[#00ff88]/30 text-[#00ff88]" : "bg-yellow-500/10 border-yellow-500/20 text-yellow-400 hover:bg-yellow-500/20"}`}
+                                        >
+                                          {m.prizeDistributed ? "✅ Prizes Paid" : "💰 Prize Distribution"}
                                         </button>
                                       </div>
                                     </div>
-                                  ))}
-                                </div>
-                              )}
 
-                              {rows.length > 0 && (
-                                <div className="flex items-center gap-3 pt-3 border-t border-[#2a2a36]">
-                                  <button
-                                    onClick={() => submitMatchResults(m.id)}
-                                    disabled={submittingMatchResult[m.id]}
-                                    className="flex items-center gap-2 px-5 py-2.5 bg-[#00ff88] text-[#0a0a0f] font-black text-xs uppercase rounded-xl hover:bg-[#00cc70] disabled:opacity-50 transition-colors"
-                                  >
-                                    {submittingMatchResult[m.id] ? "Saving..." : "💾 Save Results & Mark Complete"}
-                                  </button>
-                                  <button
-                                    onClick={() => addMatchResultRow(m.id)}
-                                    className="flex items-center gap-1.5 px-4 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-xs uppercase rounded-xl hover:text-white transition-colors"
-                                  >
-                                    <Plus className="w-3.5 h-3.5" /> Add Row
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Prize Distribution Panel */}
-                          {expandedPrize[m.id] && (
-                            <div className="border-t border-yellow-500/20 bg-[#08080f]">
-                              {/* ── Header ── */}
-                              <div className="flex items-center justify-between px-5 py-3 border-b border-[#1a1a26]">
-                                <div className="flex items-center gap-2.5">
-                                  <span className="text-base">💰</span>
-                                  <span className="font-black uppercase text-white text-sm tracking-wide">Prize Distribution</span>
-                                  {m.prizeDistributed && (
-                                    <span className="text-[10px] font-bold border border-[#00ff88]/30 bg-[#00ff88]/10 text-[#00ff88] px-2 py-0.5 rounded-full">✅ PAID</span>
-                                  )}
-                                </div>
-                                <button onClick={() => setExpandedPrize((prev) => ({ ...prev, [m.id]: false }))} className="text-[#505060] hover:text-white text-xs transition-colors">✕ Close</button>
-                              </div>
-
-                              {prizeRegData[m.id]?.loading ? (
-                                <div className="flex items-center justify-center gap-2 py-10 text-[#606070] text-sm">
-                                  <span className="animate-spin">⏳</span> Loading registrations…
-                                </div>
-                              ) : !prizeRegData[m.id] || prizeRegData[m.id].registrations.length === 0 ? (
-                                <div className="text-center py-10 text-[#505060] text-sm">No approved registrations found for this tournament.</div>
-                              ) : (() => {
-                                const prd = prizeRegData[m.id];
-                                const t = prd.tournament;
-                                const regs = prd.registrations;
-                                const placements = prizePlacements[m.id] ?? {};
-                                const kills = prizeKills[m.id] ?? {};
-                                const preview = prizePreviewData[m.id];
-
-                                // Flat list of every player across all teams for the kill table
-                                const allPlayers: { regId: number; mIdx: number; name: string; uid: string; isCapt: boolean; teamName: string; teamSize: number }[] = [];
-                                for (const reg of regs) {
-                                  const members = reg.teamMembersArr ?? [];
-                                  allPlayers.push({ regId: reg.id, mIdx: 0, name: reg.playerName, uid: reg.freefireUid ?? "", isCapt: true, teamName: reg.playerName, teamSize: 1 + members.length });
-                                  members.forEach((mem: any, i: number) => {
-                                    allPlayers.push({ regId: reg.id, mIdx: i + 1, name: mem.name, uid: mem.uid ?? "", isCapt: false, teamName: reg.playerName, teamSize: 1 + members.length });
-                                  });
-                                }
-
-                                // Prize tier amounts for display
-                                const tierAmounts = (t.prizes ?? []).map((p: any) => Number(p.amount));
-                                const pool = Number(t.prizePool ?? 0);
-                                const prize1 = tierAmounts[0] ?? (pool > 0 ? pool * 0.5 : 0);
-                                const prize2 = tierAmounts[1] ?? (pool > 0 ? pool * 0.3 : 0);
-                                const prize3 = tierAmounts[2] ?? (pool > 0 ? pool * 0.2 : 0);
-                                const perKill = Number(t.perKillReward ?? 0);
-
-                                const placedRegIds = new Set(Object.values(placements).filter(Boolean).map(Number));
-
-                                return (
-                                  <div className="p-5 space-y-6">
-
-                                    {/* ── Prize Info Bar ── */}
-                                    <div className="flex flex-wrap gap-4 px-4 py-3 bg-[#0e0e1a] border border-[#1e1e2e] rounded-xl text-xs">
-                                      {[["🥇 1st", prize1], ["🥈 2nd", prize2], ["🥉 3rd", prize3]].map(([label, amt]) => (
-                                        <div key={String(label)} className="flex items-center gap-1.5">
-                                          <span className="text-[#606070]">{label}</span>
-                                          <span className="text-white font-bold">৳{Number(amt).toLocaleString()}</span>
+                                    {/* ── Publish Results Panel ── */}
+                                    {isExpanded && (
+                                      <div className="border-t border-[#2a2a36] p-4 bg-[#0a0a12] space-y-4">
+                                        <div className="flex items-center justify-between">
+                                          <p className="text-[10px] uppercase font-black text-[#ff6b00] tracking-widest">Publish Results</p>
+                                          <button
+                                            onClick={() => addMatchResultRow(m.id)}
+                                            className="flex items-center gap-1 px-2.5 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/20 text-[#ff6b00] font-bold text-[10px] uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors"
+                                          >
+                                            <Plus className="w-3 h-3" /> Add Row
+                                          </button>
                                         </div>
-                                      ))}
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-[#606070]">⚔️ Per Kill</span>
-                                        <span className="text-white font-bold">৳{perKill.toLocaleString()}</span>
-                                      </div>
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-[#606070]">Mode</span>
-                                        <span className="text-white font-bold uppercase">{t.mode}</span>
-                                      </div>
-                                    </div>
-
-                                    {/* ── SECTION A: Placement Selection ── */}
-                                    <div>
-                                      <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section A — Rankings</p>
-                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        {([
-                                          { rank: "1", label: "1st Place", medal: "🥇", color: "border-yellow-500/40 focus:border-yellow-400", badge: "bg-yellow-500/10 text-yellow-400" },
-                                          { rank: "2", label: "2nd Place", medal: "🥈", color: "border-[#9ca3af]/30 focus:border-[#9ca3af]", badge: "bg-[#9ca3af]/10 text-[#9ca3af]" },
-                                          { rank: "3", label: "3rd Place", medal: "🥉", color: "border-orange-700/30 focus:border-orange-600", badge: "bg-orange-800/10 text-orange-500" },
-                                        ] as const).map(({ rank, label, medal, color, badge }) => {
-                                          const selectedRegId = Object.entries(placements).find(([, v]) => v === rank)?.[0];
-                                          return (
-                                            <div key={rank} className={`relative bg-[#0e0e1a] border ${color} rounded-xl p-3 transition-colors`}>
-                                              <div className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mb-2 ${badge}`}>
-                                                {medal} {label}
-                                              </div>
-                                              <select
-                                                value={selectedRegId ?? ""}
-                                                onChange={(e) => {
-                                                  const newRegId = e.target.value;
-                                                  setPrizePlacements((prev) => {
-                                                    const cur = { ...(prev[m.id] ?? {}) };
-                                                    // Remove this rank from any other reg
-                                                    Object.keys(cur).forEach((k) => { if ((cur as Record<string, string>)[k] === rank) delete (cur as Record<string, string>)[k]; });
-                                                    if (newRegId) cur[parseInt(newRegId)] = rank;
-                                                    return { ...prev, [m.id]: cur };
-                                                  });
-                                                }}
-                                                className="w-full bg-[#06060f] border border-[#1e1e2e] text-white text-xs rounded-lg px-3 py-2 focus:outline-none appearance-none cursor-pointer"
-                                              >
-                                                <option value="">— No selection —</option>
-                                                {regs.map((reg: any) => (
-                                                  <option key={reg.id} value={reg.id} disabled={placedRegIds.has(reg.id) && String(reg.id) !== selectedRegId}>
-                                                    {reg.playerName}{reg.teamMembersArr?.length > 0 ? ` (+${reg.teamMembersArr.length})` : ""}
-                                                  </option>
-                                                ))}
-                                              </select>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-
-                                    {/* ── SECTION B: Kill Entry Table ── */}
-                                    <div>
-                                      <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section B — Kill Counts</p>
-                                      <div className="bg-[#0e0e1a] border border-[#1e1e2e] rounded-xl overflow-hidden">
-                                        {/* Table header */}
-                                        <div className="grid grid-cols-[1fr_auto] gap-4 px-4 py-2 border-b border-[#1a1a26] bg-[#0a0a14]">
-                                          <span className="text-[10px] uppercase font-black text-[#404050] tracking-widest">Player / UID</span>
-                                          <span className="text-[10px] uppercase font-black text-[#404050] tracking-widest w-20 text-center">Kills</span>
-                                        </div>
-                                        {/* Rows */}
-                                        <div className="divide-y divide-[#111120]">
-                                          {allPlayers.map((player, pIdx) => {
-                                            const killKey = `${player.regId}-${player.mIdx}`;
-                                            const isFirstInTeam = player.mIdx === 0;
-                                            const teamPlacement = placements[player.regId];
-                                            const placementEmoji = teamPlacement === "1" ? "🥇" : teamPlacement === "2" ? "🥈" : teamPlacement === "3" ? "🥉" : null;
-                                            return (
-                                              <div key={pIdx} className={`grid grid-cols-[1fr_auto] gap-4 items-center px-4 py-2.5 ${isFirstInTeam && pIdx > 0 ? "border-t border-[#1e1e2e] mt-0" : ""} hover:bg-[#0c0c16] transition-colors`}>
-                                                <div className="flex items-center gap-2.5 min-w-0">
-                                                  {player.isCapt ? (
-                                                    <span className="shrink-0 text-yellow-400 text-[10px] font-black w-4 text-center" title="Captain">★</span>
-                                                  ) : (
-                                                    <span className="shrink-0 text-[#303040] text-[10px] w-4 text-center">·</span>
-                                                  )}
-                                                  <div className="min-w-0">
-                                                    <div className="flex items-center gap-1.5">
-                                                      <span className="text-white text-xs font-semibold truncate">{player.name}</span>
-                                                      {placementEmoji && player.isCapt && (
-                                                        <span className="text-xs shrink-0">{placementEmoji}</span>
-                                                      )}
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                                      {player.uid ? (
-                                                        <span className="text-[#404050] text-[10px] font-mono">{player.uid}</span>
-                                                      ) : (
-                                                        <span className="text-[10px] text-[#505058] bg-[#1a1a24] border border-[#2a2a34] px-1.5 py-0.5 rounded-full">Guest · No Wallet</span>
-                                                      )}
-                                                      {!player.isCapt && (
-                                                        <span className="text-[#303040] text-[10px]">· {player.teamName}</span>
-                                                      )}
-                                                    </div>
-                                                  </div>
-                                                </div>
-                                                <div className="w-20 shrink-0">
-                                                  <input
-                                                    type="number"
-                                                    min="0"
-                                                    placeholder="0"
-                                                    value={kills[killKey] === 0 ? "" : kills[killKey] ?? ""}
-                                                    onChange={(e) => setPrizeKills((prev) => ({
-                                                      ...prev,
-                                                      [m.id]: { ...(prev[m.id] ?? {}), [killKey]: parseInt(e.target.value) || 0 },
-                                                    }))}
-                                                    tabIndex={0}
-                                                    className="w-full bg-[#06060f] border border-[#1e1e2e] text-white text-sm font-bold rounded-lg px-3 py-1.5 text-center focus:outline-none focus:border-yellow-500/60 focus:bg-[#0a0a14] transition-colors"
-                                                  />
-                                                </div>
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {/* ── SECTION C: Preview Receipt ── */}
-                                    {preview && (
-                                      <div>
-                                        <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section C — Payout Preview</p>
-                                        <div className="bg-[#060610] border border-[#00ff88]/20 rounded-xl overflow-hidden">
-                                          <div className="px-4 py-2.5 border-b border-[#00ff88]/10 bg-[#00ff88]/5 flex items-center justify-between">
-                                            <span className="text-[#00ff88] text-xs font-black uppercase tracking-wider">Receipt</span>
-                                            <span className="text-[10px] text-[#00cc66]">{new Date().toLocaleString()}</span>
+                                        {rows.length === 0 ? (
+                                          <div className="text-center py-5 text-[#606070] text-xs border border-dashed border-[#2a2a36] rounded-xl">
+                                            Click "Add Row" to add player results.
                                           </div>
-                                          <div className="divide-y divide-[#0e1a14]">
-                                            {(preview.payouts ?? []).flatMap((payout: any) =>
-                                              (payout.memberPayouts ?? []).map((mp: any, mpi: number) => (
-                                                <div key={`${payout.registrationId}-${mpi}`} className="flex items-center justify-between px-4 py-2.5">
-                                                  <div className="flex items-center gap-2 min-w-0">
-                                                    {mp.isCapt
-                                                      ? <span className="text-yellow-400 text-[10px] shrink-0">★</span>
-                                                      : <span className="text-[#303040] text-[10px] shrink-0">·</span>
-                                                    }
-                                                    <div className="min-w-0">
-                                                      <div className="flex items-center gap-1.5">
-                                                        <span className={`text-xs font-semibold truncate ${mp.userFound ? "text-white" : "text-[#606060]"}`}>{mp.name}</span>
-                                                        {!mp.userFound && (
-                                                          <span className="text-[10px] text-[#404048] bg-[#1a1a22] border border-[#2a2a30] px-1.5 py-0.5 rounded-full shrink-0">No Wallet</span>
-                                                        )}
-                                                        {payout.rank === 1 && mp.isCapt && <span className="text-xs shrink-0">🥇</span>}
-                                                        {payout.rank === 2 && mp.isCapt && <span className="text-xs shrink-0">🥈</span>}
-                                                        {payout.rank === 3 && mp.isCapt && <span className="text-xs shrink-0">🥉</span>}
-                                                      </div>
-                                                      <div className="text-[10px] text-[#404050] mt-0.5">
-                                                        {mp.rankShare > 0 && `Win ৳${Number(mp.rankShare).toFixed(2)}`}
-                                                        {mp.rankShare > 0 && mp.killReward > 0 && " + "}
-                                                        {mp.killReward > 0 && `Kills ৳${Number(mp.killReward).toFixed(2)} (${mp.kills}×৳${perKill})`}
-                                                        {mp.rankShare === 0 && mp.killReward === 0 && "No earnings"}
-                                                      </div>
-                                                    </div>
-                                                  </div>
-                                                  <span className={`text-sm font-black shrink-0 ml-4 ${mp.userFound && mp.totalReward > 0 ? "text-[#00ff88]" : "text-[#404050]"}`}>
-                                                    {mp.userFound ? `৳${Number(mp.totalReward).toFixed(2)}` : "—"}
-                                                  </span>
-                                                </div>
-                                              ))
+                                        ) : (
+                                          <div className="space-y-2">
+                                            <div className="grid grid-cols-[1fr_70px_70px_90px_28px] gap-2 px-2 text-[10px] text-[#a0a0b0] uppercase font-bold">
+                                              <span>Player</span><span className="text-center">Kills</span><span className="text-center">Rank</span><span className="text-center">Prize ৳</span><span />
+                                            </div>
+                                            {rows.map((row, ri) => (
+                                              <div key={ri} className="grid grid-cols-[1fr_70px_70px_90px_28px] gap-2 items-center bg-[#1a1a24] rounded-lg px-2 py-1.5">
+                                                <input
+                                                  placeholder="Player name"
+                                                  value={row.playerName}
+                                                  onChange={(e) => setMatchResultRows((prev) => ({ ...prev, [m.id]: prev[m.id].map((r, i) => i === ri ? { ...r, playerName: e.target.value } : r) }))}
+                                                  className="bg-transparent border-b border-[#2a2a36] text-white text-xs py-0.5 focus:outline-none focus:border-[#ff6b00] w-full"
+                                                />
+                                                <input
+                                                  type="number" min="0" placeholder="0"
+                                                  value={row.kills}
+                                                  onChange={(e) => setMatchResultRows((prev) => ({ ...prev, [m.id]: prev[m.id].map((r, i) => i === ri ? { ...r, kills: e.target.value } : r) }))}
+                                                  className="bg-[#0d0d16] border border-[#2a2a36] rounded text-white text-xs text-center px-1 py-1 focus:outline-none focus:border-[#ff6b00] w-full"
+                                                />
+                                                <select
+                                                  value={row.rank}
+                                                  onChange={(e) => setMatchResultRows((prev) => ({ ...prev, [m.id]: prev[m.id].map((r, i) => i === ri ? { ...r, rank: e.target.value } : r) }))}
+                                                  className="bg-[#0d0d16] border border-[#2a2a36] rounded text-white text-xs text-center px-1 py-1 focus:outline-none focus:border-[#ff6b00] w-full"
+                                                >
+                                                  <option value="">—</option>
+                                                  {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+                                                    <option key={n} value={n}>{n === 1 ? "🥇 1st" : n === 2 ? "🥈 2nd" : n === 3 ? "🥉 3rd" : `#${n}`}</option>
+                                                  ))}
+                                                </select>
+                                                <input
+                                                  type="number" min="0" placeholder="0"
+                                                  value={row.prizeMoney}
+                                                  onChange={(e) => setMatchResultRows((prev) => ({ ...prev, [m.id]: prev[m.id].map((r, i) => i === ri ? { ...r, prizeMoney: e.target.value } : r) }))}
+                                                  className="bg-[#0d0d16] border border-[#2a2a36] rounded text-white text-xs text-center px-1 py-1 focus:outline-none focus:border-[#ff6b00] w-full"
+                                                />
+                                                <button
+                                                  onClick={() => setMatchResultRows((prev) => ({ ...prev, [m.id]: prev[m.id].filter((_, i) => i !== ri) }))}
+                                                  className="text-[#ff4444] hover:text-red-300 text-xs font-bold transition-colors"
+                                                >✕</button>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
+                                        <button
+                                          onClick={() => submitMatchResults(m.id)}
+                                          disabled={submittingMatchResult[m.id] || rows.length === 0}
+                                          className="w-full py-2.5 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black text-xs uppercase rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                          {submittingMatchResult[m.id] ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…</> : "🏆 Save Results"}
+                                        </button>
+                                      </div>
+                                    )}
+
+                                    {/* ── Prize Distribution Panel ── */}
+                                    {expandedPrize[m.id] && (() => {
+                                      const data = prizeRegData[m.id];
+                                      const placements = prizePlacements[m.id] ?? {};
+                                      const kills = prizeKills[m.id] ?? {};
+                                      const perKill = data?.tournament?.perKillReward ?? 0;
+                                      const regs = data?.registrations ?? [];
+                                      const placedRegIds = new Set(Object.keys(placements).filter((k) => placements[k as any]).map(Number));
+                                      const allPlayers: Array<{ name: string; uid: string; regId: number; mIdx: number; isCapt: boolean; teamName: string }> = [];
+                                      for (const reg of regs) {
+                                        allPlayers.push({ name: reg.playerName, uid: reg.freefireUid, regId: reg.id, mIdx: 0, isCapt: true, teamName: reg.playerName });
+                                        (reg.teamMembersArr ?? []).forEach((mem: any, mi: number) => {
+                                          allPlayers.push({ name: mem.name ?? mem.playerName ?? "?", uid: mem.freefireUid ?? mem.uid ?? "", regId: reg.id, mIdx: mi + 1, isCapt: false, teamName: reg.playerName });
+                                        });
+                                      }
+                                      const preview = prizePreviewData[m.id];
+                                      return (
+                                        <div className="border-t border-yellow-500/10 p-4 bg-[#0a0a0c] space-y-5">
+                                          <div className="flex items-center justify-between">
+                                            <p className="text-[10px] uppercase font-black text-yellow-500 tracking-widest">Prize Distribution</p>
+                                            {m.prizeDistributed && (
+                                              <span className="text-[#00ff88] text-[10px] font-black uppercase border border-[#00ff88]/30 bg-[#00ff88]/5 px-2 py-0.5 rounded-full">✅ Already Paid</span>
                                             )}
                                           </div>
-                                          <div className="px-4 py-3 border-t border-[#00ff88]/20 bg-[#00ff88]/5 flex items-center justify-between">
-                                            <span className="text-[#00aa44] text-xs font-bold uppercase">Total Payout</span>
-                                            <span className="text-[#00ff88] font-black text-lg">৳{Number(preview.totalDistributed).toFixed(2)}</span>
-                                          </div>
+                                          {data?.loading ? (
+                                            <div className="text-center py-6 text-[#a0a0b0] text-xs animate-pulse">Loading registrations…</div>
+                                          ) : regs.length === 0 ? (
+                                            <div className="text-center py-6 text-[#606070] text-xs border border-dashed border-[#2a2a36] rounded-xl">No registrations found for this tournament.</div>
+                                          ) : (
+                                            <>
+                                              {/* Section A — Rankings */}
+                                              <div>
+                                                <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section A — Rankings</p>
+                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                  {([
+                                                    { rank: "1", label: "1st Place", medal: "🥇", color: "border-yellow-500/40", badge: "bg-yellow-500/10 text-yellow-400" },
+                                                    { rank: "2", label: "2nd Place", medal: "🥈", color: "border-[#9ca3af]/30", badge: "bg-[#9ca3af]/10 text-[#9ca3af]" },
+                                                    { rank: "3", label: "3rd Place", medal: "🥉", color: "border-orange-700/30", badge: "bg-orange-800/10 text-orange-500" },
+                                                  ] as const).map(({ rank, label, medal, color, badge }) => {
+                                                    const selectedRegId = Object.entries(placements).find(([, v]) => v === rank)?.[0];
+                                                    return (
+                                                      <div key={rank} className={`bg-[#0e0e1a] border ${color} rounded-xl p-3`}>
+                                                        <div className={`inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mb-2 ${badge}`}>
+                                                          {medal} {label}
+                                                        </div>
+                                                        <select
+                                                          value={selectedRegId ?? ""}
+                                                          onChange={(e) => {
+                                                            const newRegId = e.target.value;
+                                                            setPrizePlacements((prev) => {
+                                                              const cur = { ...(prev[m.id] ?? {}) };
+                                                              Object.keys(cur).forEach((k) => { if ((cur as any)[k] === rank) delete (cur as any)[k]; });
+                                                              if (newRegId) cur[parseInt(newRegId)] = rank;
+                                                              return { ...prev, [m.id]: cur };
+                                                            });
+                                                          }}
+                                                          className="w-full bg-[#06060f] border border-[#1e1e2e] text-white text-xs rounded-lg px-3 py-2 focus:outline-none appearance-none cursor-pointer"
+                                                        >
+                                                          <option value="">— No selection —</option>
+                                                          {regs.map((reg: any) => (
+                                                            <option key={reg.id} value={reg.id} disabled={placedRegIds.has(reg.id) && String(reg.id) !== selectedRegId}>
+                                                              {reg.playerName}{reg.teamMembersArr?.length > 0 ? ` (+${reg.teamMembersArr.length})` : ""}
+                                                            </option>
+                                                          ))}
+                                                        </select>
+                                                      </div>
+                                                    );
+                                                  })}
+                                                </div>
+                                              </div>
+
+                                              {/* Section B — Kill Counts */}
+                                              <div>
+                                                <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section B — Kill Counts</p>
+                                                <div className="bg-[#0e0e1a] border border-[#1e1e2e] rounded-xl overflow-hidden">
+                                                  <div className="grid grid-cols-[1fr_auto] gap-4 px-4 py-2 border-b border-[#1a1a26] bg-[#0a0a14]">
+                                                    <span className="text-[10px] uppercase font-black text-[#404050] tracking-widest">Player / UID</span>
+                                                    <span className="text-[10px] uppercase font-black text-[#404050] tracking-widest w-20 text-center">Kills</span>
+                                                  </div>
+                                                  <div className="divide-y divide-[#111120]">
+                                                    {allPlayers.map((player, pIdx) => {
+                                                      const killKey = `${player.regId}-${player.mIdx}`;
+                                                      const teamPlacement = placements[player.regId];
+                                                      const placementEmoji = teamPlacement === "1" ? "🥇" : teamPlacement === "2" ? "🥈" : teamPlacement === "3" ? "🥉" : null;
+                                                      return (
+                                                        <div key={pIdx} className="grid grid-cols-[1fr_auto] gap-4 items-center px-4 py-2.5 hover:bg-[#0c0c16] transition-colors">
+                                                          <div className="flex items-center gap-2.5 min-w-0">
+                                                            {player.isCapt ? <span className="shrink-0 text-yellow-400 text-[10px] font-black w-4">★</span> : <span className="shrink-0 text-[#303040] text-[10px] w-4">·</span>}
+                                                            <div className="min-w-0">
+                                                              <div className="flex items-center gap-1.5">
+                                                                <span className="text-white text-xs font-semibold truncate">{player.name}</span>
+                                                                {placementEmoji && player.isCapt && <span className="text-xs">{placementEmoji}</span>}
+                                                              </div>
+                                                              <div className="flex items-center gap-1.5 mt-0.5">
+                                                                {player.uid ? <span className="text-[#404050] text-[10px] font-mono">{player.uid}</span> : <span className="text-[10px] text-[#505058] bg-[#1a1a24] border border-[#2a2a34] px-1.5 py-0.5 rounded-full">No Wallet</span>}
+                                                                {!player.isCapt && <span className="text-[#303040] text-[10px]">· {player.teamName}</span>}
+                                                              </div>
+                                                            </div>
+                                                          </div>
+                                                          <div className="w-20 shrink-0">
+                                                            <input
+                                                              type="number" min="0" placeholder="0"
+                                                              value={kills[killKey] === 0 ? "" : kills[killKey] ?? ""}
+                                                              onChange={(e) => setPrizeKills((prev) => ({ ...prev, [m.id]: { ...(prev[m.id] ?? {}), [killKey]: parseInt(e.target.value) || 0 } }))}
+                                                              className="w-full bg-[#06060f] border border-[#1e1e2e] text-white text-sm font-bold rounded-lg px-3 py-1.5 text-center focus:outline-none focus:border-yellow-500/60 transition-colors"
+                                                            />
+                                                          </div>
+                                                        </div>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                </div>
+                                              </div>
+
+                                              {/* Section C — Payout Preview */}
+                                              {preview && (
+                                                <div>
+                                                  <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section C — Payout Preview</p>
+                                                  <div className="bg-[#060610] border border-[#00ff88]/20 rounded-xl overflow-hidden">
+                                                    <div className="px-4 py-2.5 border-b border-[#00ff88]/10 bg-[#00ff88]/5 flex items-center justify-between">
+                                                      <span className="text-[#00ff88] text-xs font-black uppercase">Receipt</span>
+                                                      <span className="text-[10px] text-[#00cc66]">{new Date().toLocaleString()}</span>
+                                                    </div>
+                                                    <div className="divide-y divide-[#0e1a14]">
+                                                      {(preview.payouts ?? []).flatMap((payout: any) =>
+                                                        (payout.memberPayouts ?? []).map((mp: any, mpi: number) => (
+                                                          <div key={`${payout.registrationId}-${mpi}`} className="flex items-center justify-between px-4 py-2.5">
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                              {mp.isCapt ? <span className="text-yellow-400 text-[10px] shrink-0">★</span> : <span className="text-[#303040] text-[10px] shrink-0">·</span>}
+                                                              <div className="min-w-0">
+                                                                <div className="flex items-center gap-1.5">
+                                                                  <span className={`text-xs font-semibold truncate ${mp.userFound ? "text-white" : "text-[#606060]"}`}>{mp.name}</span>
+                                                                  {!mp.userFound && <span className="text-[10px] text-[#404048] bg-[#1a1a22] border border-[#2a2a30] px-1.5 py-0.5 rounded-full shrink-0">No Wallet</span>}
+                                                                  {payout.rank === 1 && mp.isCapt && <span>🥇</span>}
+                                                                  {payout.rank === 2 && mp.isCapt && <span>🥈</span>}
+                                                                  {payout.rank === 3 && mp.isCapt && <span>🥉</span>}
+                                                                </div>
+                                                                <div className="text-[10px] text-[#404050] mt-0.5">
+                                                                  {mp.rankShare > 0 && `Win ৳${Number(mp.rankShare).toFixed(2)}`}
+                                                                  {mp.rankShare > 0 && mp.killReward > 0 && " + "}
+                                                                  {mp.killReward > 0 && `Kills ৳${Number(mp.killReward).toFixed(2)} (${mp.kills}×৳${perKill})`}
+                                                                  {mp.rankShare === 0 && mp.killReward === 0 && "No earnings"}
+                                                                </div>
+                                                              </div>
+                                                            </div>
+                                                            <span className={`text-sm font-black shrink-0 ml-4 ${mp.userFound && mp.totalReward > 0 ? "text-[#00ff88]" : "text-[#404050]"}`}>
+                                                              {mp.userFound ? `৳${Number(mp.totalReward).toFixed(2)}` : "—"}
+                                                            </span>
+                                                          </div>
+                                                        ))
+                                                      )}
+                                                    </div>
+                                                    <div className="px-4 py-3 border-t border-[#00ff88]/20 bg-[#00ff88]/5 flex items-center justify-between">
+                                                      <span className="text-[#00aa44] text-xs font-bold uppercase">Total Payout</span>
+                                                      <span className="text-[#00ff88] font-black text-lg">৳{Number(preview.totalDistributed).toFixed(2)}</span>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              )}
+
+                                              {/* CTAs */}
+                                              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
+                                                <button
+                                                  onClick={() => previewPrizes(m.id)}
+                                                  className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-[#0e1e1e] border border-[#00aa66]/40 text-[#00cc88] font-black text-sm uppercase rounded-xl hover:bg-[#122020] hover:border-[#00aa66]/70 transition-colors"
+                                                >
+                                                  🔍 Preview Prizes
+                                                </button>
+                                                <button
+                                                  onClick={() => distributePrizes(m.id)}
+                                                  disabled={distributing[m.id] || m.prizeDistributed}
+                                                  className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-[#ff6b00] text-white font-black text-sm uppercase rounded-xl hover:bg-[#e66000] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg shadow-[#ff6b00]/20"
+                                                >
+                                                  {distributing[m.id] ? <><span className="animate-spin">⏳</span> Distributing…</> : m.prizeDistributed ? "✅ Already Distributed" : "🏆 Distribute Prizes"}
+                                                </button>
+                                              </div>
+                                              {m.prizeDistributedAt && (
+                                                <p className="text-center text-[#404050] text-[11px]">Paid on {new Date(m.prizeDistributedAt).toLocaleString()}</p>
+                                              )}
+                                            </>
+                                          )}
                                         </div>
-                                      </div>
-                                    )}
-
-                                    {/* ── CTAs ── */}
-                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-                                      <button
-                                        onClick={() => previewPrizes(m.id)}
-                                        className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-[#0e1e1e] border border-[#00aa66]/40 text-[#00cc88] font-black text-sm uppercase rounded-xl hover:bg-[#122020] hover:border-[#00aa66]/70 transition-colors"
-                                      >
-                                        🔍 Preview Prizes
-                                      </button>
-                                      <button
-                                        onClick={() => distributePrizes(m.id)}
-                                        disabled={distributing[m.id] || m.prizeDistributed}
-                                        className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-[#ff6b00] text-white font-black text-sm uppercase rounded-xl hover:bg-[#e66000] disabled:opacity-40 disabled:cursor-not-allowed transition-colors shadow-lg shadow-[#ff6b00]/20"
-                                      >
-                                        {distributing[m.id]
-                                          ? <><span className="animate-spin">⏳</span> Distributing…</>
-                                          : m.prizeDistributed
-                                          ? "✅ Prize Already Distributed"
-                                          : "🏆 Distribute Prizes"}
-                                      </button>
-                                    </div>
-                                    {m.prizeDistributedAt && (
-                                      <p className="text-center text-[#404050] text-[11px]">
-                                        Paid on {new Date(m.prizeDistributedAt).toLocaleString()}
-                                      </p>
-                                    )}
-
+                                      );
+                                    })()}
                                   </div>
                                 );
-                              })()}
+                              })}
+
+                              <button
+                                onClick={() => loadTournamentMatchesById(t.id)}
+                                className="flex items-center gap-1.5 text-xs text-[#a0a0b0] hover:text-white transition-colors"
+                              >
+                                <RefreshCw className="w-3 h-3" /> Refresh matches
+                              </button>
                             </div>
                           )}
                         </div>
                       );
                     })}
                   </div>
-                </>
-              )}
 
-              {/* ─── Prize Distribution Report ─────────────────────────── */}
-              <div className="mt-8 border border-[#2a2a36] rounded-xl overflow-hidden">
-                <button
-                  onClick={() => {
-                    const opening = !showPrizeReport;
-                    setShowPrizeReport(opening);
-                    if (opening && prizeReport.length === 0) loadPrizeReport();
-                  }}
-                  className="w-full flex items-center justify-between px-5 py-4 bg-[#0e0e18] hover:bg-[#12121a] transition-colors text-left"
-                >
-                  <span className="font-black uppercase text-sm text-[#a0a0b0] flex items-center gap-2">
-                    📊 Prize Distribution History
-                    {prizeReport.length > 0 && <span className="text-yellow-400 font-bold text-xs">({prizeReport.length} matches)</span>}
-                  </span>
-                  <span className="text-[#606070] text-xs">{showPrizeReport ? "▲ Collapse" : "▼ Expand"}</span>
-                </button>
-                {showPrizeReport && (
-                  <div className="p-4 border-t border-[#2a2a36] bg-[#0a0a0f]">
-                    {prizeReportLoading ? (
-                      <div className="text-center py-6 text-[#a0a0b0] text-sm">Loading report…</div>
-                    ) : prizeReport.length === 0 ? (
-                      <div className="text-center py-6 text-[#a0a0b0] text-sm">No prizes distributed yet.</div>
-                    ) : (
-                      <div className="space-y-3">
-                        {prizeReport.map((item: any) => (
-                          <div key={item.matchId} className="bg-[#12121a] border border-[#2a2a36] rounded-xl overflow-hidden">
-                            <button
-                              onClick={() => setExpandedReportMatch((prev) => ({ ...prev, [item.matchId]: !prev[item.matchId] }))}
-                              className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#1a1a24] transition-colors text-left"
-                            >
-                              <div>
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-white font-bold text-xs">Match #{item.matchNumber}</span>
-                                  {item.serialNumber && <span className="text-[#ff6b00] text-[10px] font-mono">{item.serialNumber}</span>}
-                                  <span className="text-[#a0a0b0] text-xs">— {item.tournamentName}</span>
-                                  <span className="text-[10px] font-bold text-yellow-400 uppercase border border-yellow-400/20 bg-yellow-400/5 px-1.5 py-0.5 rounded">{item.tournamentMode}</span>
-                                </div>
-                                <div className="text-[#606070] text-xs mt-0.5">
-                                  Distributed: {item.distributedAt ? new Date(item.distributedAt).toLocaleString() : "—"} · ৳{Number(item.totalAmount).toFixed(2)} total · {item.transactions?.length ?? 0} transactions
-                                </div>
-                              </div>
-                              <span className="text-[#00ff88] font-black text-sm shrink-0 ml-3">৳{Number(item.totalAmount).toFixed(2)}</span>
-                            </button>
-                            {expandedReportMatch[item.matchId] && (
-                              <div className="border-t border-[#2a2a36] p-3">
-                                {(item.transactions ?? []).length === 0 ? (
-                                  <div className="text-xs text-[#606070] text-center py-3">No transactions found.</div>
-                                ) : (
-                                  <div className="space-y-1">
-                                    {item.transactions.map((tx: any) => (
-                                      <div key={tx.id} className="flex items-center justify-between text-xs py-1.5 px-2 bg-[#0a0a0f] rounded-lg">
-                                        <div>
-                                          <span className="text-white font-bold">{tx.userName ?? tx.username ?? tx.userId}</span>
-                                          <span className="text-[#606070] ml-2">{tx.notes}</span>
-                                        </div>
-                                        <span className="text-[#00ff88] font-bold shrink-0 ml-3">+৳{Number(tx.amount).toFixed(2)}</span>
+                  {/* ─── Prize Distribution History ─────────────────────────── */}
+                  <div className="mt-8 border border-[#2a2a36] rounded-xl overflow-hidden">
+                    <button
+                      onClick={() => {
+                        const opening = !showPrizeReport;
+                        setShowPrizeReport(opening);
+                        if (opening && prizeReport.length === 0) loadPrizeReport();
+                      }}
+                      className="w-full flex items-center justify-between px-5 py-4 bg-[#0e0e18] hover:bg-[#12121a] transition-colors text-left"
+                    >
+                      <span className="font-black uppercase text-sm text-[#a0a0b0] flex items-center gap-2">
+                        📊 Prize Distribution History
+                        {prizeReport.length > 0 && <span className="text-yellow-400 font-bold text-xs">({prizeReport.length} matches)</span>}
+                      </span>
+                      <span className="text-[#606070] text-xs">{showPrizeReport ? "▲ Collapse" : "▼ Expand"}</span>
+                    </button>
+                    {showPrizeReport && (
+                      <div className="p-4 border-t border-[#2a2a36] bg-[#0a0a0f]">
+                        {prizeReportLoading ? (
+                          <div className="text-center py-6 text-[#a0a0b0] text-sm">Loading report…</div>
+                        ) : prizeReport.length === 0 ? (
+                          <div className="text-center py-6 text-[#a0a0b0] text-sm">No prizes distributed yet.</div>
+                        ) : (
+                          <div className="space-y-3">
+                            {prizeReport.map((item: any) => (
+                              <div key={item.matchId} className="bg-[#12121a] border border-[#2a2a36] rounded-xl overflow-hidden">
+                                <button
+                                  onClick={() => setExpandedReportMatch((prev) => ({ ...prev, [item.matchId]: !prev[item.matchId] }))}
+                                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#1a1a24] transition-colors text-left"
+                                >
+                                  <div>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="text-white font-bold text-xs">Match #{item.matchNumber}</span>
+                                      {item.serialNumber && <span className="text-[#ff6b00] text-[10px] font-mono">{item.serialNumber}</span>}
+                                      <span className="text-[#a0a0b0] text-xs">— {item.tournamentName}</span>
+                                      <span className="text-[10px] font-bold text-yellow-400 uppercase border border-yellow-400/20 bg-yellow-400/5 px-1.5 py-0.5 rounded">{item.tournamentMode}</span>
+                                    </div>
+                                    <div className="text-[#606070] text-xs mt-0.5">
+                                      Distributed: {item.distributedAt ? new Date(item.distributedAt).toLocaleString() : "—"} · ৳{Number(item.totalAmount).toFixed(2)} total · {item.transactions?.length ?? 0} transactions
+                                    </div>
+                                  </div>
+                                  <span className="text-[#00ff88] font-black text-sm shrink-0 ml-3">৳{Number(item.totalAmount).toFixed(2)}</span>
+                                </button>
+                                {expandedReportMatch[item.matchId] && (
+                                  <div className="border-t border-[#2a2a36] p-3">
+                                    {(item.transactions ?? []).length === 0 ? (
+                                      <div className="text-xs text-[#606070] text-center py-3">No transactions found.</div>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        {item.transactions.map((tx: any) => (
+                                          <div key={tx.id} className="flex items-center justify-between text-xs py-1.5 px-2 bg-[#0a0a0f] rounded-lg">
+                                            <div>
+                                              <span className="text-white font-bold">{tx.userName ?? tx.username ?? tx.userId}</span>
+                                              <span className="text-[#606070] ml-2">{tx.notes}</span>
+                                            </div>
+                                            <span className="text-[#00ff88] font-bold shrink-0 ml-3">+৳{Number(tx.amount).toFixed(2)}</span>
+                                          </div>
+                                        ))}
                                       </div>
-                                    ))}
+                                    )}
                                   </div>
                                 )}
                               </div>
-                            )}
+                            ))}
+                            <div className="flex justify-end">
+                              <button onClick={loadPrizeReport} className="text-xs text-[#a0a0b0] hover:text-white transition-colors">↻ Refresh</button>
+                            </div>
                           </div>
-                        ))}
-                        <div className="flex justify-end">
-                          <button onClick={loadPrizeReport} className="text-xs text-[#a0a0b0] hover:text-white transition-colors">↻ Refresh</button>
-                        </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </div>
           )}
+
 
           {/* REGISTRATIONS */}
           {activeTab === "registrations" && (() => {

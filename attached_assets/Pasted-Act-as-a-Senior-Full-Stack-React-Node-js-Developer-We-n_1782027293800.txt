@@ -1,0 +1,31 @@
+Act as a Senior Full-Stack React & Node.js Developer. We need to overhaul the Admin Panel components inside `src/pages/admin.tsx` (and related tabs) to sync the Tournament Management with the Match lifecycle, update the UI size/styling, and implement the advanced Room Release logic. Follow these exact steps:
+
+==================================================
+1. RECONSTRUCT THE 'MANAGE MATCHES' TAB (1st Image)
+==================================================
+- Ensure the "Manage Matches" section dynamically lists all created tournaments instead of showing "No matches yet".
+- Inside this tab, each match card or row must contain explicit operational actions:
+  * A "Publish Results" action module/form where scores/ranks can be saved.
+  * A "Prize Distribution" trigger that initiates the prize allocation mechanism cleanly based on tournament settings.
+- Ensure the state updates immediately so admins can manage everything right here in one dashboard.
+
+==================================================
+2. UPGRADE TOURNAMENT ROOM DETAILS UI (Same as 3rd Image)
+==================================================
+- Look at how "Community Matches" handles Room Password Release. We need to replicate that exact same comprehensive UI block inside the regular "Manage Tournaments" Room Details section.
+- Remove the small, cramped Room ID/Password layout. Replace it with a spacious, beautifully styled panel featuring:
+  * ROOM PASSWORD RELEASE header section.
+  * RELEASE Toggles: "Manually (now)" and "10 min before" button triggers.
+  * Inputs: Room ID * and Room Password fields.
+  * Time Pickers: "ROOM OPENS AT (15 min before start)" and "ROOM CLOSES AT (5 min after start)" fields.
+  * Dynamic Indicator Labels: "Visible from: [Timestamp]" (in green) and "Auto-expires: [Timestamp]" (in red).
+- Add the "Save Credentials & Timing" action button at the bottom of this panel to post these timing parameters securely to the backend database.
+
+==================================================
+3. IMPLEMENT THE AUTOMATION BACKEND & LIFECYCLE LOGIC
+==================================================
+- Connect these fields to the tournament database schema (ensure fields like `roomOpensAt`, `roomClosesAt`, and `releaseMode` are saved properly).
+- Execute backend/frontend checks so that if "10 min before" is chosen, the Room ID and Password strings are automatically released to users exactly 10 minutes prior to the match start time.
+- Enforce the "Auto-expires" countdown block so credentials disappear/mask instantly when the expiration buffer passes.
+
+Please clean up the code formatting, fix the layouts to look exactly like the community rules template interface, and let me know once all buttons work correctly.
