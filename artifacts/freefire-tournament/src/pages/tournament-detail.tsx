@@ -28,12 +28,13 @@ const modePlayerCount: Record<string, number> = {
 };
 
 const statusConfig: Record<string, { color: string; label: string; dot: string }> = {
-  upcoming:  { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", label: "Upcoming",   dot: "bg-yellow-400" },
-  live:      { color: "bg-green-500/20 text-green-400 border-green-500/30",    label: "🔴 LIVE",    dot: "bg-green-400 animate-pulse" },
-  ongoing:   { color: "bg-green-500/20 text-green-400 border-green-500/30",    label: "🔴 LIVE",    dot: "bg-green-400 animate-pulse" },
-  ended:     { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",       label: "Ended",     dot: "bg-gray-400" },
-  completed: { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",       label: "Completed", dot: "bg-gray-400" },
-  cancelled: { color: "bg-red-500/20 text-red-400 border-red-500/30",          label: "Cancelled", dot: "bg-red-400" },
+  upcoming:  { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",  label: "Upcoming",   dot: "bg-yellow-400" },
+  live:      { color: "bg-green-500/20 text-green-400 border-green-500/30",     label: "🔴 LIVE",    dot: "bg-green-400 animate-pulse" },
+  ongoing:   { color: "bg-green-500/20 text-green-400 border-green-500/30",     label: "🔴 LIVE",    dot: "bg-green-400 animate-pulse" },
+  room_open: { color: "bg-[#ff6b00]/20 text-[#ff6b00] border-[#ff6b00]/30",    label: "Room Open",  dot: "bg-[#ff6b00] animate-pulse" },
+  ended:     { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",        label: "Ended",      dot: "bg-gray-400" },
+  completed: { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",        label: "Completed",  dot: "bg-gray-400" },
+  cancelled: { color: "bg-red-500/20 text-red-400 border-red-500/30",           label: "Cancelled",  dot: "bg-red-400" },
 };
 
 const podiumConfig = [
@@ -193,15 +194,30 @@ export default function TournamentDetailPage() {
   const entryFee = t ? Number(t.entryFee) : 0;
   const canLeave = false; // No leave / no refund policy — entry is final
   const isEnded = t?.status === "ended" || t?.status === "completed";
-  const isLive = t?.status === "live" || t?.status === "ongoing";
-  const isRegistrationClosed = isLive || isEnded || t?.status === "cancelled";
 
-  // Live matches
-  const liveMatches = matches.filter(m => m.status === "live");
+  // Time-aware match status — evaluated against the real clock so that
+  // releasing room credentials early (< 15 min before start) never
+  // accidentally triggers the "LIVE" state before the actual start time.
+  const nowMs = Date.now();
+  // A match is truly "live" only once its scheduled start time has been reached.
+  const liveMatches = matches.filter(m =>
+    m.status === "live" && new Date(m.scheduledAt).getTime() <= nowMs
+  );
   const upcomingMatches = matches.filter(m => m.status === "scheduled");
   const completedMatches = matches.filter(m => m.status === "completed");
-  // roomOpen: credentials have been released for a scheduled match (NOT yet live)
-  const roomOpen = matches.some(m => m.roomVisible && m.status === "scheduled");
+  // Room is "open" when credentials are visible but the start time hasn't arrived yet.
+  // This covers both: a scheduled match with roomVisible=true, and a match the admin
+  // marked "live" early (before scheduledAt) so credentials are accessible.
+  const roomOpen = matches.some(m =>
+    m.roomVisible && (
+      m.status === "scheduled" ||
+      (m.status === "live" && new Date(m.scheduledAt).getTime() > nowMs)
+    )
+  );
+  // Tournament shows as "live" only when the actual match start time is reached.
+  const isLive = (t?.status === "live" || t?.status === "ongoing") &&
+    (matches.length === 0 || matches.some(m => new Date(m.scheduledAt).getTime() <= nowMs));
+  const isRegistrationClosed = isLive || isEnded || t?.status === "cancelled";
 
   const doJoin = async () => {
     if (!user) { setLocation("/sign-in"); return; }
@@ -341,7 +357,10 @@ export default function TournamentDetailPage() {
 
   const slotPct = Math.min((t.filledSlots / t.maxSlots) * 100, 100);
   const slotsLeft = t.maxSlots - t.filledSlots;
-  const statusCfg = statusConfig[t.status] ?? statusConfig.upcoming;
+  // Effective display status: show "Room Open" badge when credentials are out
+  // but the actual match start time hasn't been reached yet.
+  const effectiveDisplayStatus = !isLive && roomOpen ? "room_open" : t.status;
+  const statusCfg = statusConfig[effectiveDisplayStatus] ?? statusConfig.upcoming;
   const hasWinner = !!t.winnerId && !!t.winnerName;
   const playerCount = modePlayerCount[t.mode] ?? 1;
 
