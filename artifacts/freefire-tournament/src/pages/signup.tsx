@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Flame, Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle, RefreshCw, Shield } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
-
+import { useLanguage } from "@/lib/LanguageContext";
 import { apiBase as BASE } from "@/lib/apiBase";
 
 interface Captcha { token: string; question: string; }
@@ -12,20 +12,9 @@ async function fetchCaptcha(): Promise<Captcha> {
   return res.json();
 }
 
-function getPasswordStrength(pw: string): { score: number; label: string; color: string } {
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[a-z]/.test(pw)) score++;
-  if (/\d/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  const labels = ["", "Very Weak", "Weak", "Fair", "Strong", "Very Strong"];
-  const colors = ["", "#ff2244", "#ff6b00", "#ffcc00", "#00cc66", "#00ff88"];
-  return { score, label: labels[score] ?? "", color: colors[score] ?? "#2a2a36" };
-}
-
 export default function SignUpPage() {
   const { register } = useAuthContext();
+  const { t } = useLanguage();
   const [, setLocation] = useLocation();
   const [form, setForm] = useState({ email: "", username: "", password: "", confirm: "", captchaAnswer: "" });
   const [captcha, setCaptcha] = useState<Captcha | null>(null);
@@ -43,23 +32,18 @@ export default function SignUpPage() {
     try { setCaptcha(await fetchCaptcha()); } catch {}
   };
 
-  const strength = getPasswordStrength(form.password);
-
   const requirements = [
-    { label: "At least 8 characters", met: form.password.length >= 8 },
-    { label: "Uppercase letter (A-Z)", met: /[A-Z]/.test(form.password) },
-    { label: "Lowercase letter (a-z)", met: /[a-z]/.test(form.password) },
-    { label: "Number (0-9)", met: /\d/.test(form.password) },
-    { label: "Passwords match", met: form.password === form.confirm && form.confirm.length > 0 },
+    { key: "req_letters" as const, met: /[a-zA-Z]/.test(form.password) },
+    { key: "req_numbers" as const, met: /\d/.test(form.password) },
+    { key: "req_match" as const, met: form.password === form.confirm && form.confirm.length > 0 },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     if (form.password !== form.confirm) { setError("Passwords do not match."); return; }
-    if (!requirements.slice(0, 4).every((r) => r.met)) {
-      setError("Password does not meet the requirements."); return;
-    }
+    if (!/[a-zA-Z]/.test(form.password)) { setError("Password must contain at least one letter."); return; }
+    if (!/\d/.test(form.password)) { setError("Password must contain at least one number."); return; }
     if (!captcha) { setError("Security check not loaded. Please wait."); return; }
     if (!form.captchaAnswer.trim()) { setError("Please answer the security question."); return; }
     setLoading(true);
@@ -85,8 +69,8 @@ export default function SignUpPage() {
             <Flame className="w-6 h-6 text-[#ff6b00]" />
             <span className="text-xl font-black uppercase text-white">FF <span className="text-[#ff6b00]">Arena</span></span>
           </Link>
-          <h1 className="text-2xl font-black uppercase text-white">Create <span className="text-[#ff6b00]">Account</span></h1>
-          <p className="text-[#a0a0b0] text-sm mt-0.5">Join the Free Fire tournament community</p>
+          <h1 className="text-2xl font-black uppercase text-white">{t("signup_title")}</h1>
+          <p className="text-[#a0a0b0] text-sm mt-0.5">{t("signup_subtitle")}</p>
         </div>
 
         <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/20 p-5 shadow-[0_0_30px_rgba(255,107,0,0.08)]">
@@ -98,7 +82,7 @@ export default function SignUpPage() {
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider font-bold mb-1.5">Email Address *</label>
+              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider font-bold mb-1.5">{t("signup_email")} *</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a0a0b0]" />
                 <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required placeholder="you@example.com"
@@ -107,7 +91,9 @@ export default function SignUpPage() {
             </div>
 
             <div>
-              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider font-bold mb-1.5">Username <span className="text-[#a0a0b0] font-normal normal-case">(optional)</span></label>
+              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider font-bold mb-1.5">
+                {t("signup_username")} <span className="text-[#a0a0b0] font-normal normal-case">(optional)</span>
+              </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a0a0b0]" />
                 <input type="text" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} placeholder="ProPlayer99"
@@ -116,30 +102,19 @@ export default function SignUpPage() {
             </div>
 
             <div>
-              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider font-bold mb-1.5">Password *</label>
+              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider font-bold mb-1.5">{t("signup_password")} *</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a0a0b0]" />
-                <input type={showPass ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required placeholder="Min. 8 characters"
+                <input type={showPass ? "text" : "password"} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required placeholder="e.g. player123"
                   className="w-full bg-[#1a1a24] border border-[#2a2a36] rounded-xl pl-9 pr-10 py-2.5 text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors text-sm" />
                 <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a0a0b0] hover:text-white">
                   {showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
               </div>
-              {form.password.length > 0 && (
-                <div className="mt-1.5">
-                  <div className="flex gap-1 mb-0.5">
-                    {[1,2,3,4,5].map((i) => (
-                      <div key={i} className="h-0.5 flex-1 rounded-full transition-colors duration-300"
-                        style={{ backgroundColor: i <= strength.score ? strength.color : "#2a2a36" }} />
-                    ))}
-                  </div>
-                  <span className="text-xs" style={{ color: strength.color }}>{strength.label}</span>
-                </div>
-              )}
             </div>
 
             <div>
-              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider font-bold mb-1.5">Confirm Password *</label>
+              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider font-bold mb-1.5">{t("signup_confirm")} *</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a0a0b0]" />
                 <input type={showPass ? "text" : "password"} value={form.confirm} onChange={(e) => setForm({ ...form, confirm: e.target.value })} required placeholder="Repeat password"
@@ -150,9 +125,9 @@ export default function SignUpPage() {
             {(form.password.length > 0 || form.confirm.length > 0) && (
               <div className="space-y-0.5 bg-[#1a1a24] rounded-xl p-2.5">
                 {requirements.map((req) => (
-                  <div key={req.label} className={`flex items-center gap-1.5 text-xs ${req.met ? "text-[#00ff88]" : "text-[#a0a0b0]"}`}>
+                  <div key={req.key} className={`flex items-center gap-1.5 text-xs ${req.met ? "text-[#00ff88]" : "text-[#a0a0b0]"}`}>
                     <CheckCircle className={`w-3 h-3 shrink-0 ${req.met ? "text-[#00ff88]" : "text-[#2a2a36]"}`} />
-                    {req.label}
+                    {t(req.key)}
                   </div>
                 ))}
               </div>
@@ -181,13 +156,13 @@ export default function SignUpPage() {
 
             <button type="submit" disabled={loading || !captcha}
               className="w-full py-2.5 bg-[#ff6b00] text-white font-black uppercase text-sm rounded-xl hover:bg-[#e66000] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_15px_rgba(255,107,0,0.3)]">
-              {loading ? "Creating account…" : "Create Account"}
+              {loading ? t("loading") : t("signup_btn")}
             </button>
           </form>
 
           <div className="mt-4 text-center text-sm text-[#a0a0b0]">
-            Already have an account?{" "}
-            <Link href="/sign-in" className="text-[#ff6b00] font-bold hover:text-[#ff8533] transition-colors">Sign in</Link>
+            {t("signup_have_account")}{" "}
+            <Link href="/sign-in" className="text-[#ff6b00] font-bold hover:text-[#ff8533] transition-colors">{t("signup_signin")}</Link>
           </div>
         </div>
       </div>

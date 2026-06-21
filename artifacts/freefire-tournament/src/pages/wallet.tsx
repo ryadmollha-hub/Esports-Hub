@@ -9,6 +9,7 @@ import Navbar from "@/components/Navbar";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiBase } from "@/lib/apiBase";
+import { useLanguage } from "@/lib/LanguageContext";
 
 async function safeJson(res: Response): Promise<any> {
   try {
@@ -66,6 +67,7 @@ export default function WalletPage() {
   const { user, isLoading, authFetch } = useAuthContext();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useLanguage();
 
   const [balance, setBalance] = useState<WalletBalance | null>(null);
   const [txs, setTxs] = useState<Transaction[]>([]);
@@ -227,11 +229,11 @@ export default function WalletPage() {
   );
 
   const filters: { key: FilterType; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "deposit", label: "Deposits" },
-    { key: "withdraw", label: "Withdrawals" },
-    { key: "tournament_prize", label: "Prizes" },
-    { key: "tournament_entry", label: "Entry Fees" },
+    { key: "all", label: t("wallet_all") },
+    { key: "deposit", label: t("wallet_deposit") },
+    { key: "withdraw", label: t("wallet_withdraw") },
+    { key: "tournament_prize", label: t("nav_prizes") },
+    { key: "tournament_entry", label: t("wallet_entry_fees") },
   ];
 
   return (

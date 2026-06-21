@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Users, Trophy, Clock, ChevronRight, Zap, X, Medal, Swords, Star, RefreshCw } from "lucide-react";
 import CountdownTimer from "./CountdownTimer";
 import { apiBase as BASE } from "@/lib/apiBase";
+import { useLanguage } from "@/lib/LanguageContext";
 
 interface Tournament {
   id: number;
@@ -88,6 +89,7 @@ const rankMedal = (rank: number) => {
 };
 
 function LeaderboardModal({ tournament, onClose }: { tournament: Tournament; onClose: () => void }) {
+  const { t: tx } = useLanguage();
   const [matches, setMatches] = useState<MatchWithResults[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -146,7 +148,7 @@ function LeaderboardModal({ tournament, onClose }: { tournament: Tournament; onC
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <div className="w-8 h-8 border-2 border-[#ff6b00] border-t-transparent rounded-full animate-spin" />
-            <p className="text-[#606070] text-xs uppercase tracking-wider font-bold">Loading results…</p>
+            <p className="text-[#606070] text-xs uppercase tracking-wider font-bold">{tx("tc_loading")}</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3 px-6">
@@ -170,7 +172,7 @@ function LeaderboardModal({ tournament, onClose }: { tournament: Tournament; onC
                         : "bg-[#12121a] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"
                     }`}
                   >
-                    Match {m.matchNumber}
+                    {tx("tc_match")} {m.matchNumber}
                   </button>
                 ))}
               </div>
@@ -203,16 +205,16 @@ function LeaderboardModal({ tournament, onClose }: { tournament: Tournament; onC
               {sortedResults.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-2">
                   <Medal className="w-8 h-8 text-[#303040]" />
-                  <p className="text-[#606070] text-xs uppercase font-bold tracking-wider">No results published yet</p>
+                  <p className="text-[#606070] text-xs uppercase font-bold tracking-wider">{tx("tc_no_results")}</p>
                 </div>
               ) : (
                 <>
                   {/* Table header */}
                   <div className="grid grid-cols-[2rem_1fr_3rem_3rem] gap-2 px-3 py-2 mb-1">
-                    <span className="text-[#505060] text-[9px] uppercase font-bold tracking-wider text-center">Rank</span>
-                    <span className="text-[#505060] text-[9px] uppercase font-bold tracking-wider">Player</span>
-                    <span className="text-[#505060] text-[9px] uppercase font-bold tracking-wider text-center">Kills</span>
-                    <span className="text-[#505060] text-[9px] uppercase font-bold tracking-wider text-center">Points</span>
+                    <span className="text-[#505060] text-[9px] uppercase font-bold tracking-wider text-center">{tx("tc_rank")}</span>
+                    <span className="text-[#505060] text-[9px] uppercase font-bold tracking-wider">{tx("tc_player")}</span>
+                    <span className="text-[#505060] text-[9px] uppercase font-bold tracking-wider text-center">{tx("tc_kills")}</span>
+                    <span className="text-[#505060] text-[9px] uppercase font-bold tracking-wider text-center">{tx("tc_points")}</span>
                   </div>
 
                   <div className="space-y-1.5">
@@ -259,6 +261,7 @@ function LeaderboardModal({ tournament, onClose }: { tournament: Tournament; onC
 }
 
 export default function TournamentCard({ t, featured = false }: { t: Tournament; featured?: boolean }) {
+  const { t: tx } = useLanguage();
   const slotPct    = Math.min((t.filledSlots / t.maxSlots) * 100, 100);
   const slotsLeft  = t.maxSlots - t.filledSlots;
   const isFull     = slotsLeft === 0;
@@ -334,9 +337,9 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
               {/* Stats row */}
               <div className="flex items-center gap-2 flex-wrap mb-3">
                 <div className="flex items-center gap-1 bg-[#1a1a24] rounded-lg px-2 py-1">
-                  <span className="text-[#a0a0b0] text-[10px] uppercase font-bold">Entry</span>
+                  <span className="text-[#a0a0b0] text-[10px] uppercase font-bold">{tx("tc_entry")}</span>
                   <span className={`text-xs font-black ${entryFee === 0 ? "text-[#00ff88]" : "text-white"}`}>
-                    {entryFee === 0 ? "FREE" : `৳${entryFee.toLocaleString()}`}
+                    {entryFee === 0 ? tx("tc_free") : `৳${entryFee.toLocaleString()}`}
                   </span>
                 </div>
                 {perKill > 0 && (
@@ -380,7 +383,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
                     />
                   </div>
                   <span data-testid={`text-slots-left-${t.id}`} className={`font-bold text-[10px] uppercase shrink-0 ${isFull ? "text-[#ff2244]" : slotsLeft <= 5 ? "text-yellow-400" : "text-[#606070]"}`}>
-                    {isFull ? "FULL" : `${slotsLeft} left`}
+                    {isFull ? tx("tc_full") : `${slotsLeft} left`}
                   </span>
                 </div>
               </div>
@@ -395,7 +398,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
                 className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-[#ffd700]/15 to-[#ff6b00]/10 hover:from-[#ffd700]/25 hover:to-[#ff6b00]/20 border border-[#ffd700]/30 hover:border-[#ffd700]/60 text-[#ffd700] font-black text-xs uppercase rounded-xl transition-all duration-200 shadow-[0_2px_12px_rgba(255,215,0,0.08)] hover:shadow-[0_2px_20px_rgba(255,215,0,0.15)]"
               >
                 <Trophy className="w-3.5 h-3.5" />
-                View Leaderboard
+                {tx("tc_results")}
               </button>
             </div>
           )}
@@ -458,9 +461,9 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
                 </span>
               </div>
               <div className="flex items-center gap-1 bg-[#1a1a24] rounded px-1.5 py-0.5">
-                <span className="text-[#a0a0b0] text-[9px] uppercase font-bold">Entry</span>
+                <span className="text-[#a0a0b0] text-[9px] uppercase font-bold">{tx("tc_entry")}</span>
                 <span className={`text-[10px] font-black ${entryFee === 0 ? "text-[#00ff88]" : "text-white"}`}>
-                  {entryFee === 0 ? "FREE" : `৳${entryFee.toLocaleString()}`}
+                  {entryFee === 0 ? tx("tc_free") : `৳${entryFee.toLocaleString()}`}
                 </span>
               </div>
               {perKill > 0 && (
@@ -489,7 +492,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
                 />
               </div>
               <span data-testid={`text-slots-left-${t.id}`} className={`font-bold text-[9px] uppercase shrink-0 ${isFull ? "text-[#ff2244]" : slotsLeft <= 5 ? "text-yellow-400" : "text-[#606070]"}`}>
-                {isFull ? "FULL" : `${slotsLeft} left`}
+                {isFull ? tx("tc_full") : `${slotsLeft} left`}
               </span>
             </div>
           </div>
@@ -521,7 +524,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
               className="w-full flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-[#ffd700]/12 to-[#ff6b00]/8 hover:from-[#ffd700]/22 hover:to-[#ff6b00]/15 border border-[#ffd700]/25 hover:border-[#ffd700]/50 text-[#ffd700] font-black text-[10px] uppercase rounded-lg transition-all duration-200"
             >
               <Trophy className="w-3 h-3" />
-              🏆 View Leaderboard
+              🏆 {tx("tc_results")}
             </button>
           </div>
         )}

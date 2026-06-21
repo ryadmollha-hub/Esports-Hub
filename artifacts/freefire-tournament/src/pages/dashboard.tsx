@@ -9,6 +9,7 @@ import Footer from "@/components/Footer";
 import { useGetMyRegistrations, useGetMyTeam, useGetMyProfile, useUpdateMyProfile } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/LanguageContext";
 
 type DashTab = "profile" | "tournaments" | "team" | "deposits" | "withdrawals";
 
@@ -30,6 +31,7 @@ export default function DashboardPage() {
   const { user: authUser, isLoading, authFetch } = useAuthContext();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<DashTab>("profile");
 
   useEffect(() => {
@@ -90,11 +92,11 @@ export default function DashboardPage() {
   const withdrawals = walletTxs.filter((t) => t.type === "withdraw");
 
   const dashTabs: { id: DashTab; label: string; icon: any }[] = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "tournaments", label: "Tournaments", icon: Trophy },
-    { id: "team", label: "Team", icon: Shield },
-    { id: "deposits", label: "Deposits", icon: ArrowDownCircle },
-    { id: "withdrawals", label: "Withdrawals", icon: ArrowUpCircle },
+    { id: "profile", label: t("dash_profile"), icon: User },
+    { id: "tournaments", label: t("dash_tournaments"), icon: Trophy },
+    { id: "team", label: t("dash_team"), icon: Shield },
+    { id: "deposits", label: t("dash_deposits"), icon: ArrowDownCircle },
+    { id: "withdrawals", label: t("dash_withdrawals"), icon: ArrowUpCircle },
   ];
 
   const txStatusBadge = (status: string) => (

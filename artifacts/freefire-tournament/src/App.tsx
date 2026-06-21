@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/AuthContext";
 import { ThemeProvider } from "@/lib/ThemeContext";
+import { LanguageProvider } from "@/lib/LanguageContext";
 import { CreateMatchProvider } from "@/lib/CreateMatchContext";
 import { UserRoute, AdminRoute } from "@/components/ProtectedRoute";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -75,6 +76,7 @@ function MaintenanceGuard({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <ErrorBoundary>
+      <LanguageProvider>
       <ThemeProvider>
         <AuthProvider>
           <CreateMatchProvider>
@@ -168,6 +170,7 @@ function App() {
           </CreateMatchProvider>
         </AuthProvider>
       </ThemeProvider>
+      </LanguageProvider>
     </ErrorBoundary>
   );
 }

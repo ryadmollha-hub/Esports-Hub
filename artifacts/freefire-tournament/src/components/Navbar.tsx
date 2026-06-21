@@ -1,35 +1,47 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { Flame, Shield, LayoutDashboard, HeadphonesIcon } from "lucide-react";
+import { Flame, Shield, LayoutDashboard } from "lucide-react";
 import { useRole } from "@/lib/useRole";
 import { useAuthContext } from "@/lib/AuthContext";
+import { useLanguage } from "@/lib/LanguageContext";
 import NotificationBell from "./NotificationBell";
 import ThemeToggle from "./ThemeToggle";
-
-const guestNavLinks = [
-  { href: "/tournaments", label: "Tournaments" },
-  { href: "/prizes", label: "Prizes" },
-  { href: "/contact", label: "Contact" },
-  { href: "/support", label: "Support" },
-];
-
-const userNavLinks = [
-  { href: "/tournaments", label: "Tournaments" },
-  { href: "/leaderboard", label: "Leaderboard" },
-  { href: "/schedule", label: "Schedule" },
-  { href: "/results", label: "Results" },
-  { href: "/prizes", label: "Prizes" },
-  { href: "/teams", label: "Teams" },
-  { href: "/support", label: "Support" },
-];
 
 export default function Navbar() {
   const [location] = useLocation();
   const { isAdmin, isAdminSession, isUser } = useRole();
   const { user } = useAuthContext();
+  const { lang, setLang, t } = useLanguage();
+
+  const guestNavLinks = [
+    { href: "/tournaments", label: t("nav_tournaments") },
+    { href: "/prizes", label: t("nav_prizes") },
+    { href: "/contact", label: t("nav_contact") },
+    { href: "/support", label: t("nav_support") },
+  ];
+
+  const userNavLinks = [
+    { href: "/tournaments", label: t("nav_tournaments") },
+    { href: "/leaderboard", label: t("nav_leaderboard") },
+    { href: "/schedule", label: t("nav_schedule") },
+    { href: "/results", label: t("nav_results") },
+    { href: "/prizes", label: t("nav_prizes") },
+    { href: "/teams", label: t("nav_teams") },
+    { href: "/support", label: t("nav_support") },
+  ];
 
   const navLinks = isUser || isAdmin ? userNavLinks : guestNavLinks;
   const isActive = (href: string) => location === href;
+
+  const LangToggle = () => (
+    <button
+      onClick={() => setLang(lang === "en" ? "bn" : "en")}
+      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#1a1a24] border border-[#2a2a36] text-[10px] font-black uppercase tracking-wide text-[#a0a0b0] hover:text-white hover:border-[#ff6b00]/40 transition-colors shrink-0"
+      title="Toggle language"
+    >
+      {lang === "en" ? "🇧🇩 বাংলা" : "🇺🇸 EN"}
+    </button>
+  );
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-[#ff6b00]/20 light:bg-white/95 light:border-[#ff6b00]/30">
@@ -59,6 +71,7 @@ export default function Navbar() {
 
         {/* Desktop right side */}
         <div className="hidden lg:flex items-center gap-1.5">
+          <LangToggle />
           <ThemeToggle />
           <NotificationBell />
 
@@ -67,7 +80,7 @@ export default function Navbar() {
               href="/admin"
               className="flex items-center gap-1 px-2.5 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors"
             >
-              <Shield className="w-3 h-3" /> Admin
+              <Shield className="w-3 h-3" /> {t("nav_admin")}
             </Link>
           )}
 
@@ -79,17 +92,17 @@ export default function Navbar() {
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
-              {user?.displayName ?? user?.username ?? "Profile"}
+              {user?.displayName ?? user?.username ?? t("nav_profile")}
             </Link>
           )}
 
           {!isUser && !isAdmin && !isAdminSession && (
             <>
               <Link href="/sign-in" className="px-3 py-1.5 text-xs font-bold uppercase text-[#a0a0b0] hover:text-white transition-colors">
-                Sign In
+                {t("nav_signin")}
               </Link>
               <Link href="/sign-up" className="px-4 py-1.5 text-xs font-bold uppercase bg-[#ff6b00] text-white rounded-lg hover:bg-[#e66000] transition-all shadow-[0_0_15px_rgba(255,107,0,0.3)]">
-                Register
+                {t("nav_register")}
               </Link>
             </>
           )}
@@ -99,13 +112,14 @@ export default function Navbar() {
               href="/admin"
               className="flex items-center gap-1 px-2.5 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors"
             >
-              <Shield className="w-3 h-3" /> Admin
+              <Shield className="w-3 h-3" /> {t("nav_admin")}
             </Link>
           )}
         </div>
 
         {/* Mobile right side */}
         <div className="lg:hidden flex items-center gap-1">
+          <LangToggle />
           <ThemeToggle />
           <NotificationBell />
           {isUser && (
@@ -122,7 +136,7 @@ export default function Navbar() {
           )}
           {!isUser && !isAdmin && !isAdminSession && (
             <Link href="/sign-in" className="px-2.5 py-1 text-xs font-bold uppercase bg-[#ff6b00] text-white rounded-lg">
-              Sign In
+              {t("nav_signin")}
             </Link>
           )}
         </div>
