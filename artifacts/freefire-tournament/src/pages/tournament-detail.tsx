@@ -67,6 +67,14 @@ interface Rule {
   orderIndex: number;
 }
 
+interface MatchResult {
+  id: number;
+  playerName: string;
+  rank: number;
+  kills: number;
+  points: number;
+}
+
 interface MatchInfo {
   id: number;
   matchNumber: number;
@@ -78,6 +86,8 @@ interface MatchInfo {
   roomVisible?: boolean;
   roomReleaseAt?: string | null;
   roomHideAt?: string | null;
+  results?: MatchResult[];
+  resultsPublished?: boolean;
 }
 
 export default function TournamentDetailPage() {
@@ -90,6 +100,7 @@ export default function TournamentDetailPage() {
 
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [results, setResults] = useState<Participant[] | null>(null);
+  const [resultsLoading, setResultsLoading] = useState(false);
   const [rules, setRules] = useState<Rule[]>([]);
   const [matches, setMatches] = useState<MatchInfo[]>([]);
   const [loadingPart, setLoadingPart] = useState(true);
@@ -125,13 +136,16 @@ export default function TournamentDetailPage() {
 
   const loadResults = useCallback(async () => {
     if (!id) return;
+    setResultsLoading(true);
     try {
       const res = await fetch(`${apiBase}/api/tournaments/${id}/results`);
       if (res.ok) {
         const data = await res.json();
         setResults(data.results ?? []);
       }
-    } catch {}
+    } catch {} finally {
+      setResultsLoading(false);
+    }
   }, [id]);
 
   const loadRules = useCallback(async () => {
@@ -199,9 +213,10 @@ export default function TournamentDetailPage() {
   // which already has computeMatchVisibility applied server-side.
   // BUG FIX 1: do NOT gate liveMatches on scheduledAt — if the admin explicitly
   // set a match to "live", registration must close immediately regardless of start time.
-  const liveMatches      = matches.filter(m => m.status === "live");
-  const upcomingMatches  = matches.filter(m => m.status === "scheduled");
-  const completedMatches = matches.filter(m => m.status === "completed");
+  const liveMatches        = matches.filter(m => m.status === "live");
+  const upcomingMatches    = matches.filter(m => m.status === "scheduled");
+  const completedMatches   = matches.filter(m => m.status === "completed");
+  const matchesWithResults = matches.filter(m => m.results && m.results.length > 0);
 
   // BUG FIX 2: isEnded must include match-level completion.
   // When admin marks a match "completed" via PATCH /matches/:id, only the match record
@@ -650,74 +665,45 @@ export default function TournamentDetailPage() {
             )}
 
             {/* ── RESULTS SECTION ── */}
-            {t.resultsPublished && results !== null && (
+            {(t.resultsPublished || matchesWithResults.length > 0) && (
               <div id="results-section" className="space-y-4">
-                {podiumResults.length > 0 && (
-                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
-                    <div className="flex items-center gap-2 mb-5">
-                      <Trophy className="w-5 h-5 text-[#ffd700]" />
-                      <h3 className="text-white font-black uppercase text-sm tracking-wider">Tournament Results</h3>
-                    </div>
-                    <div className="space-y-3 mb-4">
-                      {podiumResults.map((player) => {
-                        const cfg = podiumConfig.find((c) => c.rank === player.resultRank)!;
-                        return (
-                          <div key={player.id} className={`relative bg-gradient-to-r ${cfg.bg} border ${cfg.border} rounded-xl p-4 overflow-hidden`}>
-                            <div className="flex items-center gap-4">
-                              <div className={`text-4xl shrink-0 leading-none`}>{cfg.emoji}</div>
-                              <div className="flex-1 min-w-0">
-                                <div className={`font-black text-lg ${cfg.text}`}>{player.playerName}</div>
-                                <div className="text-[#a0a0b0] text-xs font-mono">UID: {player.freefireUid}</div>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <div className="flex items-center gap-1.5 justify-end mb-1">
-                                  <Target className="w-3.5 h-3.5 text-[#ff6b00]" />
-                                  <span className="text-white font-black">{player.kills} kills</span>
-                                </div>
-                                <div className={`font-black text-lg ${cfg.text}`}>
-                                  ৳{Number(player.earnedAmount).toLocaleString()}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
 
-                {(podiumResults.length > 0 || otherResults.length > 0) && (
-                  <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
-                    <h3 className="text-white font-bold uppercase text-sm mb-4 tracking-wider flex items-center gap-2">
-                      <Medal className="w-4 h-4 text-[#ff6b00]" /> Full Leaderboard
-                    </h3>
+                {/* ── Per-match results (published via admin "Save Results" flow) ── */}
+                {matchesWithResults.map((m) => (
+                  <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Trophy className="w-4 h-4 text-[#ffd700]" />
+                      <h3 className="text-white font-black uppercase text-sm tracking-wider">
+                        Match #{m.matchNumber} Results{m.mapName ? ` · ${m.mapName}` : ""}
+                      </h3>
+                    </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-[#a0a0b0] text-xs uppercase border-b border-[#2a2a36]">
-                            <th className="text-left py-2 pr-3">Rank</th>
+                            <th className="text-left py-2 pr-3 w-12">Rank</th>
                             <th className="text-left py-2 pr-3">Player</th>
-                            <th className="text-left py-2 pr-3 hidden sm:table-cell">UID</th>
                             <th className="text-right py-2 pr-3">Kills</th>
-                            <th className="text-right py-2">Earned</th>
+                            <th className="text-right py-2">Prize</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {[...podiumResults, ...otherResults].map((player, i) => {
-                            const emoji = player.resultRank === 1 ? "🥇" : player.resultRank === 2 ? "🥈" : player.resultRank === 3 ? "🥉" : null;
-                            const rowNum = i + 1;
+                          {m.results!.map((r, idx) => {
+                            const medal = r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : null;
                             return (
-                              <tr key={player.id} className={`border-b border-[#1a1a24] last:border-0 ${player.userId === user?.userId ? "bg-[#ff6b00]/5" : ""}`}>
-                                <td className="py-2.5 pr-3"><span className="font-black text-[#a0a0b0]">{emoji ?? `#${rowNum}`}</span></td>
+                              <tr key={r.id ?? idx} className="border-b border-[#1a1a24] last:border-0">
                                 <td className="py-2.5 pr-3">
-                                  <div className="font-bold text-white">{player.playerName}</div>
-                                  {player.userId === user?.userId && <span className="text-[10px] text-[#00ff88] font-bold">You</span>}
+                                  <span className="font-black text-[#a0a0b0]">{medal ?? `#${r.rank}`}</span>
                                 </td>
-                                <td className="py-2.5 pr-3 hidden sm:table-cell"><span className="text-[#a0a0b0] font-mono text-xs">{player.freefireUid}</span></td>
-                                <td className="py-2.5 pr-3 text-right"><span className="text-white font-bold">{player.kills}</span></td>
+                                <td className="py-2.5 pr-3">
+                                  <div className="font-bold text-white">{r.playerName}</div>
+                                </td>
+                                <td className="py-2.5 pr-3 text-right">
+                                  <span className="text-white font-bold">{r.kills}</span>
+                                </td>
                                 <td className="py-2.5 text-right">
-                                  <span className={`font-black ${Number(player.earnedAmount) > 0 ? "text-[#00ff88]" : "text-[#a0a0b0]"}`}>
-                                    {Number(player.earnedAmount) > 0 ? `৳${Number(player.earnedAmount).toLocaleString()}` : "—"}
+                                  <span className={`font-black ${r.points > 0 ? "text-[#00ff88]" : "text-[#a0a0b0]"}`}>
+                                    {r.points > 0 ? `৳${r.points.toLocaleString()}` : "—"}
                                   </span>
                                 </td>
                               </tr>
@@ -727,6 +713,95 @@ export default function TournamentDetailPage() {
                       </table>
                     </div>
                   </div>
+                ))}
+
+                {/* ── Per-tournament registration results (published via "Publish Results" flow) ── */}
+                {t.resultsPublished && resultsLoading && (
+                  <div className="flex items-center justify-center py-10 gap-3">
+                    <div className="w-5 h-5 border-2 border-[#ff6b00] border-t-transparent rounded-full animate-spin" />
+                    <span className="text-[#a0a0b0] text-xs uppercase font-bold tracking-wider">Loading results…</span>
+                  </div>
+                )}
+
+                {t.resultsPublished && !resultsLoading && results !== null && (
+                  <>
+                    {podiumResults.length > 0 && (
+                      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
+                        <div className="flex items-center gap-2 mb-5">
+                          <Trophy className="w-5 h-5 text-[#ffd700]" />
+                          <h3 className="text-white font-black uppercase text-sm tracking-wider">Tournament Results</h3>
+                        </div>
+                        <div className="space-y-3 mb-4">
+                          {podiumResults.map((player) => {
+                            const cfg = podiumConfig.find((c) => c.rank === player.resultRank)!;
+                            return (
+                              <div key={player.id} className={`relative bg-gradient-to-r ${cfg.bg} border ${cfg.border} rounded-xl p-4 overflow-hidden`}>
+                                <div className="flex items-center gap-4">
+                                  <div className="text-4xl shrink-0 leading-none">{cfg.emoji}</div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className={`font-black text-lg ${cfg.text}`}>{player.playerName}</div>
+                                    <div className="text-[#a0a0b0] text-xs font-mono">UID: {player.freefireUid}</div>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <div className="flex items-center gap-1.5 justify-end mb-1">
+                                      <Target className="w-3.5 h-3.5 text-[#ff6b00]" />
+                                      <span className="text-white font-black">{player.kills} kills</span>
+                                    </div>
+                                    <div className={`font-black text-lg ${cfg.text}`}>
+                                      ৳{Number(player.earnedAmount).toLocaleString()}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {(podiumResults.length > 0 || otherResults.length > 0) && (
+                      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
+                        <h3 className="text-white font-bold uppercase text-sm mb-4 tracking-wider flex items-center gap-2">
+                          <Medal className="w-4 h-4 text-[#ff6b00]" /> Full Leaderboard
+                        </h3>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-[#a0a0b0] text-xs uppercase border-b border-[#2a2a36]">
+                                <th className="text-left py-2 pr-3">Rank</th>
+                                <th className="text-left py-2 pr-3">Player</th>
+                                <th className="text-left py-2 pr-3 hidden sm:table-cell">UID</th>
+                                <th className="text-right py-2 pr-3">Kills</th>
+                                <th className="text-right py-2">Earned</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {[...podiumResults, ...otherResults].map((player, i) => {
+                                const emoji = player.resultRank === 1 ? "🥇" : player.resultRank === 2 ? "🥈" : player.resultRank === 3 ? "🥉" : null;
+                                const rowNum = i + 1;
+                                return (
+                                  <tr key={player.id} className={`border-b border-[#1a1a24] last:border-0 ${player.userId === user?.userId ? "bg-[#ff6b00]/5" : ""}`}>
+                                    <td className="py-2.5 pr-3"><span className="font-black text-[#a0a0b0]">{emoji ?? `#${rowNum}`}</span></td>
+                                    <td className="py-2.5 pr-3">
+                                      <div className="font-bold text-white">{player.playerName}</div>
+                                      {player.userId === user?.userId && <span className="text-[10px] text-[#00ff88] font-bold">You</span>}
+                                    </td>
+                                    <td className="py-2.5 pr-3 hidden sm:table-cell"><span className="text-[#a0a0b0] font-mono text-xs">{player.freefireUid}</span></td>
+                                    <td className="py-2.5 pr-3 text-right"><span className="text-white font-bold">{player.kills}</span></td>
+                                    <td className="py-2.5 text-right">
+                                      <span className={`font-black ${Number(player.earnedAmount) > 0 ? "text-[#00ff88]" : "text-[#a0a0b0]"}`}>
+                                        {Number(player.earnedAmount) > 0 ? `৳${Number(player.earnedAmount).toLocaleString()}` : "—"}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -909,13 +984,16 @@ export default function TournamentDetailPage() {
                   </Link>
                 )}
 
-                {user && isJoined && (isEnded || t.resultsPublished) && (
+                {(isEnded || t.resultsPublished) && (
                   <button
-                    onClick={() => {
-                      const el = document.getElementById("results-section");
-                      if (el) {
-                        el.scrollIntoView({ behavior: "smooth", block: "start" });
+                    onClick={async () => {
+                      if (t.resultsPublished && results === null) {
+                        await loadResults();
                       }
+                      setTimeout(() => {
+                        const el = document.getElementById("results-section");
+                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }, 60);
                     }}
                     className="w-full flex items-center justify-center gap-2 py-3.5 bg-purple-500/20 border border-purple-500/40 text-purple-300 font-black uppercase rounded-xl hover:bg-purple-500/30 transition-all text-sm"
                   >
@@ -939,9 +1017,19 @@ export default function TournamentDetailPage() {
                 {user && !isJoined && (
                   <>
                     {t.resultsPublished ? (
-                      <div className="w-full text-center py-3.5 bg-purple-500/10 border border-purple-500/30 text-purple-400 font-black uppercase rounded-xl text-sm">
-                        Results Published
-                      </div>
+                      <button
+                        onClick={async () => {
+                          if (results === null) await loadResults();
+                          setTimeout(() => {
+                            const el = document.getElementById("results-section");
+                            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }, 60);
+                        }}
+                        className="w-full text-center py-3.5 bg-purple-500/10 border border-purple-500/30 text-purple-400 font-black uppercase rounded-xl text-sm hover:bg-purple-500/20 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        <Trophy className="w-4 h-4" />
+                        View Results
+                      </button>
                     ) : (isLive || liveMatches.length > 0) ? (
                       <div className="w-full text-center py-3.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-black uppercase rounded-xl text-sm flex items-center justify-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-[#ff2244] animate-pulse inline-block" />

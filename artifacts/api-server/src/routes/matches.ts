@@ -421,6 +421,29 @@ router.patch("/matches/:id/results", async (req, res) => {
       .where(eq(matchResultsTable.matchId, id))
       .orderBy(matchResultsTable.rank);
 
+    // ── Cascade: mark tournament resultsPublished = true.
+    //    Also auto-set status = "ended" if every match for this tournament is now completed.
+    if (match) {
+      try {
+        const [rem] = await db
+          .select({ cnt: sql<number>`cast(count(*) as int)` })
+          .from(matchesTable)
+          .where(and(
+            eq(matchesTable.tournamentId, match.tournamentId),
+            sql`${matchesTable.status} != 'completed'`,
+          ));
+        await db.update(tournamentsTable)
+          .set({
+            resultsPublished: true,
+            ...((rem?.cnt ?? 1) === 0 ? { status: "ended" } : {}),
+          })
+          .where(eq(tournamentsTable.id, match.tournamentId));
+        logger.info({ tournamentId: match.tournamentId, allCompleted: (rem?.cnt ?? 1) === 0 }, "Tournament resultsPublished cascaded from match results");
+      } catch (e) {
+        logger.warn({ err: e }, "Failed to cascade tournament resultsPublished after match results save");
+      }
+    }
+
     res.json({ success: true, match: { ...match, results: savedResults } });
   } catch (err) {
     logger.error({ err }, "Failed to save results");
