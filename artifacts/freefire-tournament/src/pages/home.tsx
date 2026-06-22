@@ -73,12 +73,45 @@ export default function Home() {
           <p className="text-base md:text-lg text-[#a0a0b0] mb-6 max-w-2xl mx-auto">{t("home_hero_desc")}</p>
 
           {nextTournament && (
-            <div className="glass-panel rounded-xl p-4 mb-6 max-w-sm mx-auto border border-[#ff6b00]/20 bg-[#12121a]/80 backdrop-blur-md">
+            <div className="glass-panel rounded-xl p-4 mb-4 max-w-sm mx-auto border border-[#ff6b00]/20 bg-[#12121a]/80 backdrop-blur-md">
               <p className="text-[#a0a0b0] text-xs uppercase tracking-wider mb-1">{t("home_next_tournament")}</p>
               <CountdownTimer targetDate={nextTournament.countdownTo ?? nextTournament.startDate} className="text-xl justify-center" />
               <p className="text-white font-bold mt-1 truncate text-sm">{nextTournament.name}</p>
             </div>
           )}
+
+          {/* ── Platform Stats Badges ───────────────────────────────────── */}
+          <div className="flex flex-wrap justify-center gap-2.5 mb-6 max-w-xl mx-auto">
+            {/* Prize Distributed */}
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#ffd700]/20 bg-[#ffd700]/5 backdrop-blur-md">
+              <Trophy className="w-4 h-4 text-[#ffd700] shrink-0" />
+              <div className="text-left">
+                <div className="text-[#ffd700] font-black text-sm leading-tight">৳৫০,০০০+</div>
+                <div className="text-[#a0a0b0] text-[9px] uppercase tracking-wide leading-tight">Prize Distributed</div>
+              </div>
+            </div>
+
+            {/* Active Players Online */}
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#00ff88]/20 bg-[#00ff88]/5 backdrop-blur-md">
+              <span className="relative flex shrink-0">
+                <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-[#00ff88] opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00ff88]" />
+              </span>
+              <div className="text-left">
+                <div className="text-[#00ff88] font-black text-sm leading-tight">১,৪২০ জন</div>
+                <div className="text-[#a0a0b0] text-[9px] uppercase tracking-wide leading-tight">Players Online</div>
+              </div>
+            </div>
+
+            {/* Total Matches Played */}
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#ff6b00]/20 bg-[#ff6b00]/5 backdrop-blur-md">
+              <Swords className="w-4 h-4 text-[#ff6b00] shrink-0" />
+              <div className="text-left">
+                <div className="text-[#ff6b00] font-black text-sm leading-tight">৪৫০+</div>
+                <div className="text-[#a0a0b0] text-[9px] uppercase tracking-wide leading-tight">Matches Played</div>
+              </div>
+            </div>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/tournaments" className="px-6 py-3 bg-[#ff6b00] text-white font-black uppercase text-sm rounded-xl hover:bg-[#e66000] transition-all shadow-[0_0_20px_rgba(255,107,0,0.4)] hover:shadow-[0_0_40px_rgba(255,107,0,0.6)] flex items-center justify-center gap-2">

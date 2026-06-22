@@ -171,7 +171,8 @@ router.patch("/registrations/:id/match-number", async (req, res) => {
   }
 });
 
-router.get("/registrations/me", async (req, res) => {
+// Alias: /registrations/my is what the generated API client calls (per OpenAPI spec)
+router.get(["/registrations/me", "/registrations/my"], async (req, res) => {
   try {
     const userId = safeGetUserId(req);
     if (!userId) return res.status(401).json({ error: "Unauthorized" });

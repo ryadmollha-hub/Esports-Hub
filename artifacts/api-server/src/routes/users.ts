@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { usersTable, matchResultsTable, registrationsTable } from "@workspace/db";
+import { eq, sum, sql, count } from "drizzle-orm";
 import { UpdateMyProfileBody } from "@workspace/api-zod";
 import { safeGetUserId } from "../lib/clerkAuth";
 
@@ -26,11 +26,30 @@ function sanitize(user: any) {
   return safe;
 }
 
+async function computeUserStats(userId: string) {
+  // Kills & wins from match results (matchResultsTable.userId is the user's clerkId)
+  const [statsRow] = await db
+    .select({
+      totalKills: sql<number>`coalesce(sum(${matchResultsTable.kills}), 0)::int`,
+      totalWins:  sql<number>`coalesce(count(*) filter (where ${matchResultsTable.rank} = 1), 0)::int`,
+      played:     sql<number>`coalesce(count(distinct ${matchResultsTable.matchId}), 0)::int`,
+    })
+    .from(matchResultsTable)
+    .where(eq(matchResultsTable.userId, userId));
+
+  return {
+    totalKills:        Number(statsRow?.totalKills ?? 0),
+    totalWins:         Number(statsRow?.totalWins ?? 0),
+    tournamentsPlayed: Number(statsRow?.played ?? 0),
+  };
+}
+
 router.get("/users/me", async (req, res) => {
   const userId = safeGetUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
   const user = await getOrCreateUser(userId);
-  res.json(sanitize(user));
+  const stats = await computeUserStats(userId);
+  res.json({ ...sanitize(user), ...stats });
 });
 
 router.patch("/users/me", async (req, res) => {
@@ -53,7 +72,8 @@ router.patch("/users/me", async (req, res) => {
     })
     .where(eq(usersTable.clerkId, userId))
     .returning();
-  res.json(sanitize(updated));
+  const stats = await computeUserStats(userId);
+  res.json({ ...sanitize(updated), ...stats });
 });
 
 router.get("/users/:id", async (req, res) => {
