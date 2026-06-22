@@ -143,10 +143,15 @@ router.post("/tournaments/:id/matches", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
   try {
     const id = parseInt(req.params.id);
-    const { scheduledAt, mapName, status, roomId, roomPassword, roomReleaseAt } = req.body;
+    const { matchNumber, scheduledAt, mapName, status, roomId, roomPassword, roomReleaseAt } = req.body;
 
     if (!scheduledAt) {
       return res.status(400).json({ error: "scheduledAt is required." });
+    }
+
+    const parsedMatchNumber = parseInt(matchNumber, 10);
+    if (!matchNumber || isNaN(parsedMatchNumber) || parsedMatchNumber < 1) {
+      return res.status(400).json({ error: "A valid match number is required." });
     }
 
     // Validate that the tournament exists
@@ -170,13 +175,6 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       });
     }
 
-    // Auto-increment matchNumber per tournament: MAX(match_number) + 1
-    // Using MAX instead of COUNT so deleted matches never cause collisions.
-    const [maxRow] = await db
-      .select({ maxNum: sql<number>`COALESCE(MAX(${matchesTable.matchNumber}), 0)` })
-      .from(matchesTable)
-      .where(eq(matchesTable.tournamentId, id));
-    const matchNumber = (maxRow?.maxNum ?? 0) + 1;
 
     // Default roomReleaseAt: 10 minutes before scheduledAt if not provided
     let releaseAt: Date | null = null;
@@ -193,7 +191,7 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       .insert(matchesTable)
       .values({
         tournamentId: id,
-        matchNumber,
+        matchNumber: parsedMatchNumber,
         serialNumber,
         scheduledAt: scheduledAtDate,
         status: status ?? "scheduled",
