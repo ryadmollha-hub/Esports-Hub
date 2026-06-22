@@ -9,6 +9,7 @@ import {
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
+import LeaderboardModal from "@/components/LeaderboardModal";
 import { useGetTournament, getGetTournamentQueryKey } from "@workspace/api-client-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -28,13 +29,13 @@ const modePlayerCount: Record<string, number> = {
 };
 
 const statusConfig: Record<string, { color: string; label: string; dot: string }> = {
-  upcoming:  { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",  label: "Upcoming",   dot: "bg-yellow-400" },
-  live:      { color: "bg-green-500/20 text-green-400 border-green-500/30",     label: "🔴 LIVE",    dot: "bg-green-400 animate-pulse" },
-  ongoing:   { color: "bg-green-500/20 text-green-400 border-green-500/30",     label: "🔴 LIVE",    dot: "bg-green-400 animate-pulse" },
-  room_open: { color: "bg-[#ff6b00]/20 text-[#ff6b00] border-[#ff6b00]/30",    label: "Room Open",  dot: "bg-[#ff6b00] animate-pulse" },
-  ended:     { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",        label: "Ended",      dot: "bg-gray-400" },
-  completed: { color: "bg-gray-500/20 text-gray-400 border-gray-500/30",        label: "Completed",  dot: "bg-gray-400" },
-  cancelled: { color: "bg-red-500/20 text-red-400 border-red-500/30",           label: "Cancelled",  dot: "bg-red-400" },
+  upcoming:  { color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",    label: "Upcoming",       dot: "bg-yellow-400" },
+  live:      { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",        dot: "bg-emerald-400 animate-pulse" },
+  ongoing:   { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",        dot: "bg-emerald-400 animate-pulse" },
+  room_open: { color: "bg-orange-600/20 text-orange-400 border border-orange-500",       label: "🔑 Room Open",   dot: "bg-orange-400 animate-pulse" },
+  ended:     { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Ended",          dot: "bg-red-400" },
+  completed: { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Completed",      dot: "bg-red-400" },
+  cancelled: { color: "bg-red-700/20 text-red-500 border border-red-700/40",             label: "Cancelled",      dot: "bg-red-500" },
 };
 
 const podiumConfig = [
@@ -111,6 +112,7 @@ export default function TournamentDetailPage() {
   const [showRulesModal, setShowRulesModal] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [showRoomPass, setShowRoomPass] = useState(false);
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
 
   // Registration form state
   const [regForm, setRegForm] = useState({
@@ -984,21 +986,13 @@ export default function TournamentDetailPage() {
                   </Link>
                 )}
 
-                {(isEnded || t.resultsPublished) && (
+                {(isEnded || t.resultsPublished || matchesWithResults.length > 0) && (
                   <button
-                    onClick={async () => {
-                      if (t.resultsPublished && results === null) {
-                        await loadResults();
-                      }
-                      setTimeout(() => {
-                        const el = document.getElementById("results-section");
-                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }, 60);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-purple-500/20 border border-purple-500/40 text-purple-300 font-black uppercase rounded-xl hover:bg-purple-500/30 transition-all text-sm"
+                    onClick={() => setShowLeaderboardModal(true)}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-[#ffd700]/15 to-[#ff6b00]/10 hover:from-[#ffd700]/25 hover:to-[#ff6b00]/20 border border-[#ffd700]/30 hover:border-[#ffd700]/60 text-[#ffd700] font-black uppercase rounded-xl transition-all text-sm shadow-[0_2px_14px_rgba(255,215,0,0.08)] hover:shadow-[0_2px_22px_rgba(255,215,0,0.18)]"
                   >
                     <Trophy className="w-4 h-4" />
-                    ফলাফল দেখুন
+                    🏆 ফলাফল দেখুন
                   </button>
                 )}
 
@@ -1016,19 +1010,13 @@ export default function TournamentDetailPage() {
 
                 {user && !isJoined && (
                   <>
-                    {t.resultsPublished ? (
+                    {(t.resultsPublished || matchesWithResults.length > 0) ? (
                       <button
-                        onClick={async () => {
-                          if (results === null) await loadResults();
-                          setTimeout(() => {
-                            const el = document.getElementById("results-section");
-                            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                          }, 60);
-                        }}
-                        className="w-full text-center py-3.5 bg-purple-500/10 border border-purple-500/30 text-purple-400 font-black uppercase rounded-xl text-sm hover:bg-purple-500/20 transition-colors cursor-pointer flex items-center justify-center gap-2"
+                        onClick={() => setShowLeaderboardModal(true)}
+                        className="w-full text-center py-3.5 bg-gradient-to-r from-[#ffd700]/12 to-[#ff6b00]/8 hover:from-[#ffd700]/22 hover:to-[#ff6b00]/15 border border-[#ffd700]/25 hover:border-[#ffd700]/50 text-[#ffd700] font-black uppercase rounded-xl text-sm transition-all cursor-pointer flex items-center justify-center gap-2"
                       >
                         <Trophy className="w-4 h-4" />
-                        View Results
+                        🏆 View Leaderboard
                       </button>
                     ) : (isLive || liveMatches.length > 0) ? (
                       <div className="w-full text-center py-3.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-black uppercase rounded-xl text-sm flex items-center justify-center gap-2">
@@ -1233,6 +1221,11 @@ export default function TournamentDetailPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* ── Leaderboard Modal ── */}
+      {showLeaderboardModal && t && (
+        <LeaderboardModal tournament={{ id: t.id, name: t.name }} onClose={() => setShowLeaderboardModal(false)} />
       )}
 
       {/* ── Game Rules Modal ── */}

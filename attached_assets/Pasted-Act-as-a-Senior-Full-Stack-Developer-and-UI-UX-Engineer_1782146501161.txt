@@ -1,0 +1,21 @@
+Act as a Senior Full-Stack Developer and UI/UX Engineer. We need to fix 3 status/UI sync errors and implement a premium neon highlight color scheme for match badges. Please completely rewrite the badge conditional logic and button handlers based on these specifications:
+
+1. FIX ERROR 1 ("ফলাফল দেখুন" Button & Modal Popup Sync):
+- Currently, clicking the inner purple "ফলাফল দেখুন" button renders results incorrectly or in a sidebar instead of the standard leaderboard popup.
+- Refactor this button's onClick handler to trigger the EXACT same Modal/Popup component used by the outer "VIEW RESULTS" button.
+- Ensure that if a match is completed/ended, the outer tournament card consistently displays the highlighted "VIEW RESULTS" button without missing.
+
+2. FIX ERROR 2 & 3 (Global Card Status Sync & Caching Bug):
+- When a match status updates inside the database, the outer tournament card does not sync. 
+- Fix the Tournament Card logic so it always checks the real-time database state:
+  * If the inner match has `roomOpen === true` or status is `"ROOM_OPEN"`, the outer card MUST stop the countdown timer and display the "ROOM OPEN" badge immediately.
+  * If the match is updated to completed, the outer card MUST instantly drop the "LIVE" badge and show the "ENDED" or "COMPLETED" status.
+
+3. PREMIUM NEON HIGHLIGHT BADGE COLOR OVERHAUL:
+Update the CSS/Tailwind styling for all match state badges to use high-visibility, professional gaming neon accents:
+- UPCOMING / STARTING SOON: Radiant Neon Gold (`bg-yellow-500/20 text-yellow-400 border border-yellow-500/40`)
+- ROOM OPEN: Glowing Electric Orange (`bg-orange-600/20 text-orange-400 border border-orange-500`)
+- MATCH IS LIVE: Vibrant Neon Green (`bg-emerald-500/20 text-emerald-400 border border-emerald-500/50`)
+- ENDED / COMPLETED: Striking Crimson Red or Premium Deep Purple Gradient.
+
+Review both the parent Tournament Grid/Card list components and the internal Details component to ensure these states align seamlessly.
