@@ -7,8 +7,9 @@ import {
   registrationsTable,
   usersTable,
   walletTransactionsTable,
+  matchesTable,
 } from "@workspace/db";
-import { eq, desc, ilike, and, sql } from "drizzle-orm";
+import { eq, desc, ilike, and, or, sql } from "drizzle-orm";
 import {
   CreateTournamentBody,
   UpdateTournamentBody,
@@ -163,6 +164,26 @@ router.post("/tournaments/:id/join", async (req, res) => {
     if (tournament.status === "ended" || tournament.status === "completed" || tournament.status === "cancelled") {
       return res.status(400).json({ error: "This tournament is no longer accepting players.", registrationClosed: true });
     }
+
+    // Guard: block join if any match has been explicitly set live or completed by admin.
+    // This prevents API-bypass joining when tournament-level status hasn't been updated yet.
+    const activeMatches = await db
+      .select({ id: matchesTable.id, status: matchesTable.status })
+      .from(matchesTable)
+      .where(and(
+        eq(matchesTable.tournamentId, id),
+        or(
+          eq(matchesTable.status, "live"),
+          eq(matchesTable.status, "completed"),
+        ),
+      ));
+    if (activeMatches.some(m => m.status === "live")) {
+      return res.status(400).json({ error: "Registration is closed. Match is already live.", registrationClosed: true });
+    }
+    if (activeMatches.some(m => m.status === "completed")) {
+      return res.status(400).json({ error: "This tournament is no longer accepting players.", registrationClosed: true });
+    }
+
     if (tournament.filledSlots >= tournament.maxSlots) {
       return res.status(400).json({ error: "Tournament is full. No slots available." });
     }

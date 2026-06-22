@@ -193,30 +193,42 @@ export default function TournamentDetailPage() {
   const isFull = t ? t.filledSlots >= t.maxSlots : false;
   const entryFee = t ? Number(t.entryFee) : 0;
   const canLeave = false; // No leave / no refund policy — entry is final
-  const isEnded = t?.status === "ended" || t?.status === "completed";
-
-  // Time-aware match status — evaluated against the real clock so that
-  // releasing room credentials early (< 15 min before start) never
-  // accidentally triggers the "LIVE" state before the actual start time.
   const nowMs = Date.now();
-  // A match is truly "live" only once its scheduled start time has been reached.
-  const liveMatches = matches.filter(m =>
-    m.status === "live" && new Date(m.scheduledAt).getTime() <= nowMs
-  );
-  const upcomingMatches = matches.filter(m => m.status === "scheduled");
+
+  // Match-level status buckets — derived from what the API returns (effectiveStatus),
+  // which already has computeMatchVisibility applied server-side.
+  // BUG FIX 1: do NOT gate liveMatches on scheduledAt — if the admin explicitly
+  // set a match to "live", registration must close immediately regardless of start time.
+  const liveMatches      = matches.filter(m => m.status === "live");
+  const upcomingMatches  = matches.filter(m => m.status === "scheduled");
   const completedMatches = matches.filter(m => m.status === "completed");
-  // Room is "open" when credentials are visible but the start time hasn't arrived yet.
-  // This covers both: a scheduled match with roomVisible=true, and a match the admin
-  // marked "live" early (before scheduledAt) so credentials are accessible.
+
+  // BUG FIX 2: isEnded must include match-level completion.
+  // When admin marks a match "completed" via PATCH /matches/:id, only the match record
+  // changes — the parent tournament t.status stays "upcoming". Without this check the
+  // JOIN button would wrongly remain visible after match completion.
+  const isEnded = (
+    t?.status === "ended" ||
+    t?.status === "completed" ||
+    completedMatches.length > 0
+  );
+
+  // Room is "open" when credentials are visible but the scheduled start hasn't passed.
   const roomOpen = matches.some(m =>
     m.roomVisible && (
       m.status === "scheduled" ||
       (m.status === "live" && new Date(m.scheduledAt).getTime() > nowMs)
     )
   );
-  // Tournament shows as "live" only when the actual match start time is reached.
-  const isLive = (t?.status === "live" || t?.status === "ongoing") &&
-    (matches.length === 0 || matches.some(m => new Date(m.scheduledAt).getTime() <= nowMs));
+
+  // Tournament is "live" when the tournament-level status is live/ongoing,
+  // OR when the admin has manually set any match to "live" status.
+  // Guard: not "live" when already ended (completed takes precedence).
+  const isLive = !isEnded && (
+    t?.status === "live" ||
+    t?.status === "ongoing" ||
+    liveMatches.length > 0
+  );
   const isRegistrationClosed = isLive || isEnded || t?.status === "cancelled";
 
   const doJoin = async () => {
