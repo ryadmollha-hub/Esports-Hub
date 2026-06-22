@@ -1,0 +1,28 @@
+Act as a Senior Full-Stack Developer and UI/UX Expert. We need to completely sync our database logic, fix all frozen frontend buttons, and overhaul the homepage hero design in one unified update. Please apply the following changes across the repository:
+
+1. PREMIUM UI OVERHAUL (Homepage Hero Banner - Image 3 Design Upgrade):
+- Redesign the Homepage Hero Section component (which shows "Next Tournament Starts In") to make it look exceptionally unique, active, and modern.
+- Right underneath or alongside the countdown timer, create a beautifully styled, responsive Flex/Grid container for a "Platform Live Stats Ticker".
+- Style this container with modern translucent glassmorphism (backdrop-filter: blur) and soft neon orange/dark accents matching our core theme.
+- Add these 3 specific dynamic-looking badges with relevant sharp icons:
+  * 🏆 TOTAL PRIZE DISTRIBUTED: ৳50,000+ (Gold/Orange accent)
+  * 🎮 ACTIVE PLAYERS ONLINE: 1,420 জন (With a small blinking neon-green dot next to it)
+  * ⚔️ TOTAL MATCHES PLAYED: 450+ (With cross-swords or gamepad icon)
+
+2. GLOBAL MATCH STATUS & RESULT PUBLISHING FIX:
+- When the Admin clicks the "Publish Results" button from the Admin Panel, the backend must globally update the tournament/match document status field in MongoDB to strictly equal `"Results_Published"`.
+- Ensure that once results are published, any stale "UPCOMING" or "LIVE" badges are completely removed from both the outer tournament card and the inner view.
+
+3. FRONTEND BUTTON & CLICK NAVIGATION FIX (ফলাফল দেখুন):
+- Update the Tournament Card (Outer Listing) so that the "VIEW RESULTS" button displays consistently for ALL completed/published matches without disappearing.
+- Update the inner Tournament Details Component: Add an explicit onClick routing handler to the purple/purple-gradient "ফলাফল দেখুন" button. When clicked, it must successfully navigate/redirect the user to the dedicated leaderboard/results view (e.g., `/results/${tournamentId}`) instead of remaining frozen.
+
+4. USER PROFILE COUNTER DATA MAPPING FIX:
+- Resolve the data sync bug where the User Profile/Dashboard components display hardcoded 0s for KILLS, WINS, and PLAYED.
+- Update the profile controller API to fetch real aggregates from MongoDB based on `userId === currentUser._id`:
+  * "PLAYED": Count all completed tournament registrations or participations for this user.
+  * "KILLS": Sum up the total kills credited to this user ID from the match results/kill-charts database.
+  * "WINS": Count instances where the user achieved 1st place / Booyah in the results.
+- Console.log the calculated variables on the backend to verify the values are non-zero before passing them to the frontend response JSON.
+
+Review the dependencies, clean up stale conditions, and refactor these files cleanly so that the entire gaming flow works flawlessly with the new design!

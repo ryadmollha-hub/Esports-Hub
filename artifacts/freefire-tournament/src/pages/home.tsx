@@ -53,76 +53,124 @@ export default function Home() {
       <Navbar />
 
       {/* Hero */}
-      <section className="relative min-h-[80dvh] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+      <section className="relative min-h-[92dvh] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+        {/* Background layers */}
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-10" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0f]/50 via-transparent to-[#0a0a0f]" />
-        <div className="absolute inset-0 bg-gradient-radial from-[#ff6b00]/5 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0f]/70 via-[#0a0a0f]/20 to-[#0a0a0f]" />
+        {/* Subtle grid overlay */}
+        <div
+          className="absolute inset-0 opacity-[0.035]"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,107,0,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(255,107,0,0.6) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+          }}
+        />
+        {/* Ambient glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] rounded-full bg-[#ff6b00]/6 blur-[120px] pointer-events-none" />
 
-        <div className="relative z-10 max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/30 rounded-full text-[#ff6b00] text-xs font-bold uppercase tracking-wider mb-4">
+        <div className="relative z-10 max-w-4xl mx-auto flex flex-col items-center gap-5">
+          {/* Badge pill */}
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 rounded-full text-[#ff6b00] text-[11px] font-black uppercase tracking-[0.18em]">
             <Flame className="w-3 h-3" /> {t("home_badge")}
           </div>
 
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase leading-none tracking-tight mb-4">
+          {/* Heading */}
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-black uppercase leading-none tracking-tighter">
             <span className="text-white">{t("home_hero_1")} </span>
-            <span className="text-[#ff6b00] [text-shadow:0_0_40px_rgba(255,107,0,0.5)]">{t("home_hero_2")}</span>
+            <span className="text-[#ff6b00] [text-shadow:0_0_60px_rgba(255,107,0,0.55),0_0_120px_rgba(255,107,0,0.25)]">
+              {t("home_hero_2")}
+            </span>
             <br />
             <span className="text-white">{t("home_hero_3")}</span>
           </h1>
 
-          <p className="text-base md:text-lg text-[#a0a0b0] mb-6 max-w-2xl mx-auto">{t("home_hero_desc")}</p>
+          <p className="text-base md:text-lg text-[#a0a0b0] max-w-2xl mx-auto">{t("home_hero_desc")}</p>
 
+          {/* Countdown card */}
           {nextTournament && (
-            <div className="glass-panel rounded-xl p-4 mb-4 max-w-sm mx-auto border border-[#ff6b00]/20 bg-[#12121a]/80 backdrop-blur-md">
-              <p className="text-[#a0a0b0] text-xs uppercase tracking-wider mb-1">{t("home_next_tournament")}</p>
-              <CountdownTimer targetDate={nextTournament.countdownTo ?? nextTournament.startDate} className="text-xl justify-center" />
-              <p className="text-white font-bold mt-1 truncate text-sm">{nextTournament.name}</p>
+            <div className="relative w-full max-w-sm rounded-2xl overflow-hidden border border-[#ff6b00]/20 bg-[#0d0d15]/70 backdrop-blur-xl p-4">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff6b00]/60 to-transparent" />
+              <p className="text-[#ff6b00] text-[10px] font-black uppercase tracking-[0.22em] mb-1.5">{t("home_next_tournament")}</p>
+              <CountdownTimer targetDate={nextTournament.countdownTo ?? nextTournament.startDate} className="text-2xl justify-center font-black" />
+              <p className="text-white/60 font-semibold mt-2 truncate text-xs">{nextTournament.name}</p>
             </div>
           )}
 
-          {/* ── Platform Stats Badges ───────────────────────────────────── */}
-          <div className="flex flex-wrap justify-center gap-2.5 mb-6 max-w-xl mx-auto">
-            {/* Prize Distributed */}
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#ffd700]/20 bg-[#ffd700]/5 backdrop-blur-md">
-              <Trophy className="w-4 h-4 text-[#ffd700] shrink-0" />
-              <div className="text-left">
-                <div className="text-[#ffd700] font-black text-sm leading-tight">৳৫০,০০০+</div>
-                <div className="text-[#a0a0b0] text-[9px] uppercase tracking-wide leading-tight">Prize Distributed</div>
+          {/* ── Premium Live Stats Ticker ─────────────────────────────────── */}
+          <div className="relative w-full max-w-2xl rounded-2xl overflow-hidden border border-[#ff6b00]/15 bg-[#0d0d15]/75 backdrop-blur-2xl shadow-[0_0_40px_rgba(255,107,0,0.07),inset_0_1px_0_rgba(255,255,255,0.04)]">
+            {/* Top glow line */}
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff6b00]/70 to-transparent" />
+            {/* Header bar */}
+            <div className="flex items-center justify-between px-5 py-2.5 border-b border-white/[0.05]">
+              <div className="flex items-center gap-2">
+                <span className="relative flex">
+                  <span className="animate-ping absolute inline-flex h-1.5 w-1.5 rounded-full bg-[#00ff88] opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00ff88]" />
+                </span>
+                <span className="text-[#00ff88] text-[9px] font-black uppercase tracking-[0.28em]">Live Platform Stats</span>
+              </div>
+              <span className="text-[#a0a0b0]/30 text-[9px] font-mono uppercase tracking-widest">FF ARENA</span>
+            </div>
+            {/* Three-column stats */}
+            <div className="grid grid-cols-3 divide-x divide-white/[0.05]">
+              {/* Prize Distributed */}
+              <div className="flex flex-col items-center gap-1.5 px-4 py-5">
+                <div className="w-9 h-9 rounded-xl bg-[#ffd700]/10 border border-[#ffd700]/20 flex items-center justify-center mb-0.5">
+                  <Trophy className="w-4 h-4 text-[#ffd700]" />
+                </div>
+                <div className="text-[#ffd700] font-black text-xl leading-none tracking-tight">৳৫০,০০০+</div>
+                <div className="text-[#a0a0b0] text-[9px] font-bold uppercase tracking-wider text-center leading-snug">
+                  Total Prize<br />Distributed
+                </div>
+              </div>
+              {/* Active Players */}
+              <div className="flex flex-col items-center gap-1.5 px-4 py-5">
+                <div className="w-9 h-9 rounded-xl bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center mb-0.5 relative">
+                  <Users className="w-4 h-4 text-[#00ff88]" />
+                  <span className="absolute -top-0.5 -right-0.5 flex">
+                    <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-[#00ff88] opacity-60" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[#00ff88]" />
+                  </span>
+                </div>
+                <div className="text-[#00ff88] font-black text-xl leading-none tracking-tight">১,৪২০ জন</div>
+                <div className="text-[#a0a0b0] text-[9px] font-bold uppercase tracking-wider text-center leading-snug">
+                  Active Players<br />Online
+                </div>
+              </div>
+              {/* Matches Played */}
+              <div className="flex flex-col items-center gap-1.5 px-4 py-5">
+                <div className="w-9 h-9 rounded-xl bg-[#ff6b00]/10 border border-[#ff6b00]/20 flex items-center justify-center mb-0.5">
+                  <Swords className="w-4 h-4 text-[#ff6b00]" />
+                </div>
+                <div className="text-[#ff6b00] font-black text-xl leading-none tracking-tight">৪৫০+</div>
+                <div className="text-[#a0a0b0] text-[9px] font-bold uppercase tracking-wider text-center leading-snug">
+                  Total Matches<br />Played
+                </div>
               </div>
             </div>
-
-            {/* Active Players Online */}
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#00ff88]/20 bg-[#00ff88]/5 backdrop-blur-md">
-              <span className="relative flex shrink-0">
-                <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-[#00ff88] opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#00ff88]" />
-              </span>
-              <div className="text-left">
-                <div className="text-[#00ff88] font-black text-sm leading-tight">১,৪২০ জন</div>
-                <div className="text-[#a0a0b0] text-[9px] uppercase tracking-wide leading-tight">Players Online</div>
-              </div>
-            </div>
-
-            {/* Total Matches Played */}
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#ff6b00]/20 bg-[#ff6b00]/5 backdrop-blur-md">
-              <Swords className="w-4 h-4 text-[#ff6b00] shrink-0" />
-              <div className="text-left">
-                <div className="text-[#ff6b00] font-black text-sm leading-tight">৪৫০+</div>
-                <div className="text-[#a0a0b0] text-[9px] uppercase tracking-wide leading-tight">Matches Played</div>
-              </div>
-            </div>
+            {/* Bottom glow line */}
+            <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#ff6b00]/20 to-transparent" />
           </div>
 
+          {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/tournaments" className="px-6 py-3 bg-[#ff6b00] text-white font-black uppercase text-sm rounded-xl hover:bg-[#e66000] transition-all shadow-[0_0_20px_rgba(255,107,0,0.4)] hover:shadow-[0_0_40px_rgba(255,107,0,0.6)] flex items-center justify-center gap-2">
+            <Link
+              href="/tournaments"
+              className="px-7 py-3 bg-[#ff6b00] text-white font-black uppercase text-sm rounded-xl hover:bg-[#e66000] transition-all shadow-[0_0_24px_rgba(255,107,0,0.45)] hover:shadow-[0_0_44px_rgba(255,107,0,0.65)] flex items-center justify-center gap-2"
+            >
               <Trophy className="w-4 h-4" /> {t("home_find_tournaments")}
             </Link>
-            <Link href="/leaderboard" className="px-6 py-3 bg-transparent text-white font-black uppercase text-sm rounded-xl border border-[#ff6b00]/40 hover:border-[#ff6b00] hover:bg-[#ff6b00]/10 transition-all flex items-center justify-center gap-2">
+            <Link
+              href="/leaderboard"
+              className="px-7 py-3 bg-transparent text-white font-black uppercase text-sm rounded-xl border border-[#ff6b00]/40 hover:border-[#ff6b00] hover:bg-[#ff6b00]/10 transition-all flex items-center justify-center gap-2"
+            >
               <Zap className="w-4 h-4" /> {t("home_view_leaderboard")}
             </Link>
           </div>
         </div>
 
+        {/* Scroll indicator */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-[#a0a0b0]">
           <div className="w-px h-8 bg-gradient-to-b from-transparent to-[#ff6b00]/40" />
           <span className="text-[10px] uppercase tracking-widest">{t("home_scroll")}</span>

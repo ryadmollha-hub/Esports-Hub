@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { usersTable, matchResultsTable, registrationsTable } from "@workspace/db";
-import { eq, sum, sql, count } from "drizzle-orm";
+import { eq, sum, sql, count, and } from "drizzle-orm";
 import { UpdateMyProfileBody } from "@workspace/api-zod";
 import { safeGetUserId } from "../lib/clerkAuth";
 
@@ -27,20 +27,41 @@ function sanitize(user: any) {
 }
 
 async function computeUserStats(userId: string) {
-  // Kills & wins from match results (matchResultsTable.userId is the user's clerkId)
-  const [statsRow] = await db
+  // Primary: aggregate from registrationsTable which stores userId reliably.
+  // kills + resultRank are populated by POST /tournaments/:id/publish-results.
+  const [regStats] = await db
+    .select({
+      played:     sql<number>`coalesce(count(*), 0)::int`,
+      totalKills: sql<number>`coalesce(sum(${registrationsTable.kills}), 0)::int`,
+      totalWins:  sql<number>`coalesce(count(*) filter (where ${registrationsTable.resultRank} = 1), 0)::int`,
+    })
+    .from(registrationsTable)
+    .where(
+      and(
+        eq(registrationsTable.userId, userId),
+        eq(registrationsTable.status, "approved"),
+      )
+    );
+
+  // Supplement: per-match results where the admin explicitly linked a userId.
+  const [matchStats] = await db
     .select({
       totalKills: sql<number>`coalesce(sum(${matchResultsTable.kills}), 0)::int`,
       totalWins:  sql<number>`coalesce(count(*) filter (where ${matchResultsTable.rank} = 1), 0)::int`,
-      played:     sql<number>`coalesce(count(distinct ${matchResultsTable.matchId}), 0)::int`,
     })
     .from(matchResultsTable)
     .where(eq(matchResultsTable.userId, userId));
 
+  const kills        = Number(regStats?.totalKills ?? 0) + Number(matchStats?.totalKills ?? 0);
+  const wins         = Number(regStats?.totalWins  ?? 0) + Number(matchStats?.totalWins  ?? 0);
+  const played       = Number(regStats?.played     ?? 0);
+
+  console.log(`[stats] userId=${userId}  played=${played}  kills=${kills}  wins=${wins}`);
+
   return {
-    totalKills:        Number(statsRow?.totalKills ?? 0),
-    totalWins:         Number(statsRow?.totalWins ?? 0),
-    tournamentsPlayed: Number(statsRow?.played ?? 0),
+    totalKills:        kills,
+    totalWins:         wins,
+    tournamentsPlayed: played,
   };
 }
 
