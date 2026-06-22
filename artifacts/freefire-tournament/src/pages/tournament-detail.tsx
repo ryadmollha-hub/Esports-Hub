@@ -369,9 +369,13 @@ export default function TournamentDetailPage() {
 
   const slotPct = Math.min((t.filledSlots / t.maxSlots) * 100, 100);
   const slotsLeft = t.maxSlots - t.filledSlots;
-  // Effective display status: show "Room Open" badge when credentials are out
-  // but the actual match start time hasn't been reached yet.
-  const effectiveDisplayStatus = !isLive && roomOpen ? "room_open" : t.status;
+  // Effective display status — priority order:
+  // 1. If ended/completed (via tournament status OR any completed match) → "ended" / "completed"
+  // 2. If room credentials are out but match hasn't started → "room_open"
+  // 3. Otherwise fall back to the tournament's own status field
+  const effectiveDisplayStatus = isEnded
+    ? (t.status === "cancelled" ? "cancelled" : t.status === "completed" ? "completed" : "ended")
+    : (!isLive && roomOpen ? "room_open" : t.status);
   const statusCfg = statusConfig[effectiveDisplayStatus] ?? statusConfig.upcoming;
   const hasWinner = !!t.winnerId && !!t.winnerName;
   const playerCount = modePlayerCount[t.mode] ?? 1;

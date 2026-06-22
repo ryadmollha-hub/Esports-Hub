@@ -268,10 +268,15 @@ export default function TournamentCard({ t, featured = false, from }: { t: Tourn
   const entryFee   = Number(t.entryFee);
   const perKill    = Number(t.perKillReward ?? 0);
 
-  const clientStatus = useClientStatus(t.status, t.startDate);
+  const rawClientStatus = useClientStatus(t.status, t.startDate);
+  // Safety override: once results are published the tournament is definitively done —
+  // never show LIVE/STARTING SOON regardless of what time-based logic computed.
+  const clientStatus: StatusKey = t.resultsPublished
+    ? "completed"
+    : rawClientStatus;
   const isLive       = clientStatus === "live" || clientStatus === "ongoing" || clientStatus === "starting_soon";
   const sc           = statusConfig[clientStatus] ?? statusConfig.upcoming;
-  const showResults  = t.resultsPublished === true || clientStatus === "completed" || t.status === "completed";
+  const showResults  = t.resultsPublished === true || clientStatus === "completed" || t.status === "completed" || t.status === "ended";
 
   const targetDate: string = (t.countdownTo ?? t.startDate)!;
 

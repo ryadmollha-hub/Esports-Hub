@@ -243,8 +243,32 @@ router.patch("/matches/:id", async (req, res) => {
       .where(eq(matchesTable.id, id))
       .returning();
     if (!updated) return res.status(404).json({ error: "Match not found." });
+
+    // ── Auto-cascade: when all matches for a tournament are completed,
+    //    promote the tournament status to "ended" so every page is consistent.
+    if (status === "completed") {
+      try {
+        const [rem] = await db
+          .select({ cnt: sql<number>`cast(count(*) as int)` })
+          .from(matchesTable)
+          .where(and(
+            eq(matchesTable.tournamentId, updated.tournamentId),
+            sql`${matchesTable.status} != 'completed'`,
+          ));
+        if ((rem?.cnt ?? 1) === 0) {
+          await db.update(tournamentsTable)
+            .set({ status: "ended" })
+            .where(eq(tournamentsTable.id, updated.tournamentId));
+          logger.info({ tournamentId: updated.tournamentId }, "Tournament auto-ended: all matches completed");
+        }
+      } catch (e) {
+        logger.warn({ err: e }, "Failed to auto-end tournament after match completed");
+      }
+    }
+
     res.json(updated);
-  } catch {
+  } catch (err) {
+    logger.error({ err }, "Failed to update match");
     res.status(500).json({ error: "Failed to update match." });
   }
 });
