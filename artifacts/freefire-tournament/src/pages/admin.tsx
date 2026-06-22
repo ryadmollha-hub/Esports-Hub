@@ -102,7 +102,7 @@ export default function AdminPage() {
   const [resultMode, setResultMode] = useState<Record<number, "winner" | "results">>({}); // toggle between winner-select and results-entry
 
   // Tournament form
-  const [tForm, setTForm] = useState({ name: "", description: "", mode: "squad", gameMode: "", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" });
+  const [tForm, setTForm] = useState({ name: "", description: "", mode: "squad", gameMode: "", startDate: "", endDate: "", maxSlots: "", prizePool: "", entryFee: "", perKillReward: "", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" });
   const [editingTournament, setEditingTournament] = useState<any>(null);
   const [showTForm, setShowTForm] = useState(false);
 
@@ -517,7 +517,7 @@ export default function AdminPage() {
       if (res.ok) {
         toast({ title: editingTournament ? "Tournament updated!" : "Tournament created!" });
         setShowTForm(false); setEditingTournament(null);
-        setTForm({ name: "", description: "", mode: "squad", gameMode: "", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" });
+        setTForm({ name: "", description: "", mode: "squad", gameMode: "", startDate: "", endDate: "", maxSlots: "", prizePool: "", entryFee: "", perKillReward: "", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" });
         loadTournaments(); loadStats();
       } else {
         const d = await safeJson(res);
@@ -1329,7 +1329,7 @@ export default function AdminPage() {
               <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-black uppercase">Manage <span className="text-[#ff6b00]">Tournaments</span></h1>
                 <button
-                  onClick={() => { setShowTForm(true); setEditingTournament(null); setTForm({ name: "", description: "", mode: "squad", gameMode: "", startDate: "", endDate: "", maxSlots: "100", prizePool: "0", entryFee: "0", perKillReward: "0", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" }); }}
+                  onClick={() => { setShowTForm(true); setEditingTournament(null); setTForm({ name: "", description: "", mode: "squad", gameMode: "", startDate: "", endDate: "", maxSlots: "", prizePool: "", entryFee: "", perKillReward: "", status: "upcoming", bannerUrl: "", prize1Amt: "", prize2Amt: "", prize3Amt: "" }); }}
                   className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] transition-colors"
                 >
                   <Plus className="w-4 h-4" /> Create Tournament
@@ -1342,11 +1342,11 @@ export default function AdminPage() {
                   <form onSubmit={saveTournament} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
                       <label className="label-sm">Tournament Name *</label>
-                      <input value={tForm.name} onChange={(e) => setTForm({ ...tForm, name: e.target.value })} required placeholder="e.g. FF Arena Grand Championship S1" className="admin-input" />
+                      <input value={tForm.name} onChange={(e) => setTForm({ ...tForm, name: e.target.value })} required className="admin-input" />
                     </div>
                     <div className="md:col-span-2">
                       <label className="label-sm">Description</label>
-                      <textarea value={tForm.description} onChange={(e) => setTForm({ ...tForm, description: e.target.value })} rows={3} className="admin-input resize-none" placeholder="Tournament details..." />
+                      <textarea value={tForm.description} onChange={(e) => setTForm({ ...tForm, description: e.target.value })} rows={3} className="admin-input resize-none" />
                     </div>
                     <div>
                       <label className="label-sm">Game Category <span className="text-[#ff2244]">*</span></label>
@@ -1401,11 +1401,11 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label className="label-sm">Per Kill Reward (৳)</label>
-                      <input type="number" value={tForm.perKillReward} onChange={(e) => setTForm({ ...tForm, perKillReward: e.target.value })} min="0" step="0.01" placeholder="0" className="admin-input" />
+                      <input type="number" value={tForm.perKillReward} onChange={(e) => setTForm({ ...tForm, perKillReward: e.target.value })} min="0" step="0.01" className="admin-input" />
                     </div>
                     <div>
                       <label className="label-sm">Banner Image URL</label>
-                      <input value={tForm.bannerUrl} onChange={(e) => setTForm({ ...tForm, bannerUrl: e.target.value })} placeholder="https://..." className="admin-input" />
+                      <input value={tForm.bannerUrl} onChange={(e) => setTForm({ ...tForm, bannerUrl: e.target.value })} className="admin-input" />
                     </div>
                     {!editingTournament && parseFloat(tForm.prizePool) > 0 && (
                       <div className="md:col-span-2 bg-[#0d0d16] border border-[#ff6b00]/10 rounded-xl p-4">
