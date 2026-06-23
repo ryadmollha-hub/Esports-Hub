@@ -219,35 +219,39 @@ router.post("/tournaments/:id/join", async (req, res) => {
       });
     }
 
-    // For duo/squad: additional team members
-    const teamMembers = req.body?.teamMembers ?? null; // Array of {uid, name}
-    // Validate team member count based on mode
-    if (tournament.mode === "duo" && teamMembers && teamMembers.length !== 1) {
-      return res.status(400).json({ error: "Duo tournament requires exactly 2 players (1 additional member)." });
-    }
-    if (tournament.mode === "squad" && teamMembers && teamMembers.length !== 3) {
-      return res.status(400).json({ error: "Squad tournament requires exactly 4 players (3 additional members)." });
-    }
+    // For duo/squad/5v5/6v6/any mode: additional team members
+    const teamMembers: Array<{ uid: string; name: string }> | null = req.body?.teamMembers ?? null;
 
-    // ── Entry fee check & deduction ──────────────────────────────────────────
-    const entryFee = Number(tournament.entryFee);
-    if (entryFee > 0) {
+    // ── Dynamic team size & total fee calculation ────────────────────────────
+    // teamSize = 1 (leader) + however many members were submitted.
+    // This handles every mode automatically: solo=1, duo=2, squad=4, 5v5=5, etc.
+    const teamSize = 1 + (teamMembers?.length ?? 0);
+    const entryFee = Number(tournament.entryFee);           // per-player fee
+    const totalFee = parseFloat((entryFee * teamSize).toFixed(2));
+
+    if (totalFee > 0) {
       const balance = await getUserBalance(userId);
-      if (balance < entryFee) {
+      if (balance < totalFee) {
+        const perPlayerNote = teamSize > 1 ? ` (৳${entryFee} × ${teamSize} players)` : "";
         return res.status(400).json({
-          error: `Insufficient wallet balance. You need ৳${entryFee} but have ৳${balance.toFixed(2)}.`,
+          error: `Insufficient wallet balance. Total entry fee is ৳${totalFee}${perPlayerNote}. You have ৳${balance.toFixed(2)}.`,
           insufficientBalance: true,
-          required: entryFee,
+          required: totalFee,
+          perPlayer: entryFee,
+          teamSize,
           balance,
         });
       }
-      // Deduct entry fee (auto-approved system transaction)
+      // Deduct total entry fee as a single auto-approved transaction
+      const feeNote = teamSize > 1
+        ? `Entry fee for "${tournament.name}" (${teamSize} players × ৳${entryFee})`
+        : `Entry fee for "${tournament.name}"`;
       await db.insert(walletTransactionsTable).values({
         userId,
         type: "tournament_entry",
-        amount: String(entryFee),
+        amount: String(totalFee),
         status: "approved",
-        notes: `Entry fee for "${tournament.name}"`,
+        notes: feeNote,
         tournamentId: id,
       });
     }
@@ -272,7 +276,9 @@ router.post("/tournaments/:id/join", async (req, res) => {
     res.status(201).json({
       success: true,
       registration: reg,
-      entryFeeDeducted: entryFee > 0 ? entryFee : 0,
+      entryFeeDeducted: totalFee > 0 ? totalFee : 0,
+      perPlayerFee: entryFee,
+      teamSize,
     });
   } catch {
     res.status(500).json({ error: "Failed to join tournament. Please try again." });

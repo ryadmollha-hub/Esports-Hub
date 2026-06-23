@@ -28,6 +28,13 @@ const modePlayerCount: Record<string, number> = {
   squad: 4,
 };
 
+function getPlayerCount(mode: string): number {
+  if (modePlayerCount[mode]) return modePlayerCount[mode];
+  const m = mode?.match(/^(\d+)v\d+$/i);
+  if (m) return parseInt(m[1]);
+  return 1;
+}
+
 const statusConfig: Record<string, { color: string; label: string; dot: string }> = {
   upcoming:  { color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",    label: "Upcoming",       dot: "bg-yellow-400" },
   live:      { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",        dot: "bg-emerald-400 animate-pulse" },
@@ -395,7 +402,8 @@ export default function TournamentDetailPage() {
     : (!isLive && roomOpen ? "room_open" : t.status);
   const statusCfg = statusConfig[effectiveDisplayStatus] ?? statusConfig.upcoming;
   const hasWinner = !!t.winnerId && !!t.winnerName;
-  const playerCount = modePlayerCount[t.mode] ?? 1;
+  const playerCount = getPlayerCount(t.mode);
+  const totalEntryFee = entryFee * playerCount;
 
   const podiumResults = results?.filter((r) => r.resultRank && r.resultRank <= 3)
     .sort((a, b) => (a.resultRank ?? 99) - (b.resultRank ?? 99)) ?? [];
@@ -956,9 +964,14 @@ export default function TournamentDetailPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[#a0a0b0] text-sm">Entry Fee</span>
-                <span className={`font-black text-base ${entryFee === 0 ? "text-[#00ff88]" : "text-white"}`}>
-                  {entryFee === 0 ? "FREE" : `৳${entryFee.toLocaleString()}`}
-                </span>
+                <div className="text-right">
+                  <span className={`font-black text-base ${totalEntryFee === 0 ? "text-[#00ff88]" : "text-white"}`}>
+                    {totalEntryFee === 0 ? "FREE" : `৳${totalEntryFee.toLocaleString()}`}
+                  </span>
+                  {playerCount > 1 && entryFee > 0 && (
+                    <div className="text-[10px] text-[#a0a0b0] mt-0.5">৳{entryFee} × {playerCount} players</div>
+                  )}
+                </div>
               </div>
               {Number(t.perKillReward) > 0 && (
                 <div className="flex items-center justify-between">
@@ -980,16 +993,16 @@ export default function TournamentDetailPage() {
               </div>
 
               {/* Wallet balance */}
-              {user && walletBalance !== null && entryFee > 0 && !isJoined && !isRegistrationClosed && (
+              {user && walletBalance !== null && totalEntryFee > 0 && !isJoined && !isRegistrationClosed && (
                 <div className={`flex items-center justify-between py-2 px-3 rounded-lg border ${
-                  walletBalance >= entryFee
+                  walletBalance >= totalEntryFee
                     ? "bg-[#00ff88]/5 border-[#00ff88]/20"
                     : "bg-[#ff2244]/10 border-[#ff2244]/30"
                 }`}>
                   <span className="flex items-center gap-1.5 text-sm text-[#a0a0b0]">
                     <Wallet className="w-3.5 h-3.5" /> Balance
                   </span>
-                  <span className={`font-black text-sm ${walletBalance >= entryFee ? "text-[#00ff88]" : "text-[#ff2244]"}`}>
+                  <span className={`font-black text-sm ${walletBalance >= totalEntryFee ? "text-[#00ff88]" : "text-[#ff2244]"}`}>
                     ৳{walletBalance.toFixed(2)}
                   </span>
                 </div>
@@ -1068,7 +1081,7 @@ export default function TournamentDetailPage() {
                       <button onClick={handleJoinClick} disabled={joining}
                         className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-all shadow-[0_0_20px_rgba(255,107,0,0.3)] disabled:opacity-50 text-sm">
                         <UserPlus className="w-4 h-4" />
-                        {joining ? "Joining..." : entryFee > 0 ? `Join (৳${entryFee} fee)` : "Join Tournament"}
+                        {joining ? "Joining..." : totalEntryFee > 0 ? `Join (৳${totalEntryFee} fee)` : "Join Tournament"}
                       </button>
                     )}
                   </>
@@ -1185,7 +1198,7 @@ export default function TournamentDetailPage() {
                 disabled={joining}
                 className="w-full py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 text-sm"
               >
-                {joining ? "Joining..." : entryFee > 0 ? `Continue (৳${entryFee} fee)` : "Join Tournament"}
+                {joining ? "Joining..." : totalEntryFee > 0 ? `Continue (৳${totalEntryFee} fee)` : "Join Tournament"}
               </button>
             </div>
           </div>
@@ -1213,18 +1226,31 @@ export default function TournamentDetailPage() {
                 <span className="text-[#a0a0b0]">Mode</span>
                 <span className="text-white font-bold uppercase">{t.mode}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[#a0a0b0]">Entry Fee</span>
-                <span className="text-[#ff6b00] font-black">৳{entryFee}</span>
-              </div>
+              {playerCount > 1 ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#a0a0b0]">Per Player</span>
+                    <span className="text-white font-bold">৳{entryFee} × {playerCount}</span>
+                  </div>
+                  <div className="flex justify-between text-sm border-t border-[#2a2a36] pt-2">
+                    <span className="text-[#a0a0b0] font-bold">Total Fee</span>
+                    <span className="text-[#ff6b00] font-black">৳{totalEntryFee}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between text-sm">
+                  <span className="text-[#a0a0b0]">Entry Fee</span>
+                  <span className="text-[#ff6b00] font-black">৳{totalEntryFee}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm border-t border-[#2a2a36] pt-2">
                 <span className="text-[#a0a0b0]">Your Balance</span>
-                <span className={`font-black ${walletBalance !== null && walletBalance >= entryFee ? "text-[#00ff88]" : "text-[#ff2244]"}`}>
+                <span className={`font-black ${walletBalance !== null && walletBalance >= totalEntryFee ? "text-[#00ff88]" : "text-[#ff2244]"}`}>
                   ৳{walletBalance?.toFixed(2) ?? "..."}
                 </span>
               </div>
             </div>
-            {walletBalance !== null && walletBalance < entryFee ? (
+            {walletBalance !== null && walletBalance < totalEntryFee ? (
               <div className="space-y-3">
                 <p className="text-[#ff2244] text-sm text-center font-bold">Insufficient balance to join.</p>
                 <Link href="/wallet" onClick={() => setShowFeeModal(false)}
@@ -1235,11 +1261,11 @@ export default function TournamentDetailPage() {
             ) : (
               <div className="space-y-3">
                 <p className="text-[#a0a0b0] text-sm text-center">
-                  ৳{entryFee} will be deducted from your wallet instantly.
+                  ৳{totalEntryFee} will be deducted from your wallet instantly.
                 </p>
                 <button onClick={() => doJoin()} disabled={joining}
                   className="w-full py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 text-sm">
-                  {joining ? "Joining..." : `Confirm & Pay ৳${entryFee}`}
+                  {joining ? "Joining..." : `Confirm & Pay ৳${totalEntryFee}`}
                 </button>
               </div>
             )}
