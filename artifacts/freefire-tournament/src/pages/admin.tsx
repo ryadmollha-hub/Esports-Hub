@@ -141,6 +141,10 @@ export default function AdminPage() {
   const [expandedMatchResult, setExpandedMatchResult] = useState<Record<number, boolean>>({});
   const [matchResultRows, setMatchResultRows] = useState<Record<number, Array<{ playerName: string; rank: string; kills: string; prizeMoney: string }>>>({});
   const [submittingMatchResult, setSubmittingMatchResult] = useState<Record<number, boolean>>({});
+  // Team-grouped match result entry (squad-aware)
+  const [matchTeamData, setMatchTeamData] = useState<Record<number, { loading: boolean; tournament: any; registrations: any[] }>>({});
+  const [matchTeamKills, setMatchTeamKills] = useState<Record<number, Record<string, number>>>({});
+  const [matchTeamRanks, setMatchTeamRanks] = useState<Record<number, Record<number, string>>>({});
 
   // Prize distribution state
   const [expandedPrize, setExpandedPrize] = useState<Record<number, boolean>>({});
@@ -676,6 +680,67 @@ export default function AdminPage() {
       const d = await safeJson(res);
       if (res.ok) {
         toast({ title: "✅ Match results saved!", description: `${results.length} players ranked.` });
+        setExpandedMatchResult((prev) => ({ ...prev, [matchId]: false }));
+        loadMatches();
+      } else {
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setSubmittingMatchResult((prev) => ({ ...prev, [matchId]: false }));
+    }
+  };
+
+  const loadMatchTeamData = async (matchId: number, tournamentId: number) => {
+    setMatchTeamData((prev) => ({ ...prev, [matchId]: { loading: true, tournament: null, registrations: [] } }));
+    try {
+      const res = await apiFetch(`/admin/tournaments/${tournamentId}/prize-registrations`);
+      const d = await safeJson(res);
+      if (res.ok) {
+        setMatchTeamData((prev) => ({ ...prev, [matchId]: { loading: false, tournament: d.tournament, registrations: d.registrations ?? [] } }));
+      } else {
+        setMatchTeamData((prev) => ({ ...prev, [matchId]: { loading: false, tournament: null, registrations: [] } }));
+        toast({ title: "Failed to load teams", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      setMatchTeamData((prev) => ({ ...prev, [matchId]: { loading: false, tournament: null, registrations: [] } }));
+      toast({ title: "Connection error", variant: "destructive" });
+    }
+  };
+
+  const submitTeamResults = async (matchId: number) => {
+    const data = matchTeamData[matchId];
+    const regs = data?.registrations ?? [];
+    if (regs.length === 0) return toast({ title: "No teams loaded yet", variant: "destructive" });
+
+    const ranks = matchTeamRanks[matchId] ?? {};
+    const kills = matchTeamKills[matchId] ?? {};
+
+    const teams = regs.map((reg: any) => ({
+      registrationId: reg.id,
+      rank: ranks[reg.id] ? parseInt(ranks[reg.id]) : null,
+      captainKills: kills[`${reg.id}-0`] ?? 0,
+      memberKills: (reg.teamMembersArr ?? []).map((_: any, i: number) => kills[`${reg.id}-${i + 1}`] ?? 0),
+    })).filter((t: any) => {
+      const totalKills = t.captainKills + (t.memberKills?.reduce((s: number, k: number) => s + k, 0) ?? 0);
+      return t.rank !== null || totalKills > 0;
+    });
+
+    if (teams.length === 0) return toast({ title: "Enter at least one team's data (rank or kills)", variant: "destructive" });
+
+    setSubmittingMatchResult((prev) => ({ ...prev, [matchId]: true }));
+    try {
+      const res = await apiFetch(`/admin/matches/${matchId}/team-results`, {
+        method: "PATCH",
+        body: JSON.stringify({ teams }),
+      });
+      const d = await safeJson(res);
+      if (res.ok) {
+        toast({
+          title: "✅ Results saved!",
+          description: `${d.resultsCount} player rows saved · ৳${Number(d.totalPrize ?? 0).toFixed(2)} credited to ${d.teamsRewarded} team leader${d.teamsRewarded !== 1 ? "s" : ""}.`,
+        });
         setExpandedMatchResult((prev) => ({ ...prev, [matchId]: false }));
         loadMatches();
       } else {
@@ -1762,14 +1827,10 @@ export default function AdminPage() {
                                         )}
                                         <button
                                           onClick={() => {
-                                            setExpandedMatchResult((prev) => ({ ...prev, [m.id]: !prev[m.id] }));
-                                            if (!matchResultRows[m.id]) {
-                                              setMatchResultRows((prev) => ({
-                                                ...prev,
-                                                [m.id]: hasResults
-                                                  ? m.results.map((r: any) => ({ playerName: r.playerName, rank: String(r.rank), kills: String(r.kills), prizeMoney: String(r.prizeMoney ?? r.points ?? "") }))
-                                                  : [],
-                                              }));
+                                            const opening = !expandedMatchResult[m.id];
+                                            setExpandedMatchResult((prev) => ({ ...prev, [m.id]: opening }));
+                                            if (opening && !matchTeamData[m.id]) {
+                                              loadMatchTeamData(m.id, t.id);
                                             }
                                           }}
                                           className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-lg text-[#ff6b00] text-xs font-bold hover:bg-[#ff6b00]/20 transition-colors"
@@ -1789,74 +1850,159 @@ export default function AdminPage() {
                                       </div>
                                     </div>
 
-                                    {/* ── Publish Results Panel ── */}
-                                    {isExpanded && (
-                                      <div className="border-t border-[#2a2a36] p-4 bg-[#0a0a12] space-y-4">
-                                        <div className="flex items-center justify-between">
-                                          <p className="text-[10px] uppercase font-black text-[#ff6b00] tracking-widest">Publish Results</p>
+                                    {/* ── Publish Results Panel (squad-grouped) ── */}
+                                    {isExpanded && (() => {
+                                      const teamData = matchTeamData[m.id];
+                                      const teamRegs = teamData?.registrations ?? [];
+                                      const tKills = matchTeamKills[m.id] ?? {};
+                                      const tRanks = matchTeamRanks[m.id] ?? {};
+                                      const perKillAmt = Number(teamData?.tournament?.perKillReward ?? 0);
+                                      const prizeTiersList: any[] = teamData?.tournament?.prizes ?? [];
+                                      const prizeByRankMap: Record<number, number> = {};
+                                      prizeTiersList.forEach((p: any, i: number) => { prizeByRankMap[i + 1] = Number(p.amount); });
+                                      if (prizeTiersList.length === 0) {
+                                        const pool = Number(teamData?.tournament?.prizePool ?? 0);
+                                        if (pool > 0) { prizeByRankMap[1] = pool * 0.5; prizeByRankMap[2] = pool * 0.3; prizeByRankMap[3] = pool * 0.2; }
+                                      }
+                                      return (
+                                        <div className="border-t border-[#2a2a36] p-4 bg-[#0a0a12] space-y-4">
+                                          <div className="flex items-center justify-between">
+                                            <p className="text-[10px] uppercase font-black text-[#ff6b00] tracking-widest">Publish Results — Squad Groups</p>
+                                            <button
+                                              onClick={() => loadMatchTeamData(m.id, t.id)}
+                                              className="flex items-center gap-1 px-2.5 py-1 bg-[#1a1a26] border border-[#2a2a36] text-[#a0a0b0] font-bold text-[10px] uppercase rounded-lg hover:bg-[#2a2a36] transition-colors"
+                                            >
+                                              <RefreshCw className={`w-3 h-3 ${teamData?.loading ? "animate-spin" : ""}`} /> Reload Teams
+                                            </button>
+                                          </div>
+
+                                          {/* Info bar */}
+                                          <div className="flex items-center gap-3 text-[10px] text-[#606070] bg-[#0d0d18] border border-[#1a1a28] rounded-lg px-3 py-2">
+                                            <span>👑 One RANK per squad</span>
+                                            <span>·</span>
+                                            <span>⚡ Kills entered per member</span>
+                                            <span>·</span>
+                                            <span>💰 Prize auto-calculated → Leader wallet</span>
+                                          </div>
+
+                                          {teamData?.loading ? (
+                                            <div className="flex items-center justify-center gap-2 py-8 text-[#606070] text-xs">
+                                              <RefreshCw className="w-4 h-4 animate-spin" /> Loading registered teams…
+                                            </div>
+                                          ) : teamRegs.length === 0 ? (
+                                            <div className="text-center py-8 text-[#606070] text-xs border border-dashed border-[#2a2a36] rounded-xl">
+                                              {teamData ? "No approved registrations found for this tournament." : "Click Reload Teams to load squads."}
+                                            </div>
+                                          ) : (
+                                            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                                              {teamRegs.map((reg: any) => {
+                                                const allMembers = [
+                                                  { name: reg.playerName, uid: reg.freefireUid, idx: 0, isLeader: true },
+                                                  ...(reg.teamMembersArr ?? []).map((mem: any, mi: number) => ({
+                                                    name: mem.name ?? "?",
+                                                    uid: mem.uid ?? "",
+                                                    idx: mi + 1,
+                                                    isLeader: false,
+                                                  })),
+                                                ];
+                                                const teamTotalKills = allMembers.reduce((s, mem) => s + (tKills[`${reg.id}-${mem.idx}`] ?? 0), 0);
+                                                const selectedRank = tRanks[reg.id] ? parseInt(tRanks[reg.id]) : null;
+                                                const rankPrize = selectedRank ? (prizeByRankMap[selectedRank] ?? 0) : 0;
+                                                const killReward = teamTotalKills * perKillAmt;
+                                                const estimated = rankPrize + killReward;
+                                                const rankEmoji = selectedRank === 1 ? "🥇" : selectedRank === 2 ? "🥈" : selectedRank === 3 ? "🥉" : null;
+                                                return (
+                                                  <div key={reg.id} className="bg-[#0e0e1a] border border-[#1e1e2e] rounded-xl overflow-hidden">
+                                                    {/* Squad header */}
+                                                    <div className="flex items-center gap-3 px-4 py-2.5 bg-[#0a0a14] border-b border-[#1a1a26]">
+                                                      <span className="text-sm">👑</span>
+                                                      <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                          <span className="text-white text-xs font-black truncate">{reg.playerName}</span>
+                                                          {reg.teamMembersArr?.length > 0 && (
+                                                            <span className="text-[10px] text-[#606070] bg-[#1a1a26] px-1.5 py-0.5 rounded-full border border-[#2a2a36]">
+                                                              +{reg.teamMembersArr.length}
+                                                            </span>
+                                                          )}
+                                                          {rankEmoji && <span className="text-xs">{rankEmoji}</span>}
+                                                        </div>
+                                                        {estimated > 0 && (
+                                                          <div className="text-[10px] text-[#00ff88] mt-0.5">
+                                                            Est. Prize: ৳{estimated.toFixed(2)}
+                                                            {rankPrize > 0 && killReward > 0 && ` (৳${rankPrize.toFixed(0)} rank + ৳${killReward.toFixed(0)} kills)`}
+                                                          </div>
+                                                        )}
+                                                      </div>
+                                                      {/* Single RANK dropdown per squad */}
+                                                      <select
+                                                        value={tRanks[reg.id] ?? ""}
+                                                        onChange={(e) => setMatchTeamRanks((prev) => ({ ...prev, [m.id]: { ...(prev[m.id] ?? {}), [reg.id]: e.target.value } }))}
+                                                        className="bg-[#0d0d16] border border-[#2a2a36] rounded-lg text-white text-xs px-2 py-1.5 focus:outline-none focus:border-[#ff6b00] shrink-0 w-24"
+                                                      >
+                                                        <option value="">Rank —</option>
+                                                        {[1,2,3,4,5,6,7,8,9,10].map((n) => (
+                                                          <option key={n} value={n}>{n === 1 ? "🥇 1st" : n === 2 ? "🥈 2nd" : n === 3 ? "🥉 3rd" : `#${n}`}</option>
+                                                        ))}
+                                                      </select>
+                                                    </div>
+                                                    {/* Member rows with individual kill inputs */}
+                                                    <div className="divide-y divide-[#111120]">
+                                                      {allMembers.map((mem) => {
+                                                        const killKey = `${reg.id}-${mem.idx}`;
+                                                        const memberKills = tKills[killKey] ?? 0;
+                                                        return (
+                                                          <div key={mem.idx} className={`flex items-center gap-3 hover:bg-[#0c0c16] transition-colors py-2 ${mem.isLeader ? "px-4" : "px-6 bg-[#08080e]"}`}>
+                                                            {mem.isLeader
+                                                              ? <span className="text-[10px] shrink-0">👑</span>
+                                                              : <span className="text-[10px] text-[#404050] font-black w-4 shrink-0">P{mem.idx + 1}</span>
+                                                            }
+                                                            <div className="flex-1 min-w-0">
+                                                              <div className={`text-xs font-semibold truncate ${mem.isLeader ? "text-white" : "text-[#b0b0c0]"}`}>{mem.name}</div>
+                                                              {mem.uid && <div className="text-[#404050] text-[10px] font-mono leading-none">{mem.uid}</div>}
+                                                            </div>
+                                                            {mem.isLeader && <span className="text-[10px] text-[#ffd700] font-black bg-[#ffd700]/10 border border-[#ffd700]/20 px-1.5 py-0.5 rounded-full shrink-0">Wallet</span>}
+                                                            {perKillAmt > 0 && memberKills > 0 && (
+                                                              <span className="text-[10px] text-[#00ff88] shrink-0">+৳{(memberKills * perKillAmt).toFixed(0)}</span>
+                                                            )}
+                                                            <div className="w-16 shrink-0">
+                                                              <input
+                                                                type="number" min="0" placeholder="0"
+                                                                value={memberKills === 0 ? "" : memberKills}
+                                                                onChange={(e) => setMatchTeamKills((prev) => ({
+                                                                  ...prev,
+                                                                  [m.id]: { ...(prev[m.id] ?? {}), [killKey]: parseInt(e.target.value) || 0 },
+                                                                }))}
+                                                                className="w-full bg-[#06060f] border border-[#1e1e2e] text-white text-xs font-bold rounded-lg px-2 py-1.5 text-center focus:outline-none focus:border-[#ff6b00] transition-colors"
+                                                              />
+                                                            </div>
+                                                          </div>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                    {/* Team kill total footer */}
+                                                    <div className="flex items-center justify-between px-4 py-1.5 bg-[#07070f] border-t border-[#111120]">
+                                                      <span className="text-[10px] text-[#404050]">Team Kills</span>
+                                                      <span className={`text-[10px] font-black ${teamTotalKills > 0 ? "text-[#00ff88]" : "text-[#303040]"}`}>
+                                                        {teamTotalKills}
+                                                        {perKillAmt > 0 && teamTotalKills > 0 && <span className="text-[#606060] font-normal"> × ৳{perKillAmt} = ৳{(teamTotalKills * perKillAmt).toFixed(0)}</span>}
+                                                      </span>
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+
                                           <button
-                                            onClick={() => addMatchResultRow(m.id)}
-                                            className="flex items-center gap-1 px-2.5 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/20 text-[#ff6b00] font-bold text-[10px] uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors"
+                                            onClick={() => submitTeamResults(m.id)}
+                                            disabled={submittingMatchResult[m.id] || teamRegs.length === 0}
+                                            className="w-full py-2.5 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black text-xs uppercase rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                                           >
-                                            <Plus className="w-3 h-3" /> Add Row
+                                            {submittingMatchResult[m.id] ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…</> : "🏆 Save Results & Auto-Distribute Prize"}
                                           </button>
                                         </div>
-                                        {rows.length === 0 ? (
-                                          <div className="text-center py-5 text-[#606070] text-xs border border-dashed border-[#2a2a36] rounded-xl">
-                                            Click "Add Row" to add player results.
-                                          </div>
-                                        ) : (
-                                          <div className="space-y-2">
-                                            <div className="grid grid-cols-[1fr_70px_70px_90px_28px] gap-2 px-2 text-[10px] text-[#a0a0b0] uppercase font-bold">
-                                              <span>Player</span><span className="text-center">Kills</span><span className="text-center">Rank</span><span className="text-center">Prize ৳</span><span />
-                                            </div>
-                                            {rows.map((row, ri) => (
-                                              <div key={ri} className="grid grid-cols-[1fr_70px_70px_90px_28px] gap-2 items-center bg-[#1a1a24] rounded-lg px-2 py-1.5">
-                                                <input
-                                                  placeholder="Player name"
-                                                  value={row.playerName}
-                                                  onChange={(e) => setMatchResultRows((prev) => ({ ...prev, [m.id]: prev[m.id].map((r, i) => i === ri ? { ...r, playerName: e.target.value } : r) }))}
-                                                  className="bg-transparent border-b border-[#2a2a36] text-white text-xs py-0.5 focus:outline-none focus:border-[#ff6b00] w-full"
-                                                />
-                                                <input
-                                                  type="number" min="0" placeholder="0"
-                                                  value={row.kills}
-                                                  onChange={(e) => setMatchResultRows((prev) => ({ ...prev, [m.id]: prev[m.id].map((r, i) => i === ri ? { ...r, kills: e.target.value } : r) }))}
-                                                  className="bg-[#0d0d16] border border-[#2a2a36] rounded text-white text-xs text-center px-1 py-1 focus:outline-none focus:border-[#ff6b00] w-full"
-                                                />
-                                                <select
-                                                  value={row.rank}
-                                                  onChange={(e) => setMatchResultRows((prev) => ({ ...prev, [m.id]: prev[m.id].map((r, i) => i === ri ? { ...r, rank: e.target.value } : r) }))}
-                                                  className="bg-[#0d0d16] border border-[#2a2a36] rounded text-white text-xs text-center px-1 py-1 focus:outline-none focus:border-[#ff6b00] w-full"
-                                                >
-                                                  <option value="">—</option>
-                                                  {[1,2,3,4,5,6,7,8,9,10].map((n) => (
-                                                    <option key={n} value={n}>{n === 1 ? "🥇 1st" : n === 2 ? "🥈 2nd" : n === 3 ? "🥉 3rd" : `#${n}`}</option>
-                                                  ))}
-                                                </select>
-                                                <input
-                                                  type="number" min="0" placeholder="0"
-                                                  value={row.prizeMoney}
-                                                  onChange={(e) => setMatchResultRows((prev) => ({ ...prev, [m.id]: prev[m.id].map((r, i) => i === ri ? { ...r, prizeMoney: e.target.value } : r) }))}
-                                                  className="bg-[#0d0d16] border border-[#2a2a36] rounded text-white text-xs text-center px-1 py-1 focus:outline-none focus:border-[#ff6b00] w-full"
-                                                />
-                                                <button
-                                                  onClick={() => setMatchResultRows((prev) => ({ ...prev, [m.id]: prev[m.id].filter((_, i) => i !== ri) }))}
-                                                  className="text-[#ff4444] hover:text-red-300 text-xs font-bold transition-colors"
-                                                >✕</button>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
-                                        <button
-                                          onClick={() => submitMatchResults(m.id)}
-                                          disabled={submittingMatchResult[m.id] || rows.length === 0}
-                                          className="w-full py-2.5 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black text-xs uppercase rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                                        >
-                                          {submittingMatchResult[m.id] ? <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Saving…</> : "🏆 Save Results"}
-                                        </button>
-                                      </div>
-                                    )}
+                                      );
+                                    })()}
 
                                     {/* ── Prize Distribution Panel ── */}
                                     {expandedPrize[m.id] && (() => {

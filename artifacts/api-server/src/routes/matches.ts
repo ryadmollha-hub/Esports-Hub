@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { matchesTable, matchResultsTable, tournamentsTable, registrationsTable } from "@workspace/db";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { matchesTable, matchResultsTable, tournamentsTable, registrationsTable, walletTransactionsTable, prizeTiersTable } from "@workspace/db";
+import { eq, desc, and, sql, inArray } from "drizzle-orm";
 import { requireAdmin } from "../middlewares/requireAdmin";
 import { logger } from "../lib/logger";
 import { nextMatchSerial } from "../lib/matchSerial";
@@ -448,6 +448,187 @@ router.patch("/matches/:id/results", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to save results");
     res.status(500).json({ error: "Failed to save results." });
+  }
+});
+
+// ─── Team-grouped results + auto prize distribution (admin) ──────────────────
+// Accepts squad-structured kills/ranks, saves per-member result rows, and
+// automatically credits the computed grand total (rank prize + kill reward)
+// to the team leader's wallet. Teammates receive result rows but NO wallet tx.
+
+router.patch("/admin/matches/:id/team-results", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const { teams } = req.body as {
+      teams: Array<{
+        registrationId: number;
+        rank: number | null;
+        captainKills: number;
+        memberKills?: number[];
+      }>;
+    };
+
+    if (!Array.isArray(teams) || teams.length === 0) {
+      return res.status(400).json({ error: "teams array is required." });
+    }
+
+    const [match] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
+    if (!match) return res.status(404).json({ error: "Match not found." });
+
+    const [tournament] = await db
+      .select()
+      .from(tournamentsTable)
+      .where(eq(tournamentsTable.id, match.tournamentId));
+    if (!tournament) return res.status(404).json({ error: "Tournament not found." });
+
+    const prizes = await db
+      .select()
+      .from(prizeTiersTable)
+      .where(eq(prizeTiersTable.tournamentId, match.tournamentId))
+      .orderBy(prizeTiersTable.rank);
+
+    // rank → prize amount map
+    const prizeByRank: Record<number, number> = {};
+    prizes.forEach((p, i) => { prizeByRank[i + 1] = Number(p.amount); });
+    if (prizes.length === 0) {
+      const pool = Number(tournament.prizePool ?? 0);
+      if (pool > 0) {
+        prizeByRank[1] = parseFloat((pool * 0.50).toFixed(2));
+        prizeByRank[2] = parseFloat((pool * 0.30).toFixed(2));
+        prizeByRank[3] = parseFloat((pool * 0.20).toFixed(2));
+      }
+    }
+
+    const perKill = Number(tournament.perKillReward ?? 0);
+
+    const regIds = teams.map((t) => t.registrationId);
+    const registrations = await db
+      .select()
+      .from(registrationsTable)
+      .where(inArray(registrationsTable.id, regIds));
+    const regMap = new Map(registrations.map((r) => [r.id, r]));
+
+    const resultRows: Array<typeof matchResultsTable.$inferInsert> = [];
+    const walletInserts: Array<typeof walletTransactionsTable.$inferInsert> = [];
+    let totalPrize = 0;
+    let teamsRewarded = 0;
+
+    const rankLabel = (rank: number | null) =>
+      rank === 1 ? "🥇 1st Place" : rank === 2 ? "🥈 2nd Place" : rank === 3 ? "🥉 3rd Place" : `#${rank}`;
+
+    for (const team of teams) {
+      const reg = regMap.get(team.registrationId);
+      if (!reg) continue;
+
+      const teamMembers: { uid: string; name: string }[] = reg.teamMembers
+        ? JSON.parse(reg.teamMembers)
+        : [];
+
+      const rank = team.rank ?? null;
+      const rankPrize = rank ? (prizeByRank[rank] ?? 0) : 0;
+      const captKills = team.captainKills ?? 0;
+      const memberKillsList = team.memberKills ?? [];
+      const totalKills = captKills + memberKillsList.reduce((s, k) => s + k, 0);
+      const killReward = parseFloat((totalKills * perKill).toFixed(2));
+      const grandTotal = parseFloat((rankPrize + killReward).toFixed(2));
+      const displayRank = rank ?? 99;
+
+      // Captain result row — carries total team prize in points for leaderboard
+      resultRows.push({
+        matchId: id,
+        userId: reg.userId ?? null,
+        playerName: reg.playerName,
+        rank: displayRank,
+        kills: captKills,
+        points: grandTotal > 0 ? Math.round(grandTotal) : 0,
+      });
+
+      // Teammate result rows — track kills but no wallet credit
+      teamMembers.forEach((mem, i) => {
+        resultRows.push({
+          matchId: id,
+          userId: null,
+          playerName: mem.name,
+          rank: displayRank,
+          kills: memberKillsList[i] ?? 0,
+          points: 0,
+        });
+      });
+
+      // Wallet transactions → team leader only
+      if (grandTotal > 0 && reg.userId) {
+        teamsRewarded++;
+        totalPrize = parseFloat((totalPrize + grandTotal).toFixed(2));
+
+        if (rankPrize > 0) {
+          walletInserts.push({
+            userId: reg.userId,
+            type: "tournament_prize",
+            amount: rankPrize.toFixed(2),
+            status: "approved",
+            notes: `Match #${match.matchNumber} ${rankLabel(rank)} Rank Prize — "${tournament.name}"`,
+            tournamentId: match.tournamentId,
+            matchId: id,
+          });
+        }
+
+        if (killReward > 0) {
+          const killBreakdown = [
+            captKills > 0 ? `${reg.playerName} ${captKills}K` : null,
+            ...teamMembers.map((m, i) =>
+              (memberKillsList[i] ?? 0) > 0 ? `${m.name} ${memberKillsList[i]}K` : null
+            ),
+          ].filter(Boolean).join(" + ");
+          walletInserts.push({
+            userId: reg.userId,
+            type: "tournament_prize",
+            amount: killReward.toFixed(2),
+            status: "approved",
+            notes: `Match #${match.matchNumber} Team Kill Reward (${killBreakdown || `${totalKills}K`}) × ৳${perKill} — "${tournament.name}"`,
+            tournamentId: match.tournamentId,
+            matchId: id,
+          });
+        }
+      }
+    }
+
+    // Replace results for this match
+    await db.delete(matchResultsTable).where(eq(matchResultsTable.matchId, id));
+    if (resultRows.length > 0) await db.insert(matchResultsTable).values(resultRows);
+
+    // Insert wallet transactions
+    if (walletInserts.length > 0) await db.insert(walletTransactionsTable).values(walletInserts);
+
+    // Mark match completed
+    await db.update(matchesTable)
+      .set({ status: "completed" })
+      .where(eq(matchesTable.id, id));
+
+    // Cascade tournament resultsPublished
+    try {
+      const [rem] = await db
+        .select({ cnt: sql<number>`cast(count(*) as int)` })
+        .from(matchesTable)
+        .where(and(
+          eq(matchesTable.tournamentId, match.tournamentId),
+          sql`${matchesTable.status} != 'completed'`,
+        ));
+      await db.update(tournamentsTable)
+        .set({
+          resultsPublished: true,
+          ...((rem?.cnt ?? 1) === 0 ? { status: "ended" } : {}),
+        })
+        .where(eq(tournamentsTable.id, match.tournamentId));
+    } catch (e) {
+      logger.warn({ err: e }, "Failed to cascade tournament resultsPublished");
+    }
+
+    logger.info({ matchId: id, resultsCount: resultRows.length, teamsRewarded, totalPrize }, "Team results saved with auto prize distribution");
+    res.json({ success: true, resultsCount: resultRows.length, teamsRewarded, totalPrize });
+  } catch (err) {
+    logger.error({ err }, "Failed to save team results");
+    res.status(500).json({ error: "Failed to save team results." });
   }
 });
 
