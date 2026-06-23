@@ -102,17 +102,30 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
   const clientStatus = useClientStatus(t.status, t.startDate);
   const roomOpen     = useRoomOpen(t.id, clientStatus);
 
-  // Derive effective status: room_open takes priority over upcoming/starting_soon
-  const effectiveStatus: StatusKey =
-    roomOpen && (clientStatus === "upcoming" || clientStatus === "starting_soon" || clientStatus === "live")
-      ? "room_open"
-      : clientStatus;
+  // Derive effective status.
+  // Priority (highest → lowest):
+  //   1. resultsPublished OR server/client completed/ended  → completed / ended
+  //   2. roomOpen (credentials visible, match not yet started) → room_open
+  //   3. client-computed status
+  const isTerminal =
+    t.resultsPublished === true ||
+    t.status === "completed" ||
+    t.status === "ended" ||
+    clientStatus === "completed" ||
+    clientStatus === "ended";
+
+  const effectiveStatus: StatusKey = isTerminal
+    ? (t.status === "cancelled" ? "cancelled" : (t.status === "completed" || clientStatus === "completed") ? "completed" : "ended")
+    : roomOpen && (clientStatus === "upcoming" || clientStatus === "starting_soon" || clientStatus === "live")
+    ? "room_open"
+    : clientStatus;
 
   const isLive = effectiveStatus === "live" || effectiveStatus === "ongoing" || effectiveStatus === "starting_soon" || effectiveStatus === "room_open";
   const sc     = statusConfig[effectiveStatus] ?? statusConfig.upcoming;
 
-  const showResults  = t.resultsPublished === true || t.status === "completed" || effectiveStatus === "completed" || effectiveStatus === "ended";
-  const showCountdown = effectiveStatus === "upcoming" || effectiveStatus === "starting_soon";
+  const showResults  = isTerminal;
+  // Show countdown for upcoming/starting_soon/room_open — timer must stay visible even when room credentials are out
+  const showCountdown = effectiveStatus === "upcoming" || effectiveStatus === "starting_soon" || effectiveStatus === "room_open";
   const targetDate: string = (t.countdownTo ?? t.startDate)!;
 
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
@@ -182,19 +195,18 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
                 </div>
               </div>
 
-              {showCountdown && !roomOpen && (
+              {showCountdown && (
                 <div className="mb-3 bg-[#0a0a0f] rounded-xl px-3 py-2 border border-[#1e1e2e]">
                   <div className="text-[9px] uppercase tracking-widest text-[#606070] font-bold mb-1.5">
-                    {effectiveStatus === "starting_soon" ? "⚡ Starting Soon" : "Starts In"}
+                    {effectiveStatus === "starting_soon" ? "⚡ Starting Soon" : effectiveStatus === "room_open" ? "🔑 Match Starts In" : "Starts In"}
                   </div>
                   <CountdownTimer targetDate={targetDate} className="text-[11px] gap-1.5" />
-                </div>
-              )}
-
-              {effectiveStatus === "room_open" && (
-                <div className="mb-3 bg-orange-600/10 rounded-xl px-3 py-2 border border-orange-500/40 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shrink-0" />
-                  <span className="text-orange-400 text-[10px] font-black uppercase tracking-wide">Room credentials are now available</span>
+                  {effectiveStatus === "room_open" && (
+                    <div className="mt-1.5 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse shrink-0" />
+                      <span className="text-orange-400 text-[9px] font-black uppercase tracking-wide">Room credentials available</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -310,10 +322,10 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
           </div>
 
           <div className="flex flex-col items-end gap-1 shrink-0">
-            {showCountdown && !roomOpen ? (
+            {showCountdown ? (
               <div className="flex flex-col items-end gap-0.5">
-                <span className={`text-[8px] uppercase tracking-widest font-bold ${effectiveStatus === "starting_soon" ? "text-yellow-400" : "text-[#606070]"}`}>
-                  {effectiveStatus === "starting_soon" ? "⚡ Soon" : "Starts In"}
+                <span className={`text-[8px] uppercase tracking-widest font-bold ${effectiveStatus === "starting_soon" ? "text-yellow-400" : effectiveStatus === "room_open" ? "text-orange-400" : "text-[#606070]"}`}>
+                  {effectiveStatus === "starting_soon" ? "⚡ Soon" : effectiveStatus === "room_open" ? "🔑 Opens" : "Starts In"}
                 </span>
                 <CountdownTimer targetDate={targetDate} className="text-[9px] gap-0.5" />
               </div>

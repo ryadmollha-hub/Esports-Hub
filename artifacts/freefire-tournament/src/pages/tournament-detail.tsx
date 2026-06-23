@@ -387,10 +387,10 @@ export default function TournamentDetailPage() {
   const slotPct = Math.min((t.filledSlots / t.maxSlots) * 100, 100);
   const slotsLeft = t.maxSlots - t.filledSlots;
   // Effective display status — priority order:
-  // 1. If ended/completed (via tournament status OR any completed match) → "ended" / "completed"
+  // 1. resultsPublished OR ended/completed → always "completed"/"ended" (overrides room_open)
   // 2. If room credentials are out but match hasn't started → "room_open"
   // 3. Otherwise fall back to the tournament's own status field
-  const effectiveDisplayStatus = isEnded
+  const effectiveDisplayStatus = (isEnded || t.resultsPublished)
     ? (t.status === "cancelled" ? "cancelled" : t.status === "completed" ? "completed" : "ended")
     : (!isLive && roomOpen ? "room_open" : t.status);
   const statusCfg = statusConfig[effectiveDisplayStatus] ?? statusConfig.upcoming;
@@ -494,11 +494,16 @@ export default function TournamentDetailPage() {
               </div>
             )}
 
-            {/* Countdown */}
-            {t.status === "upcoming" && t.countdownTo && (
-              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
-                <h3 className="text-white font-bold uppercase text-sm mb-3 tracking-wider">Starts In</h3>
-                <CountdownTimer targetDate={t.countdownTo} className="text-3xl gap-4" />
+            {/* Countdown — visible for upcoming AND when room is open (timer keeps ticking) */}
+            {(t.status === "upcoming" || roomOpen) && (t.countdownTo ?? t.startDate) && (
+              <div className={`rounded-xl border p-5 ${roomOpen ? "bg-orange-600/5 border-orange-500/30" : "bg-[#12121a] border-[#ff6b00]/20"}`}>
+                <h3 className={`font-bold uppercase text-sm mb-3 tracking-wider ${roomOpen ? "text-orange-400" : "text-white"}`}>
+                  {roomOpen ? "🔑 Match Starts In" : "Starts In"}
+                </h3>
+                <CountdownTimer targetDate={(t.countdownTo ?? t.startDate)!} className="text-3xl gap-4" />
+                {roomOpen && (
+                  <p className="mt-3 text-orange-300/70 text-xs">Room credentials are now available. Check your join details.</p>
+                )}
               </div>
             )}
 
