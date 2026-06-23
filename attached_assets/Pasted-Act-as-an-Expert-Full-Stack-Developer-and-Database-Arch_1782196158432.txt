@@ -1,0 +1,22 @@
+Act as an Expert Full-Stack Developer and Database Architect. We need to overhaul the Duo/Squad tournament registration, leaderboard display, and prize distribution logic. Implement the following comprehensive system upgrades across the backend models, admin panels, and user views:
+
+1. AUTOMATIC TEAM LEADER IDENTIFICATION & CROWN BADGE:
+- In the Database Schema for Match Registrations (Duo/Squad), the user who initiates the registration and pays the entry fee must be explicitly flagged as the `teamLeader` (storing their User ID).
+- For team members (Slot 2, 3, 4), store only their Free Fire In-Game UID/Name inputted by the leader. They do not require an app account.
+- User UI: In the Match Details "Joined Players/Teams" list, render a prominent Golden Crown Icon (👑) or a highlighted "👑 Leader" badge next to the Team Leader's name. The teammates' names should be indented underneath the leader's row as a unified team block.
+
+2. RESTRUCTURE ADMIN RESULTS INPUT & AUTOMATED PRIZE CALCULATOR:
+- Eliminate the redundant double-entry system. Admin should NOT have to manually type the prize money amount again during results publishing.
+- When creating a match, the admin defines the Prize Pool rules (e.g., Rank 1 = 500 TK, Rank 2 = 300 TK, Per Kill = 20 TK). Store this config in the Match Model.
+- Admin Results UI: When the admin opens the match completion sheet, display the full team structure. Provide separate input fields for individual kills for EVERY player (Leader and Teammates separately) so users can see true stats on the leaderboard.
+
+3. SMART BACKEND PRIZE DISTRIBUTION ALGORITHM:
+- When the admin inputs the kills/ranks and clicks "Publish Results", the backend must run a calculation loop:
+  * Fetch the predefined prize config for that match.
+  * Calculate Total Team Kill Reward = (Leader Kills + Teammate 1 Kills + Teammate 2 Kills + Teammate 3 Kills) * Per Kill Prize.
+  * Fetch Rank Reward based on the team's placement.
+  * Grand Total Team Prize = Total Team Kill Reward + Rank Reward.
+- CRITICAL ROUTING LOGIC: Do NOT look for teammate accounts. Credit the entire Grand Total Team Prize automatically into the main wallet balance of the registered `teamLeader`'s User ID. 
+- Log a single transaction history entry for the Team Leader explaining the breakdown (e.g., "Won Match #X: Rank Reward + X Team Kills").
+
+Review the tournament listing grid, the internal details leaderboards, and the admin match-management handlers to deploy this synchronized architecture cleanly.
