@@ -891,34 +891,53 @@ export default function TournamentDetailPage() {
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                     {participants.map((p, i) => {
                       const members: TeamMember[] = p.teamMembers ? JSON.parse(p.teamMembers) : [];
+                      const isWinner = p.userId === t.winnerId;
+                      const isSquad = members.length > 0;
                       return (
-                        <div key={p.id} className={`flex items-start gap-3 p-3 rounded-xl ${
-                          p.userId === t.winnerId ? "bg-[#ffd700]/10 border border-[#ffd700]/30" : "bg-[#1a1a24]"
+                        <div key={p.id} className={`rounded-xl overflow-hidden border ${
+                          isWinner ? "border-[#ffd700]/40" : "border-[#2a2a36]"
                         }`}>
-                          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 mt-0.5 ${
-                            p.userId === t.winnerId ? "bg-[#ffd700]/20 text-[#ffd700]" : "bg-[#ff6b00]/15 text-[#ff6b00]"
+                          {/* Team Leader Row */}
+                          <div className={`flex items-center gap-3 p-3 ${
+                            isWinner ? "bg-[#ffd700]/10" : "bg-[#1a1a24]"
                           }`}>
-                            {p.userId === t.winnerId ? <Crown className="w-3.5 h-3.5" /> : i + 1}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-white font-bold text-sm">{p.playerName}</span>
-                              {p.userId === user?.userId && (
-                                <span className="text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 px-1.5 py-0.5 rounded-full">You</span>
-                              )}
+                            <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                              isWinner ? "bg-[#ffd700]/20 text-[#ffd700]" : "bg-[#ff6b00]/15 text-[#ff6b00]"
+                            }`}>
+                              {isWinner ? <Crown className="w-3.5 h-3.5" /> : i + 1}
                             </div>
-                            <div className="text-[#a0a0b0] text-xs font-mono">UID: {p.freefireUid}</div>
-                            {members.length > 0 && (
-                              <div className="mt-1 space-y-0.5">
-                                {members.map((m, mi) => (
-                                  <div key={mi} className="text-[#a0a0b0] text-xs">
-                                    P{mi + 2}: {m.name} <span className="font-mono">(UID: {m.uid})</span>
-                                  </div>
-                                ))}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {/* Crown badge for team leader in duo/squad */}
+                                {isSquad && (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-black text-[#ffd700] bg-[#ffd700]/10 border border-[#ffd700]/30 px-1.5 py-0.5 rounded-full">
+                                    👑 Leader
+                                  </span>
+                                )}
+                                <span className="text-white font-bold text-sm">{p.playerName}</span>
+                                {p.userId === user?.userId && (
+                                  <span className="text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 px-1.5 py-0.5 rounded-full">You</span>
+                                )}
                               </div>
-                            )}
+                              <div className="text-[#a0a0b0] text-xs font-mono">UID: {p.freefireUid}</div>
+                            </div>
+                            <CheckCircle className="w-4 h-4 text-[#00ff88] shrink-0" />
                           </div>
-                          <CheckCircle className="w-4 h-4 text-[#00ff88] shrink-0 mt-0.5" />
+                          {/* Teammate Rows — indented squad block */}
+                          {members.map((m, mi) => (
+                            <div key={mi} className="flex items-center gap-3 px-3 py-2 bg-[#141420] border-t border-[#222230]">
+                              <div className="w-7 h-7 flex items-center justify-center shrink-0">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#404058]" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10px] font-black text-[#606070] uppercase">P{mi + 2}</span>
+                                  <span className="text-[#c0c0d0] text-xs font-medium">{m.name}</span>
+                                </div>
+                                <div className="text-[#505060] text-[10px] font-mono">UID: {m.uid}</div>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       );
                     })}

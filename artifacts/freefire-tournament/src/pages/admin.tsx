@@ -1863,16 +1863,9 @@ export default function AdminPage() {
                                       const data = prizeRegData[m.id];
                                       const placements = prizePlacements[m.id] ?? {};
                                       const kills = prizeKills[m.id] ?? {};
-                                      const perKill = data?.tournament?.perKillReward ?? 0;
+                                      const perKill = Number(data?.tournament?.perKillReward ?? 0);
                                       const regs = data?.registrations ?? [];
                                       const placedRegIds = new Set(Object.keys(placements).filter((k) => placements[k as any]).map(Number));
-                                      const allPlayers: Array<{ name: string; uid: string; regId: number; mIdx: number; isCapt: boolean; teamName: string }> = [];
-                                      for (const reg of regs) {
-                                        allPlayers.push({ name: reg.playerName, uid: reg.freefireUid, regId: reg.id, mIdx: 0, isCapt: true, teamName: reg.playerName });
-                                        (reg.teamMembersArr ?? []).forEach((mem: any, mi: number) => {
-                                          allPlayers.push({ name: mem.name ?? mem.playerName ?? "?", uid: mem.freefireUid ?? mem.uid ?? "", regId: reg.id, mIdx: mi + 1, isCapt: false, teamName: reg.playerName });
-                                        });
-                                      }
                                       const preview = prizePreviewData[m.id];
                                       return (
                                         <div className="border-t border-yellow-500/10 p-4 bg-[#0a0a0c] space-y-5">
@@ -1929,89 +1922,148 @@ export default function AdminPage() {
                                                 </div>
                                               </div>
 
-                                              {/* Section B — Kill Counts */}
+                                              {/* Section B — Kill Counts (grouped by team) */}
                                               <div>
-                                                <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section B — Kill Counts</p>
-                                                <div className="bg-[#0e0e1a] border border-[#1e1e2e] rounded-xl overflow-hidden">
-                                                  <div className="grid grid-cols-[1fr_auto] gap-4 px-4 py-2 border-b border-[#1a1a26] bg-[#0a0a14]">
-                                                    <span className="text-[10px] uppercase font-black text-[#404050] tracking-widest">Player / UID</span>
-                                                    <span className="text-[10px] uppercase font-black text-[#404050] tracking-widest w-20 text-center">Kills</span>
-                                                  </div>
-                                                  <div className="divide-y divide-[#111120]">
-                                                    {allPlayers.map((player, pIdx) => {
-                                                      const killKey = `${player.regId}-${player.mIdx}`;
-                                                      const teamPlacement = placements[player.regId];
-                                                      const placementEmoji = teamPlacement === "1" ? "🥇" : teamPlacement === "2" ? "🥈" : teamPlacement === "3" ? "🥉" : null;
-                                                      return (
-                                                        <div key={pIdx} className="grid grid-cols-[1fr_auto] gap-4 items-center px-4 py-2.5 hover:bg-[#0c0c16] transition-colors">
-                                                          <div className="flex items-center gap-2.5 min-w-0">
-                                                            {player.isCapt ? <span className="shrink-0 text-yellow-400 text-[10px] font-black w-4">★</span> : <span className="shrink-0 text-[#303040] text-[10px] w-4">·</span>}
-                                                            <div className="min-w-0">
-                                                              <div className="flex items-center gap-1.5">
-                                                                <span className="text-white text-xs font-semibold truncate">{player.name}</span>
-                                                                {placementEmoji && player.isCapt && <span className="text-xs">{placementEmoji}</span>}
-                                                              </div>
-                                                              <div className="flex items-center gap-1.5 mt-0.5">
-                                                                {player.uid ? <span className="text-[#404050] text-[10px] font-mono">{player.uid}</span> : <span className="text-[10px] text-[#505058] bg-[#1a1a24] border border-[#2a2a34] px-1.5 py-0.5 rounded-full">No Wallet</span>}
-                                                                {!player.isCapt && <span className="text-[#303040] text-[10px]">· {player.teamName}</span>}
-                                                              </div>
-                                                            </div>
+                                                <div className="flex items-center justify-between mb-3">
+                                                  <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest">Section B — Kill Counts per Member</p>
+                                                  <span className="text-[10px] text-[#404050]">Prize credited to 👑 Leader</span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                  {regs.map((reg: any) => {
+                                                    const teamPlacement = placements[reg.id];
+                                                    const placementEmoji = teamPlacement === "1" ? "🥇" : teamPlacement === "2" ? "🥈" : teamPlacement === "3" ? "🥉" : null;
+                                                    const allMembers = [
+                                                      { name: reg.playerName, uid: reg.freefireUid, idx: 0, isLeader: true },
+                                                      ...(reg.teamMembersArr ?? []).map((mem: any, mi: number) => ({
+                                                        name: mem.name ?? "?",
+                                                        uid: mem.uid ?? "",
+                                                        idx: mi + 1,
+                                                        isLeader: false,
+                                                      })),
+                                                    ];
+                                                    const teamTotalKills = allMembers.reduce((s, mem) => s + (kills[`${reg.id}-${mem.idx}`] ?? 0), 0);
+                                                    return (
+                                                      <div key={reg.id} className="bg-[#0e0e1a] border border-[#1e1e2e] rounded-xl overflow-hidden">
+                                                        {/* Team header */}
+                                                        <div className="flex items-center justify-between px-4 py-2 bg-[#0a0a14] border-b border-[#1a1a26]">
+                                                          <div className="flex items-center gap-2">
+                                                            <span className="text-[#ffd700] text-xs">👑</span>
+                                                            <span className="text-white text-xs font-black">{reg.playerName}</span>
+                                                            {placementEmoji && <span className="text-xs">{placementEmoji}</span>}
+                                                            {reg.teamMembersArr?.length > 0 && (
+                                                              <span className="text-[10px] text-[#606070] bg-[#1a1a24] px-1.5 py-0.5 rounded-full border border-[#2a2a36]">
+                                                                +{reg.teamMembersArr.length} teammate{reg.teamMembersArr.length > 1 ? "s" : ""}
+                                                              </span>
+                                                            )}
                                                           </div>
-                                                          <div className="w-20 shrink-0">
-                                                            <input
-                                                              type="number" min="0" placeholder="0"
-                                                              value={kills[killKey] === 0 ? "" : kills[killKey] ?? ""}
-                                                              onChange={(e) => setPrizeKills((prev) => ({ ...prev, [m.id]: { ...(prev[m.id] ?? {}), [killKey]: parseInt(e.target.value) || 0 } }))}
-                                                              className="w-full bg-[#06060f] border border-[#1e1e2e] text-white text-sm font-bold rounded-lg px-3 py-1.5 text-center focus:outline-none focus:border-yellow-500/60 transition-colors"
-                                                            />
+                                                          <div className="flex items-center gap-1.5 text-[10px] text-[#505060]">
+                                                            <span>Team Kills:</span>
+                                                            <span className={`font-black ${teamTotalKills > 0 ? "text-[#00ff88]" : "text-[#404050]"}`}>{teamTotalKills}</span>
+                                                            {perKill > 0 && teamTotalKills > 0 && (
+                                                              <span className="text-[#606070]">= ৳{(teamTotalKills * perKill).toFixed(0)}</span>
+                                                            )}
                                                           </div>
                                                         </div>
-                                                      );
-                                                    })}
-                                                  </div>
+                                                        {/* Member rows */}
+                                                        <div className="divide-y divide-[#111120]">
+                                                          {allMembers.map((mem) => {
+                                                            const killKey = `${reg.id}-${mem.idx}`;
+                                                            return (
+                                                              <div key={mem.idx} className={`grid grid-cols-[1fr_auto] gap-4 items-center py-2.5 hover:bg-[#0c0c16] transition-colors ${mem.isLeader ? "px-4" : "px-6 bg-[#09090f]"}`}>
+                                                                <div className="flex items-center gap-2 min-w-0">
+                                                                  {mem.isLeader
+                                                                    ? <span className="shrink-0 text-[10px]">👑</span>
+                                                                    : <span className="shrink-0 text-[#303040] text-[10px] font-bold w-4">P{mem.idx + 1}</span>
+                                                                  }
+                                                                  <div className="min-w-0">
+                                                                    <span className={`text-xs font-semibold truncate block ${mem.isLeader ? "text-white" : "text-[#b0b0c0]"}`}>{mem.name}</span>
+                                                                    {mem.uid && <span className="text-[#404050] text-[10px] font-mono">{mem.uid}</span>}
+                                                                  </div>
+                                                                  {mem.isLeader && <span className="shrink-0 text-[10px] text-[#ffd700] bg-[#ffd700]/10 border border-[#ffd700]/20 px-1.5 py-0.5 rounded-full font-black">Wallet</span>}
+                                                                </div>
+                                                                <div className="w-20 shrink-0">
+                                                                  <input
+                                                                    type="number" min="0" placeholder="0"
+                                                                    value={kills[killKey] === 0 ? "" : kills[killKey] ?? ""}
+                                                                    onChange={(e) => setPrizeKills((prev) => ({ ...prev, [m.id]: { ...(prev[m.id] ?? {}), [killKey]: parseInt(e.target.value) || 0 } }))}
+                                                                    className="w-full bg-[#06060f] border border-[#1e1e2e] text-white text-sm font-bold rounded-lg px-3 py-1.5 text-center focus:outline-none focus:border-yellow-500/60 transition-colors"
+                                                                  />
+                                                                </div>
+                                                              </div>
+                                                            );
+                                                          })}
+                                                        </div>
+                                                      </div>
+                                                    );
+                                                  })}
                                                 </div>
                                               </div>
 
-                                              {/* Section C — Payout Preview */}
+                                              {/* Section C — Payout Preview (team-level, all prize → leader) */}
                                               {preview && (
                                                 <div>
                                                   <p className="text-[10px] uppercase font-black text-[#505060] tracking-widest mb-3">Section C — Payout Preview</p>
                                                   <div className="bg-[#060610] border border-[#00ff88]/20 rounded-xl overflow-hidden">
                                                     <div className="px-4 py-2.5 border-b border-[#00ff88]/10 bg-[#00ff88]/5 flex items-center justify-between">
-                                                      <span className="text-[#00ff88] text-xs font-black uppercase">Receipt</span>
+                                                      <span className="text-[#00ff88] text-xs font-black uppercase">Receipt — Full Prize → 👑 Leader</span>
                                                       <span className="text-[10px] text-[#00cc66]">{new Date().toLocaleString()}</span>
                                                     </div>
                                                     <div className="divide-y divide-[#0e1a14]">
-                                                      {(preview.payouts ?? []).flatMap((payout: any) =>
-                                                        (payout.memberPayouts ?? []).map((mp: any, mpi: number) => (
-                                                          <div key={`${payout.registrationId}-${mpi}`} className="flex items-center justify-between px-4 py-2.5">
-                                                            <div className="flex items-center gap-2 min-w-0">
-                                                              {mp.isCapt ? <span className="text-yellow-400 text-[10px] shrink-0">★</span> : <span className="text-[#303040] text-[10px] shrink-0">·</span>}
-                                                              <div className="min-w-0">
-                                                                <div className="flex items-center gap-1.5">
-                                                                  <span className={`text-xs font-semibold truncate ${mp.userFound ? "text-white" : "text-[#606060]"}`}>{mp.name}</span>
-                                                                  {!mp.userFound && <span className="text-[10px] text-[#404048] bg-[#1a1a22] border border-[#2a2a30] px-1.5 py-0.5 rounded-full shrink-0">No Wallet</span>}
-                                                                  {payout.rank === 1 && mp.isCapt && <span>🥇</span>}
-                                                                  {payout.rank === 2 && mp.isCapt && <span>🥈</span>}
-                                                                  {payout.rank === 3 && mp.isCapt && <span>🥉</span>}
-                                                                </div>
-                                                                <div className="text-[10px] text-[#404050] mt-0.5">
-                                                                  {mp.rankShare > 0 && `Win ৳${Number(mp.rankShare).toFixed(2)}`}
-                                                                  {mp.rankShare > 0 && mp.killReward > 0 && " + "}
-                                                                  {mp.killReward > 0 && `Kills ৳${Number(mp.killReward).toFixed(2)} (${mp.kills}×৳${perKill})`}
-                                                                  {mp.rankShare === 0 && mp.killReward === 0 && "No earnings"}
-                                                                </div>
+                                                      {(preview.payouts ?? []).map((payout: any) => {
+                                                        const rankEmoji = payout.rank === 1 ? "🥇" : payout.rank === 2 ? "🥈" : payout.rank === 3 ? "🥉" : null;
+                                                        const killBreakdown = (payout.members ?? [])
+                                                          .filter((mem: any) => mem.kills > 0)
+                                                          .map((mem: any) => `${mem.name} ${mem.kills}K`)
+                                                          .join(" + ");
+                                                        return (
+                                                          <div key={payout.registrationId} className="px-4 py-3">
+                                                            {/* Team header */}
+                                                            <div className="flex items-center justify-between mb-2">
+                                                              <div className="flex items-center gap-2 min-w-0">
+                                                                <span className="text-xs">👑</span>
+                                                                <span className={`text-xs font-black truncate ${payout.leaderFound ? "text-white" : "text-[#606060]"}`}>{payout.teamName}</span>
+                                                                {!payout.leaderFound && <span className="text-[10px] text-[#404048] bg-[#1a1a22] border border-[#2a2a30] px-1.5 py-0.5 rounded-full shrink-0">No Wallet</span>}
+                                                                {rankEmoji && <span className="text-xs shrink-0">{rankEmoji}</span>}
                                                               </div>
+                                                              <span className={`text-base font-black shrink-0 ml-4 ${payout.leaderFound && payout.grandTotal > 0 ? "text-[#00ff88]" : "text-[#404050]"}`}>
+                                                                {payout.leaderFound ? `৳${Number(payout.grandTotal).toFixed(2)}` : "—"}
+                                                              </span>
                                                             </div>
-                                                            <span className={`text-sm font-black shrink-0 ml-4 ${mp.userFound && mp.totalReward > 0 ? "text-[#00ff88]" : "text-[#404050]"}`}>
-                                                              {mp.userFound ? `৳${Number(mp.totalReward).toFixed(2)}` : "—"}
-                                                            </span>
+                                                            {/* Breakdown */}
+                                                            <div className="space-y-1 pl-5">
+                                                              {payout.rankPrize > 0 && (
+                                                                <div className="flex items-center justify-between text-[10px]">
+                                                                  <span className="text-[#505060]">{rankEmoji} Rank Prize</span>
+                                                                  <span className="text-[#a0a0b0]">৳{Number(payout.rankPrize).toFixed(2)}</span>
+                                                                </div>
+                                                              )}
+                                                              {payout.killReward > 0 && (
+                                                                <div className="flex items-center justify-between text-[10px]">
+                                                                  <span className="text-[#505060]">⚡ {killBreakdown || `${payout.totalKills}K`} × ৳{perKill}</span>
+                                                                  <span className="text-[#a0a0b0]">৳{Number(payout.killReward).toFixed(2)}</span>
+                                                                </div>
+                                                              )}
+                                                              {payout.rankPrize === 0 && payout.killReward === 0 && (
+                                                                <div className="text-[10px] text-[#404050]">No earnings this match</div>
+                                                              )}
+                                                              {/* Member kill stats (display only) */}
+                                                              {(payout.members ?? []).length > 1 && (
+                                                                <div className="mt-1.5 pt-1.5 border-t border-[#111120]">
+                                                                  {(payout.members ?? []).map((mem: any, mi: number) => (
+                                                                    <div key={mi} className="flex items-center justify-between text-[10px] text-[#404050]">
+                                                                      <span>{mem.isLeader ? "👑" : `P${mi + 1}`} {mem.name}</span>
+                                                                      <span>{mem.kills}K</span>
+                                                                    </div>
+                                                                  ))}
+                                                                </div>
+                                                              )}
+                                                            </div>
                                                           </div>
-                                                        ))
-                                                      )}
+                                                        );
+                                                      })}
                                                     </div>
                                                     <div className="px-4 py-3 border-t border-[#00ff88]/20 bg-[#00ff88]/5 flex items-center justify-between">
-                                                      <span className="text-[#00aa44] text-xs font-bold uppercase">Total Payout</span>
+                                                      <span className="text-[#00aa44] text-xs font-bold uppercase">Total Payout to Leaders</span>
                                                       <span className="text-[#00ff88] font-black text-lg">৳{Number(preview.totalDistributed).toFixed(2)}</span>
                                                     </div>
                                                   </div>

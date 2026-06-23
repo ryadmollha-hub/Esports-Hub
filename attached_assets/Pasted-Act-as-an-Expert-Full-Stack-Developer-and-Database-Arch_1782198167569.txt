@@ -1,0 +1,21 @@
+Act as an Expert Full-Stack Developer and Database Architect. We need to implement a comprehensive Duo/Squad team structure, leaderboard with individual kill tracking, and automated prize distribution system. Please modify the backend schemas, admin forms, and frontend lists based on the following 3 requirements:
+
+1. TEAM LEADER CROWN BADGE SYSTEM:
+- In the Match Registration/Slot schema, explicitly flag the user who pays and registers the team as the `teamLeader` (store their main User ID). 
+- Store teammates (Slots 2, 3, and 4) as simple text inputs for In-Game UID/Names. They do not need separate app accounts.
+- On the User UI (Match Details > Joined Players list), display a prominent Golden Crown Icon (👑) or a highlighted "👑 Leader" badge next to the Team Leader. Group and indent their teammates right below them as a unified squad block.
+
+2. RESTRUCTURE ADMIN INPUTS (REMOVE DOUBLE ENTRY):
+- Eliminate the redundant manual prize entry boxes during results publishing. 
+- When a match is created, store the Prize Pool schema configuration natively (e.g., Rank 1 = 500 TK, Rank 2 = 300 TK, Per Kill = 20 TK).
+- Admin Results Sheet UI: Display the joined teams in grouped slots. Provide a clean input field to log individual kills for every single member (Leader and Teammates) separately so that accurate statistics render on the leaderboard.
+
+3. SMART PRIZE DISTRIBUTION ALGORITHM:
+- When the admin hits "Publish Results", the backend must calculate rewards automatically:
+  * Fetch the predefined prize configurations for this match.
+  * Total Team Kill Reward = (Leader Kills + Teammate 1 Kills + Teammate 2 Kills + Teammate 3 Kills) * Per Kill Prize.
+  * Fetch Rank Reward based on the team's standing.
+  * Grand Total Team Prize = Total Team Kill Reward + Rank Reward.
+- ROUTING RULE: Do NOT check for teammate app balances. Direct and credit the entire Grand Total Team Prize instantly into the main wallet balance of the registered `teamLeader`'s User ID. Log a clear breakdown in their wallet history.
+
+Please locate the tournament lists, database schemas, and admin management endpoints to seamlessly implement this synchronized gaming flow.

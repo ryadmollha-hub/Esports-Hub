@@ -60,6 +60,9 @@ router.get("/admin/tournaments/:tournamentId/prize-registrations", async (req, r
 });
 
 // ─── Preview or distribute prizes for a match ─────────────────────────────────
+// ROUTING RULE: Entire team prize (rank reward + all member kills × perKill)
+// is credited to the team leader's wallet. Teammates without app accounts are
+// tracked for stats only — they do not receive separate wallet transactions.
 
 router.post("/admin/matches/:matchId/distribute-prizes", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
@@ -98,9 +101,7 @@ router.post("/admin/matches/:matchId/distribute-prizes", async (req, res) => {
       .where(eq(prizeTiersTable.tournamentId, match.tournamentId))
       .orderBy(prizeTiersTable.rank);
 
-    // Map rank (1, 2, 3) → prize amount using array position.
-    // Fallback: if no prize tiers are configured, split tournament prizePool
-    // using default percentages: 1st=50%, 2nd=30%, 3rd=20%.
+    // Map rank (1, 2, 3) → prize amount. Fallback: split prizePool 50/30/20.
     const prizeByRank: Record<number, number> = {};
     if (prizes.length > 0) {
       prizes.forEach((p, i) => { prizeByRank[i + 1] = Number(p.amount); });
@@ -115,7 +116,6 @@ router.post("/admin/matches/:matchId/distribute-prizes", async (req, res) => {
 
     const perKill = Number(tournament.perKillReward ?? 0);
 
-    // Collect all registration IDs involved
     const allRegIds = [
       ...new Set([
         ...placements.map((p) => p.registrationId),
@@ -147,45 +147,25 @@ router.post("/admin/matches/:matchId/distribute-prizes", async (req, res) => {
       placementMap.set(p.registrationId, p.rank);
     }
 
-    // Collect all additional-member freefireUids for batch userId lookup
-    const allUids: string[] = [];
-    for (const regId of allRegIds) {
-      const reg = regMap.get(regId);
-      if (!reg?.teamMembers) continue;
-      const members = JSON.parse(reg.teamMembers) as { uid: string; name: string }[];
-      for (const m of members) { if (m.uid) allUids.push(m.uid); }
-    }
-
-    const uidToUserId = new Map<string, string>();
-    if (allUids.length > 0) {
-      const found = await db
-        .select({ clerkId: usersTable.clerkId, freefireUid: usersTable.freefireUid })
-        .from(usersTable)
-        .where(inArray(usersTable.freefireUid, allUids));
-      for (const u of found) {
-        if (u.freefireUid) uidToUserId.set(u.freefireUid, u.clerkId);
-      }
-    }
-
-    // Build per-team payouts
-    type MemberPayout = {
+    // ─── Build per-team payouts ────────────────────────────────────────────────
+    type MemberStat = {
       name: string;
-      userId: string | null;
       freefireUid: string | null;
-      isCapt: boolean;
+      isLeader: boolean;
       kills: number;
-      rankShare: number;
-      killReward: number;
-      totalReward: number;
-      userFound: boolean;
     };
+
     type TeamPayout = {
       registrationId: number;
       teamName: string;
       rank: number | null;
       rankPrize: number;
-      totalMembers: number;
-      memberPayouts: MemberPayout[];
+      totalKills: number;
+      killReward: number;
+      grandTotal: number;
+      leaderUserId: string | null;
+      leaderFound: boolean;
+      members: MemberStat[];
     };
 
     const payouts: TeamPayout[] = [];
@@ -201,59 +181,39 @@ router.post("/admin/matches/:matchId/distribute-prizes", async (req, res) => {
       const teamMembers: { uid: string; name: string }[] = reg.teamMembers
         ? JSON.parse(reg.teamMembers)
         : [];
-      const totalMembers = 1 + teamMembers.length;
-      const rankShare = totalMembers > 0 ? rankPrize / totalMembers : 0;
 
-      const memberPayouts: MemberPayout[] = [];
-
-      // Captain
       const captKills = kills.captainKills;
-      const captKillReward = captKills * perKill;
-      memberPayouts.push({
-        name: reg.playerName,
-        userId: reg.userId,
-        freefireUid: reg.freefireUid,
-        isCapt: true,
-        kills: captKills,
-        rankShare,
-        killReward: captKillReward,
-        totalReward: rankShare + captKillReward,
-        userFound: true,
-      });
+      const memberKillsList = kills.memberKills;
+      const totalKills = captKills + memberKillsList.reduce((s, k) => s + k, 0);
+      const killReward = parseFloat((totalKills * perKill).toFixed(2));
+      const grandTotal = parseFloat((rankPrize + killReward).toFixed(2));
 
-      // Additional team members
-      for (let i = 0; i < teamMembers.length; i++) {
-        const member = teamMembers[i];
-        const mKills = kills.memberKills[i] ?? 0;
-        const mKillReward = mKills * perKill;
-        const mUserId = uidToUserId.get(member.uid) ?? null;
-        memberPayouts.push({
-          name: member.name,
-          userId: mUserId,
-          freefireUid: member.uid,
-          isCapt: false,
-          kills: mKills,
-          rankShare,
-          killReward: mKillReward,
-          totalReward: rankShare + mKillReward,
-          userFound: !!mUserId,
-        });
-      }
+      // Build per-member stat list for display / logging
+      const memberStats: MemberStat[] = [
+        { name: reg.playerName, freefireUid: reg.freefireUid, isLeader: true, kills: captKills },
+        ...teamMembers.map((m, i) => ({
+          name: m.name,
+          freefireUid: m.uid,
+          isLeader: false,
+          kills: memberKillsList[i] ?? 0,
+        })),
+      ];
 
       payouts.push({
         registrationId: regId,
         teamName: reg.playerName,
         rank,
         rankPrize,
-        totalMembers,
-        memberPayouts,
+        totalKills,
+        killReward,
+        grandTotal,
+        leaderUserId: reg.userId,
+        leaderFound: !!reg.userId,
+        members: memberStats,
       });
     }
 
-    const totalDistributed = payouts.reduce(
-      (sum, p) => sum + p.memberPayouts.reduce((s, m) => s + m.totalReward, 0),
-      0
-    );
+    const totalDistributed = payouts.reduce((sum, p) => sum + p.grandTotal, 0);
 
     if (preview) {
       return res.json({ preview: true, payouts, totalDistributed, perKill, prizeByRank });
@@ -264,46 +224,50 @@ router.post("/admin/matches/:matchId/distribute-prizes", async (req, res) => {
       rank === 1 ? "🥇 1st Place" : rank === 2 ? "🥈 2nd Place" : rank === 3 ? "🥉 3rd Place" : null;
 
     let txCount = 0;
+
     for (const payout of payouts) {
-      for (const member of payout.memberPayouts) {
-        if (!member.userId) continue; // skip members without platform accounts
+      if (!payout.leaderUserId) continue;
 
-        if (member.rankShare > 0) {
-          await db.insert(walletTransactionsTable).values({
-            userId: member.userId,
-            type: "tournament_prize",
-            amount: member.rankShare.toFixed(2),
-            status: "approved",
-            notes: `Match #${match.matchNumber} ${rankLabel(payout.rank)} Winning Share — "${tournament.name}"`,
-            tournamentId: match.tournamentId,
-            matchId: matchId,
-          });
-          txCount++;
-        }
+      // Rank reward transaction
+      if (payout.rankPrize > 0) {
+        await db.insert(walletTransactionsTable).values({
+          userId: payout.leaderUserId,
+          type: "tournament_prize",
+          amount: payout.rankPrize.toFixed(2),
+          status: "approved",
+          notes: `Match #${match.matchNumber} ${rankLabel(payout.rank)} Rank Prize — "${tournament.name}"`,
+          tournamentId: match.tournamentId,
+          matchId,
+        });
+        txCount++;
+      }
 
-        if (member.killReward > 0) {
-          await db.insert(walletTransactionsTable).values({
-            userId: member.userId,
-            type: "tournament_prize",
-            amount: member.killReward.toFixed(2),
-            status: "approved",
-            notes: `Match #${match.matchNumber} Kill Reward — ${member.kills} kills × ৳${perKill} — "${tournament.name}"`,
-            tournamentId: match.tournamentId,
-            matchId: matchId,
-          });
-          txCount++;
-        }
+      // Kill reward transaction (all member kills combined → leader)
+      if (payout.killReward > 0) {
+        const killBreakdown = payout.members
+          .filter((m) => m.kills > 0)
+          .map((m) => `${m.name} ${m.kills}K`)
+          .join(" + ");
+        await db.insert(walletTransactionsTable).values({
+          userId: payout.leaderUserId,
+          type: "tournament_prize",
+          amount: payout.killReward.toFixed(2),
+          status: "approved",
+          notes: `Match #${match.matchNumber} Team Kill Reward (${killBreakdown || `${payout.totalKills}K`}) × ৳${perKill} — "${tournament.name}"`,
+          tournamentId: match.tournamentId,
+          matchId,
+        });
+        txCount++;
       }
     }
 
-    // Update registration result fields for placed teams
+    // Update registration result fields
     for (const p of placements) {
       const payout = payouts.find((po) => po.registrationId === p.registrationId);
       if (!payout) continue;
-      const captTotal = payout.memberPayouts[0]?.totalReward ?? 0;
       await db
         .update(registrationsTable)
-        .set({ resultRank: p.rank, earnedAmount: captTotal.toFixed(2) })
+        .set({ resultRank: p.rank, earnedAmount: payout.grandTotal.toFixed(2) })
         .where(eq(registrationsTable.id, p.registrationId));
     }
 
