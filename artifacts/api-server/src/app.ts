@@ -62,6 +62,14 @@ for (const paramName of ["id", "teamId", "memberId"]) {
   });
 }
 
+// ─── Bare /health alias for Render & load balancers ─────────────────────────
+// Render's default health-check probes GET /health (without /api prefix).
+// This route is intentionally placed BEFORE apiLimiter so health probes are
+// never rate-limited and do not count against the 300 req/min budget.
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok" });
+});
+
 app.use("/api", router);
 
 app.use(errorHandler);
