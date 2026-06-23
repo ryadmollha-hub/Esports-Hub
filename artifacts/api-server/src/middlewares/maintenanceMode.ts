@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { db } from "@workspace/db";
 import { settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { verifyToken } from "../lib/jwt";
 
 let cached: boolean | null = null;
 let cacheTime = 0;
@@ -38,15 +39,15 @@ export function invalidateMaintenanceCache(): void {
 }
 
 function isAdminRequest(req: Request): boolean {
-  const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "BLACKCODE";
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "USER505";
-  const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "blackcode-admin-secret-2026";
+  // Empty-string fallbacks: fail-safe (no access) when env vars are missing.
+  const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "";
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
+  const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "";
   const expectedToken = Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}:${ADMIN_SECRET}`).toString("base64");
   if (req.headers["x-admin-token"] === expectedToken) return true;
   const auth = req.headers["authorization"];
   if (auth?.startsWith("Bearer ")) {
     try {
-      const { verifyToken } = require("../lib/jwt");
       const payload = verifyToken(auth.slice(7));
       if (payload?.isAdmin) return true;
     } catch {}

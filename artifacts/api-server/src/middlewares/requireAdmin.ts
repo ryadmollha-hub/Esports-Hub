@@ -4,9 +4,16 @@ import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { safeGetUserId } from "../lib/clerkAuth";
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "BLACKCODE";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "USER505";
-const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "blackcode-admin-secret-2026";
+// Empty-string fallbacks intentional: when env vars are absent the generated
+// token will be an invalid base64 string that can never match any request,
+// so admin access is DENIED (fail-safe) rather than granted with known defaults.
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
+const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "";
+
+if (process.env.NODE_ENV === "production" && (!process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD || !process.env.ADMIN_SECRET)) {
+  console.error("[FATAL] ADMIN_USERNAME / ADMIN_PASSWORD / ADMIN_SECRET must be set in production. Admin panel will be inaccessible.");
+}
 
 function getAdminToken(): string {
   return Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}:${ADMIN_SECRET}`).toString("base64");

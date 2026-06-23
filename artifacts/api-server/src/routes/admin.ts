@@ -19,9 +19,10 @@ import { eq, desc, sql, ilike, or, and, gte } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "BLACKCODE";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "USER505";
-const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "blackcode-admin-secret-2026";
+// Empty-string fallbacks: fail-safe (no access) when env vars are missing.
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "";
+const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "";
 
 function getAdminToken(): string {
   return Buffer.from(`${ADMIN_USERNAME}:${ADMIN_PASSWORD}:${ADMIN_SECRET}`).toString("base64");

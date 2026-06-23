@@ -9,7 +9,6 @@ services:
     buildCommand: >
       corepack enable pnpm &&
       pnpm install --frozen-lockfile &&
-      pnpm --filter @workspace/db run push &&
       pnpm --filter @workspace/api-server run build
     startCommand: node --enable-source-maps artifacts/api-server/dist/index.mjs
     healthCheckPath: /health
@@ -32,3 +31,10 @@ services:
         sync: false
       - key: LOG_LEVEL
         value: info
+
+# ─── Database migrations ──────────────────────────────────────────────────────
+# Run manually BEFORE deploying schema changes:
+#   DATABASE_URL=<your-prod-url> pnpm --filter @workspace/db run push
+#
+# Never run drizzle-kit push automatically in the build command on Render.
+# Doing so risks accidental data loss on every deploy.
