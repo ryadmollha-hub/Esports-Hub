@@ -27,8 +27,6 @@ const statusIcon: Record<string, React.ReactElement> = {
   pending: <Clock className="w-3.5 h-3.5" />,
 };
 
-import { apiBase as BASE } from "@/lib/apiBase";
-
 export default function DashboardPage() {
   const { user: authUser, isLoading, authFetch } = useAuthContext();
   const [, setLocation] = useLocation();
