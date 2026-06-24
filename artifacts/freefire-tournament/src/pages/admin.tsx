@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { parseBDDate } from "@/lib/bdTime";
 import { useLocation, Link } from "wouter";
 import {
   Users, Trophy, Shield, Clock, DollarSign, CheckCircle, XCircle, Bell,
@@ -2384,7 +2385,7 @@ export default function AdminPage() {
                               const now = Date.now();
                               const rel = m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null;
                               const hid = m.roomHideAt ? new Date(m.roomHideAt).getTime() : null;
-                              const statusBadge = m.roomId
+                              const statusBadge = (m.roomSet || m.roomReleaseAt)
                                 ? rel && now >= rel && (!hid || now < hid)
                                   ? <span className="text-[#00ff88] text-[10px] font-black border border-[#00ff88]/30 bg-[#00ff88]/5 px-2 py-0.5 rounded-full">🟢 LIVE</span>
                                   : rel && now < rel
@@ -3491,8 +3492,15 @@ export default function AdminPage() {
                                     <button
                                       type="button"
                                       onClick={() => {
-                                        const rel = new Date(new Date(m.scheduledAt).getTime() - 15 * 60 * 1000).toISOString().slice(0, 16);
-                                        const hid = new Date(new Date(m.scheduledAt).getTime() + 5 * 60 * 1000).toISOString().slice(0, 16);
+                                        // Convert to datetime-local format using browser LOCAL time so display matches what admin expects
+                                        const pad = (n: number) => String(n).padStart(2, "0");
+                                        const toLocalDT = (epochMs: number) => {
+                                          const d = new Date(epochMs);
+                                          return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                                        };
+                                        const baseMs = parseBDDate(m.scheduledAt).getTime();
+                                        const rel = toLocalDT(baseMs - 15 * 60 * 1000);
+                                        const hid = toLocalDT(baseMs + 5 * 60 * 1000);
                                         setRoomCredentials((prev) => ({ ...prev, [m.id]: { ...prev[m.id], roomId: prev[m.id]?.roomId ?? "", password: prev[m.id]?.password ?? "", roomReleaseTime: rel, roomHideTime: hid } }));
                                       }}
                                       className="text-[9px] font-bold text-[#00b4ff] hover:text-[#33c9ff] uppercase transition-colors"
@@ -3531,13 +3539,26 @@ export default function AdminPage() {
                                 if (!creds?.roomId?.trim()) return;
                                 setSubmittingCredentials(m.id);
                                 try {
+                                  // Compute release time: manual input → UTC ISO; toggle → compute from scheduledAt
+                                  let roomReleaseTimeISO: string | undefined;
+                                  if (creds.roomReleaseTime) {
+                                    // datetime-local string: browser interprets as local time → convert to UTC ISO
+                                    roomReleaseTimeISO = new Date(creds.roomReleaseTime).toISOString();
+                                  } else if (releaseMode[m.id] === "scheduled" && m.scheduledAt) {
+                                    // "10 min before" toggle with no manual time: use scheduledAt - 10 min (BD-aware)
+                                    roomReleaseTimeISO = new Date(parseBDDate(m.scheduledAt).getTime() - 10 * 60 * 1000).toISOString();
+                                  }
+                                  let roomHideTimeISO: string | undefined;
+                                  if (creds.roomHideTime) {
+                                    roomHideTimeISO = new Date(creds.roomHideTime).toISOString();
+                                  }
                                   const res = await apiFetch(`/admin/user-matches/${m.id}/room-credentials`, {
                                     method: "PATCH",
                                     body: JSON.stringify({
                                       adminRoomId: creds.roomId.trim(),
                                       adminRoomPassword: creds.password?.trim() || undefined,
-                                      roomReleaseTime: creds.roomReleaseTime || undefined,
-                                      roomHideTime: creds.roomHideTime || undefined,
+                                      roomReleaseTime: roomReleaseTimeISO,
+                                      roomHideTime: roomHideTimeISO,
                                     }),
                                   });
                                   if (res.ok) {

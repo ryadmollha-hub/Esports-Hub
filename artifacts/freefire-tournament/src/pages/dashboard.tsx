@@ -95,7 +95,7 @@ export default function DashboardPage() {
               const tMatches: any[] = matchesByTournament[tId] ?? [];
               const tName = reg.tournament?.name ?? `Tournament #${tId}`;
               const tPrize = reg.tournament?.prizePool;
-              const visibleMatches = tMatches.filter((m: any) => m.roomVisible || m.roomId);
+              const visibleMatches = tMatches.filter((m: any) => m.roomVisible);
 
               return (
                 <div key={reg.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 hover:border-[#ff6b00]/25 transition-colors overflow-hidden">

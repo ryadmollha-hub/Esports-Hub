@@ -33,8 +33,8 @@ function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
           }
         }
         // now < roomReleaseAt → keep hidden; or room open but start not reached → stay "scheduled"
-      } else if (match.status === "live") {
-        // No timing configured + admin manually marked live → show room
+      } else if (match.status === "live" && now >= startTime) {
+        // No timing configured + admin manually marked live + match start time reached → show room
         roomVisible = true;
       }
     }
@@ -77,6 +77,7 @@ router.get("/tournaments/:id/matches", async (req, res) => {
           status: effectiveStatus,
           roomId: roomVisible ? m.roomId : null,
           roomPassword: roomVisible ? m.roomPassword : null,
+          roomSet: !!(m.roomId),   // true if admin has saved credentials, regardless of visibility timing
           roomVisible,
           results,
         };

@@ -554,7 +554,7 @@ export default function TournamentDetailPage() {
                         {formatBDTime(match.scheduledAt)}
                       </div>
                     </div>
-                    {match.roomVisible && isJoined ? (
+                    {match.roomVisible && isJoined && Date.now() >= (match.roomReleaseAt ? parseBDDate(match.roomReleaseAt).getTime() : parseBDDate(match.scheduledAt).getTime()) ? (
                       <div className="grid grid-cols-2 gap-3 mt-3">
                         <div className="bg-[#0a0a0f]/60 rounded-lg p-3">
                           <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
@@ -576,7 +576,7 @@ export default function TournamentDetailPage() {
                           </div>
                         </div>
                       </div>
-                    ) : match.roomVisible && !isJoined ? (
+                    ) : match.roomVisible && !isJoined && Date.now() >= (match.roomReleaseAt ? parseBDDate(match.roomReleaseAt).getTime() : parseBDDate(match.scheduledAt).getTime()) ? (
                       <div className="text-center py-2 text-[#a0a0b0] text-sm">
                         Join the tournament to view room details.
                       </div>
@@ -642,7 +642,7 @@ export default function TournamentDetailPage() {
                           </div>
                         </div>
                         {/* Show credentials when room is open, to joined players only */}
-                        {match.roomVisible && isJoined && (
+                        {match.roomVisible && isJoined && Date.now() >= (match.roomReleaseAt ? parseBDDate(match.roomReleaseAt).getTime() : parseBDDate(match.scheduledAt).getTime()) && (
                           <div className="grid grid-cols-2 gap-3 mt-2">
                             <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-[#ff6b00]/20">
                               <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
@@ -665,7 +665,7 @@ export default function TournamentDetailPage() {
                             </div>
                           </div>
                         )}
-                        {match.roomVisible && !isJoined && (
+                        {match.roomVisible && !isJoined && Date.now() >= (match.roomReleaseAt ? parseBDDate(match.roomReleaseAt).getTime() : parseBDDate(match.scheduledAt).getTime()) && (
                           <div className="mt-2 text-center text-[#a0a0b0] text-xs py-2 bg-[#1a1a24] rounded-lg">
                             Join the tournament to view room credentials.
                           </div>
