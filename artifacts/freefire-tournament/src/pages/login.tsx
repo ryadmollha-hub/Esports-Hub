@@ -38,7 +38,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       await login(form.email, form.password, captcha.token, form.captchaAnswer);
-      setLocation("/tournaments/all");
+      setLocation("/tournaments");
     } catch (err: any) {
       setError(err.message ?? "Login failed. Please try again.");
       refreshCaptcha();

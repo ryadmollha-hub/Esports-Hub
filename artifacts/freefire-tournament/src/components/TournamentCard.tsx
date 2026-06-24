@@ -60,17 +60,18 @@ function useClientStatus(serverStatus: string, startDate: string): StatusKey {
   return status;
 }
 
-/** Poll match room status when tournament is potentially active */
-function useRoomOpen(tournamentId: number, clientStatus: StatusKey): boolean {
+/** Poll match room status and active match numbers when tournament is potentially active */
+function useRoomOpen(tournamentId: number, clientStatus: StatusKey): { roomOpen: boolean; activeMatchNumbers: number[] } {
   const [roomOpen, setRoomOpen] = useState(false);
+  const [activeMatchNumbers, setActiveMatchNumbers] = useState<number[]>([]);
   const shouldPoll = clientStatus === "upcoming" || clientStatus === "starting_soon" || clientStatus === "live" || clientStatus === "ongoing" || clientStatus === "room_open";
 
   const check = useCallback(async () => {
-    if (!shouldPoll) { setRoomOpen(false); return; }
+    if (!shouldPoll) { setRoomOpen(false); setActiveMatchNumbers([]); return; }
     try {
       const res = await fetch(`${BASE}/api/tournaments/${tournamentId}/matches`);
       if (!res.ok) return;
-      const data: Array<{ status: string; roomVisible?: boolean; scheduledAt?: string }> = await res.json();
+      const data: Array<{ id: number; matchNumber: number; status: string; roomVisible?: boolean; scheduledAt?: string }> = await res.json();
       const now = Date.now();
       const open = data.some(m =>
         m.roomVisible && (
@@ -79,6 +80,8 @@ function useRoomOpen(tournamentId: number, clientStatus: StatusKey): boolean {
         )
       );
       setRoomOpen(open);
+      const nums = data.map(m => m.matchNumber).filter(Boolean);
+      setActiveMatchNumbers(nums);
     } catch {}
   }, [tournamentId, shouldPoll]);
 
@@ -89,7 +92,7 @@ function useRoomOpen(tournamentId: number, clientStatus: StatusKey): boolean {
     return () => clearInterval(id);
   }, [check, shouldPoll]);
 
-  return roomOpen;
+  return { roomOpen, activeMatchNumbers };
 }
 
 export default function TournamentCard({ t, featured = false }: { t: Tournament; featured?: boolean }) {
@@ -100,7 +103,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
   const perKill   = Number(t.perKillReward ?? 0);
 
   const clientStatus = useClientStatus(t.status, t.startDate);
-  const roomOpen     = useRoomOpen(t.id, clientStatus);
+  const { roomOpen, activeMatchNumbers } = useRoomOpen(t.id, clientStatus);
 
   // Derive effective status.
   // Priority (highest → lowest):
@@ -153,7 +156,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
               <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e17] via-[#0e0e17]/20 to-transparent" />
               {isLive && <div className="absolute inset-0 bg-[#00ff88]/3" />}
 
-              <div className="absolute top-3 left-3 flex items-center gap-1.5">
+              <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
                 <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-wide ${modeColors[t.mode] ?? modeColors.squad}`} data-testid={`badge-mode-${t.id}`}>
                   {t.mode}
                 </span>
@@ -161,6 +164,11 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
                   {sc.dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`} />}
                   {sc.label}
                 </span>
+                {activeMatchNumbers.map(n => (
+                  <span key={n} className="text-[10px] font-black px-2 py-0.5 rounded border uppercase bg-[#ff6b00]/20 text-[#ff6b00] border-[#ff6b00]/40">
+                    Match #{n}
+                  </span>
+                ))}
               </div>
 
               <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 border border-[#ffd700]/20">
@@ -278,6 +286,11 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
                 {sc.dot && <span className={`w-1 h-1 rounded-full shrink-0 ${sc.dot}`} />}
                 {sc.label}
               </span>
+              {activeMatchNumbers.map(n => (
+                <span key={n} className="text-[9px] font-black px-1.5 py-0.5 rounded border uppercase bg-[#ff6b00]/15 text-[#ff6b00] border-[#ff6b00]/30">
+                  Match #{n}
+                </span>
+              ))}
             </div>
 
             <h3 className="text-white font-black text-sm leading-tight group-hover:text-[#ff6b00] transition-colors line-clamp-1 mb-1.5" data-testid={`text-tournament-name-${t.id}`}>

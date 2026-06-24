@@ -1,0 +1,40 @@
+We need to overhaul the login redirection, clean up the "My Tournaments" section, and complete a comprehensive system overhaul across the routing, backend controllers, validation systems, and layout density based on our updated specifications and screenshots:
+
+1. LOGIN REDIRECTION & CORE INTERFACE FLOW:
+- Currently, when a user logs in, they are incorrectly redirected to the Profile page view (as seen in Screenshot 2026-06-24 123855.png).
+- Change the post-login routing behavior. Upon successful login or authentication, automatically redirect users directly to the main "All Tournaments" / matches page dashboard so they can instantly view active tournaments instead of their profile dashboard.
+
+2. "MY TOURNAMENTS" CLEANUP & DYNAMIC MATCH TRACKING:
+- In the sidebar drawer menu, target the "My Tournaments" navigation tab highlighted in the screenshot.
+- Completely strip out and remove all the unnecessary clutter and bloated default data placeholder components currently inside that view.
+- Turn the "My Tournaments" view into a dedicated user dashboard that selectively fetches and displays ONLY the specific tournament matches (e.g., CS, BR, Duo/Squad) that the currently logged-in user has actually registered for and paid entry fees to join.
+- Each joined match layout item inside this list must provide structured dashboard access links for the user to directly view:
+  * Room ID & Password (Custom Room Release configuration)
+  * Prize Pool distribution data
+  * Live dynamic match Leaderboard
+  * Match stats tracking
+
+3. GLOBAL CATEGORY-BASED RULES SYSTEM:
+- Stop utilizing individual rules configurations per unique match or tournament instance. Clean up the match creation logic.
+- Implement a centralized "Category Rules Config" in the Admin Panel. Admins will set ONE global markdown/text rule layout per category type (e.g., "CS", "BR", "LOL").
+- Automatically fetch and render this global rules set on the user-facing match information screen depending entirely on the category of the match they are viewing.
+
+4. MATCH NUMBER VISIBILITY BUG FIX (FRONTEND & ADMIN UI):
+- Currently, match identifiers like "Match #2" or sequential tags are hidden globally on main list views and only show up after hitting "Expand" inside the management dashboard (as seen in screenshots).
+- Fix this behavior globally across both the User Home / Tournament Lists and Admin Management views. Append the Match Number (e.g., "[Match #1]", "[Match #2]") or its formatted index directly onto the primary outer preview cards so users and admins can track match sequencing at a glance without expanding cards.
+
+5. AUTOMATED ADMIN MATCH CREATION SIMPLIFICATION:
+- Simplify the "ADD MATCH" component form inside the Tournament Management dashboard. 
+- Eliminate the manual Date/Time picker prompt requirement. When an admin clicks "ADD MATCH", automatically pre-fill the "SCHEDULED AT" input field with the current system date and time by default.
+- Reduce the creation form fields to require only two explicit manual configuration fields: "MATCH NUMBER" and a dropdown/selector for the "MATCH NAME". Everything else should be automatically handled.
+
+6. DYNAMIC REGISTRATION FEES & LIVE COUNTER VALIDATION:
+- Update the User Match Registration Modal UI to feature a Game Mode Toggle Selector: [ SOLO ] / [ DUO ] / [ SQUAD ].
+- Calculate total entry costs dynamically inside the UI before checkout based on the selection:
+  * SOLO: Cost = Base Fee * 1 (Displays 1 player input field).
+  * DUO: Cost = Base Fee * 2 (Dynamically renders 1 teammate input form field).
+  * SQUAD: Cost = Base Fee * 4 (Dynamically renders 3 teammate input form fields).
+- Change the main button text dynamically (e.g., "CONTINUE (৳40 FEE)"). Ensure backend payment routers securely deduct the correctly multiplied total from the registering Team Leader's wallet balance.
+- Ensure the live counters (Kills, Wins, Registered slots) maintain high relational integrity and process correctly, rendering zero or empty states reliably only when no actual participant data exists.
+
+Please execute these schema adjustments, frontend state tracking updates, and layout refactors concurrently to seamlessly enforce these user and admin navigation modifications.

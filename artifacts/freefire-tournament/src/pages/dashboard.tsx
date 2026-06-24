@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useLocation, Link } from "wouter";
 import {
   Trophy, Shield, Clock, CheckCircle, XCircle,
-  Edit, Save, X, ArrowDownCircle, ArrowUpCircle, User
+  Edit, Save, X, ArrowDownCircle, ArrowUpCircle, User,
+  Key, EyeOff, Eye, BarChart2, Swords, Star, Copy
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -10,6 +11,7 @@ import { useGetMyRegistrations, useGetMyTeam, useGetMyProfile, useUpdateMyProfil
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/LanguageContext";
+import { apiBase as BASE } from "@/lib/apiBase";
 
 type DashTab = "profile" | "tournaments" | "team" | "deposits" | "withdrawals";
 
@@ -49,6 +51,29 @@ export default function DashboardPage() {
 
   const [walletTxs, setWalletTxs] = useState<any[]>([]);
   const [loadingWallet, setLoadingWallet] = useState(false);
+  const [matchesByTournament, setMatchesByTournament] = useState<Record<number, any[]>>({});
+  const [roomPassVisible, setRoomPassVisible] = useState<Record<string, boolean>>({});
+
+  const fetchMatchesForTournament = useCallback(async (tournamentId: number) => {
+    try {
+      const res = await fetch(`${BASE}/api/tournaments/${tournamentId}/matches`);
+      if (res.ok) {
+        const data = await res.json();
+        setMatchesByTournament((prev) => ({ ...prev, [tournamentId]: data }));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "tournaments" && regs.length > 0) {
+      const approvedRegs = regs.filter((r: any) => r.status === "approved");
+      approvedRegs.forEach((r: any) => {
+        if (!matchesByTournament[r.tournamentId]) {
+          fetchMatchesForTournament(r.tournamentId);
+        }
+      });
+    }
+  }, [activeTab, regs]);
 
   const [editing, setEditing] = useState(false);
   const [pForm, setPForm] = useState({ username: "", displayName: "", freefireUid: "", freefireNickname: "" });
@@ -224,11 +249,11 @@ export default function DashboardPage() {
         {activeTab === "tournaments" && (
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-black uppercase">Tournament <span className="text-[#ff6b00]">History</span></h2>
-              <Link href="/tournaments" className="text-[#ff6b00] text-sm font-bold hover:underline">Find More →</Link>
+              <h2 className="text-xl font-black uppercase">My <span className="text-[#ff6b00]">Tournaments</span></h2>
+              <Link href="/tournaments" className="text-[#ff6b00] text-sm font-bold hover:underline">Browse More →</Link>
             </div>
             {loadingRegs ? (
-              <div className="space-y-3">{[1,2].map((i) => <div key={i} className="h-20 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
+              <div className="space-y-4">{[1,2].map((i) => <div key={i} className="h-32 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
             ) : regs.length === 0 ? (
               <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center">
                 <Trophy className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/30" />
@@ -236,17 +261,124 @@ export default function DashboardPage() {
                 <Link href="/tournaments" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-bold uppercase text-sm rounded-xl hover:bg-[#e66000] transition-all">Browse Tournaments</Link>
               </div>
             ) : (
-              <div className="space-y-3">
-                {regs.map((reg: any) => (
-                  <div key={reg.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 hover:border-[#ff6b00]/30 transition-colors p-4 flex items-center gap-4">
-                    <div className="flex-1">
-                      <div className="font-bold text-white">{reg.tournament?.name ?? `Tournament #${reg.tournamentId}`}</div>
-                      <div className="text-[#a0a0b0] text-xs mt-0.5">UID: <span className="font-mono">{reg.freefireUid}</span> — {reg.playerName}</div>
-                      <div className="text-[#a0a0b0] text-xs">{new Date(reg.createdAt).toLocaleDateString()}</div>
+              <div className="space-y-4">
+                {regs.map((reg: any) => {
+                  const tId = reg.tournamentId;
+                  const tMatches: any[] = matchesByTournament[tId] ?? [];
+                  const tName = reg.tournament?.name ?? `Tournament #${tId}`;
+                  const tPrize = reg.tournament?.prizePool;
+                  const visibleMatches = tMatches.filter((m: any) => m.roomVisible || m.roomId);
+
+                  return (
+                    <div key={reg.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 hover:border-[#ff6b00]/25 transition-colors overflow-hidden">
+                      {/* Header */}
+                      <div className="p-4 flex items-start gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-[#ff6b00]/15 border border-[#ff6b00]/20 flex items-center justify-center shrink-0 mt-0.5">
+                          <Trophy className="w-4.5 h-4.5 text-[#ff6b00]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <Link href={`/tournaments/${tId}`} className="font-black text-white hover:text-[#ff6b00] transition-colors truncate block text-sm">
+                            {tName}
+                          </Link>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <span className="text-[#a0a0b0] text-[10px] font-mono">UID: {reg.freefireUid}</span>
+                            {tMatches.length > 0 && tMatches.map((m: any) => (
+                              <span key={m.id} className="text-[10px] font-black px-1.5 py-0.5 rounded border bg-[#ff6b00]/10 text-[#ff6b00] border-[#ff6b00]/20">
+                                Match #{m.matchNumber}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="shrink-0">{txStatusBadge(reg.status)}</div>
+                      </div>
+
+                      {/* Match Action Links — only for approved registrations */}
+                      {reg.status === "approved" && (
+                        <div className="border-t border-[#ff6b00]/8 px-4 pb-4">
+                          {/* Room Credentials */}
+                          {visibleMatches.length > 0 ? visibleMatches.map((m: any) => (
+                            <div key={m.id} className="mt-3 bg-[#0a0a14] rounded-xl border border-[#00ff88]/20 p-3">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88] animate-pulse" />
+                                <span className="text-[#00ff88] text-[10px] font-black uppercase tracking-wider">Match #{m.matchNumber} — Room Open</span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="bg-[#12121a] rounded-lg p-2">
+                                  <div className="text-[#606070] text-[9px] uppercase mb-0.5 flex items-center gap-1"><Key className="w-2.5 h-2.5" /> Room ID</div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-white font-mono font-bold text-xs">{m.roomId}</span>
+                                    <button onClick={() => navigator.clipboard.writeText(m.roomId)} className="text-[#606070] hover:text-[#ff6b00] transition-colors shrink-0">
+                                      <Copy className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="bg-[#12121a] rounded-lg p-2">
+                                  <div className="text-[#606070] text-[9px] uppercase mb-0.5 flex items-center justify-between">
+                                    <span className="flex items-center gap-1"><Key className="w-2.5 h-2.5" /> Password</span>
+                                    <button onClick={() => setRoomPassVisible(prev => ({ ...prev, [m.id]: !prev[m.id] }))} className="text-[#606070] hover:text-[#ff6b00] transition-colors">
+                                      {roomPassVisible[m.id] ? <EyeOff className="w-2.5 h-2.5" /> : <Eye className="w-2.5 h-2.5" />}
+                                    </button>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-white font-mono font-bold text-xs">
+                                      {roomPassVisible[m.id] ? m.roomPassword : "••••••"}
+                                    </span>
+                                    {roomPassVisible[m.id] && (
+                                      <button onClick={() => navigator.clipboard.writeText(m.roomPassword)} className="text-[#606070] hover:text-[#ff6b00] transition-colors shrink-0">
+                                        <Copy className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )) : (
+                            <div className="mt-3 bg-[#0a0a14] rounded-xl border border-[#2a2a36] p-3 text-center">
+                              <Key className="w-4 h-4 text-[#404050] mx-auto mb-1" />
+                              <p className="text-[#606070] text-[10px]">Room credentials will appear here when released</p>
+                            </div>
+                          )}
+
+                          {/* Quick action links */}
+                          <div className="grid grid-cols-3 gap-2 mt-3">
+                            <Link
+                              href={`/tournaments/${tId}`}
+                              className="flex flex-col items-center gap-1 p-2.5 bg-[#1a1a24] hover:bg-[#ff6b00]/10 border border-[#2a2a36] hover:border-[#ff6b00]/30 rounded-xl transition-all group"
+                            >
+                              <BarChart2 className="w-4 h-4 text-[#a0a0b0] group-hover:text-[#ff6b00] transition-colors" />
+                              <span className="text-[9px] text-[#a0a0b0] group-hover:text-white font-bold uppercase">Leaderboard</span>
+                            </Link>
+                            <Link
+                              href={`/tournaments/${tId}`}
+                              className="flex flex-col items-center gap-1 p-2.5 bg-[#1a1a24] hover:bg-[#ffd700]/10 border border-[#2a2a36] hover:border-[#ffd700]/30 rounded-xl transition-all group"
+                            >
+                              <Trophy className="w-4 h-4 text-[#a0a0b0] group-hover:text-[#ffd700] transition-colors" />
+                              <span className="text-[9px] text-[#a0a0b0] group-hover:text-white font-bold uppercase">
+                                {tPrize ? `৳${Number(tPrize).toLocaleString()}` : "Prize Pool"}
+                              </span>
+                            </Link>
+                            <Link
+                              href={`/tournaments/${tId}`}
+                              className="flex flex-col items-center gap-1 p-2.5 bg-[#1a1a24] hover:bg-[#00ff88]/10 border border-[#2a2a36] hover:border-[#00ff88]/30 rounded-xl transition-all group"
+                            >
+                              <Swords className="w-4 h-4 text-[#a0a0b0] group-hover:text-[#00ff88] transition-colors" />
+                              <span className="text-[9px] text-[#a0a0b0] group-hover:text-white font-bold uppercase">Match Stats</span>
+                            </Link>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pending/rejected notice */}
+                      {reg.status !== "approved" && (
+                        <div className="border-t border-[#2a2a36] px-4 pb-3 pt-2">
+                          <p className="text-[#606070] text-[10px]">
+                            {reg.status === "pending" ? "⏳ Registration pending approval — match access will unlock once approved." : "❌ Registration rejected."}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <div className="shrink-0">{txStatusBadge(reg.status)}</div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -260,13 +260,9 @@ export default function AdminPage() {
       toast({ title: "Match number is required", description: "Enter a valid match number (≥ 1).", variant: "destructive" });
       return;
     }
-    if (!form?.scheduledAt) {
-      toast({ title: "Scheduled date is required", variant: "destructive" });
-      return;
-    }
     setCreatingTournamentMatch((prev) => ({ ...prev, [tournamentId]: true }));
     try {
-      const scheduledAtISO = new Date(form.scheduledAt).toISOString();
+      const scheduledAtISO = form?.scheduledAt ? new Date(form.scheduledAt).toISOString() : new Date().toISOString();
       const res = await apiFetch(`/tournaments/${tournamentId}/matches`, {
         method: "POST",
         body: JSON.stringify({
@@ -1564,15 +1560,19 @@ export default function AdminPage() {
                             setExpandedTournamentMatches((prev) => ({ ...prev, [t.id]: open }));
                             if (open && !tournamentMatchesList[t.id]) loadTournamentMatchesById(t.id);
                           }}
-                          className="flex items-center gap-2 text-sm font-bold text-[#a0a0b0] hover:text-white transition-colors"
+                          className="flex items-center gap-2 text-sm font-bold text-[#a0a0b0] hover:text-white transition-colors flex-wrap"
                         >
                           <span>🗓️</span>
                           <span className="uppercase text-xs tracking-wider">Matches</span>
-                          {tournamentMatchesList[t.id] && (
-                            <span className="text-[10px] bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/20 px-1.5 py-0.5 rounded-full font-black">
-                              {tournamentMatchesList[t.id].length}
-                            </span>
-                          )}
+                          {tournamentMatchesList[t.id] && tournamentMatchesList[t.id].length > 0 ? (
+                            tournamentMatchesList[t.id].map((m: any) => (
+                              <span key={m.id} className="text-[10px] bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/20 px-1.5 py-0.5 rounded font-black">
+                                Match #{m.matchNumber}
+                              </span>
+                            ))
+                          ) : tournamentMatchesList[t.id] ? (
+                            <span className="text-[10px] text-[#606070] italic">No matches yet</span>
+                          ) : null}
                           <span className="text-[#404050] text-xs">{expandedTournamentMatches[t.id] ? "▲" : "▼"}</span>
                         </button>
                         <button
@@ -1586,7 +1586,10 @@ export default function AdminPage() {
                       {showTournamentMatchForm[t.id] && (
                         <div className="bg-[#0a0a14] border border-[#ff6b00]/20 rounded-xl p-4 mb-3">
                           <h3 className="text-xs font-black uppercase text-[#ff6b00] mb-3">New Match for {t.name}</h3>
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="text-[10px] text-[#606070] mb-3 bg-[#1a1a24] rounded-lg px-3 py-2 border border-[#2a2a36]">
+                            ⏱️ Scheduled At will be auto-set to current date & time
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div>
                               <label className="text-[#606070] text-[10px] uppercase block mb-1">Match Number *</label>
                               <input
@@ -1599,18 +1602,9 @@ export default function AdminPage() {
                               />
                             </div>
                             <div>
-                              <label className="text-[#606070] text-[10px] uppercase block mb-1">Scheduled At *</label>
+                              <label className="text-[#606070] text-[10px] uppercase block mb-1">Match Name</label>
                               <input
-                                type="datetime-local"
-                                value={tournamentMatchForms[t.id]?.scheduledAt ?? ""}
-                                onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { ...prev[t.id], matchNumber: prev[t.id]?.matchNumber ?? "", scheduledAt: e.target.value, mapName: prev[t.id]?.mapName ?? "" } }))}
-                                className="admin-input"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[#606070] text-[10px] uppercase block mb-1">Map Name</label>
-                              <input
-                                placeholder="Bermuda, Purgatory..."
+                                placeholder="e.g. Bermuda Battle, Finals..."
                                 value={tournamentMatchForms[t.id]?.mapName ?? ""}
                                 onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { ...prev[t.id], matchNumber: prev[t.id]?.matchNumber ?? "", scheduledAt: prev[t.id]?.scheduledAt ?? "", mapName: e.target.value } }))}
                                 className="admin-input"
@@ -1744,11 +1738,15 @@ export default function AdminPage() {
                                 <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                   <span className="text-[10px] text-[#a0a0b0] uppercase tracking-wider">{t.mode}</span>
                                   <span className={statusBadge(t.status)}>{t.status}</span>
-                                  {tMatches && (
-                                    <span className="text-[10px] bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/20 px-1.5 py-0.5 rounded-full font-black">
-                                      {tMatches.length} match{tMatches.length !== 1 ? "es" : ""}
-                                    </span>
-                                  )}
+                                  {tMatches && tMatches.length > 0 ? (
+                                    tMatches.map((m: any) => (
+                                      <span key={m.id} className="text-[10px] bg-[#ff6b00]/15 text-[#ff6b00] border border-[#ff6b00]/20 px-1.5 py-0.5 rounded font-black">
+                                        Match #{m.matchNumber}
+                                      </span>
+                                    ))
+                                  ) : tMatches ? (
+                                    <span className="text-[10px] text-[#606070] italic">No matches</span>
+                                  ) : null}
                                   {t.prizePool > 0 && (
                                     <span className="text-[10px] text-yellow-400 font-bold">৳{Number(t.prizePool).toLocaleString()} pool</span>
                                   )}
