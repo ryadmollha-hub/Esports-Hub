@@ -4,6 +4,7 @@ import { Users, Trophy, Clock, ChevronRight, Zap } from "lucide-react";
 import CountdownTimer from "./CountdownTimer";
 import LeaderboardModal from "./LeaderboardModal";
 import { apiBase as BASE } from "@/lib/apiBase";
+import { parseBDDate, formatBDDate } from "@/lib/bdTime";
 
 interface Tournament {
   id: number;
@@ -45,7 +46,9 @@ function useClientStatus(serverStatus: string, startDate: string): StatusKey {
   const computeStatus = (): StatusKey => {
     if (serverStatus !== "upcoming") return serverStatus as StatusKey;
     const now = Date.now();
-    const start = new Date(startDate).getTime();
+    // parseBDDate: if startDate has no timezone suffix, treat as UTC+6 (Bangladesh).
+    // This prevents 6-hour drift when the app runs on non-BD servers (e.g. Replit UTC).
+    const start = parseBDDate(startDate).getTime();
     if (now >= start + 60 * 60 * 1000) return "completed";
     if (now >= start) return "live";
     if (now >= start - 10 * 60 * 1000) return "starting_soon";
@@ -76,7 +79,7 @@ function useRoomOpen(tournamentId: number, clientStatus: StatusKey): { roomOpen:
       const open = data.some(m =>
         m.roomVisible && (
           m.status === "scheduled" ||
-          (m.status === "live" && m.scheduledAt && new Date(m.scheduledAt).getTime() > now)
+          (m.status === "live" && m.scheduledAt && parseBDDate(m.scheduledAt).getTime() > now)
         )
       );
       setRoomOpen(open);
@@ -199,7 +202,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
                 )}
                 <div className="ml-auto flex items-center gap-1 text-[#606070] text-[10px]">
                   <Clock className="w-3 h-3" />
-                  {new Date(t.startDate).toLocaleDateString("en-BD", { day: "numeric", month: "short" })}
+                  {formatBDDate(t.startDate)}
                 </div>
               </div>
 
@@ -345,7 +348,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
             ) : (
               <div className="flex items-center gap-0.5 text-[#606070] text-[10px]">
                 <Clock className="w-2.5 h-2.5" />
-                {new Date(t.startDate).toLocaleDateString("en-BD", { day: "numeric", month: "short" })}
+                {formatBDDate(t.startDate)}
               </div>
             )}
             <ChevronRight className="w-3.5 h-3.5 text-[#ff6b00]/50 group-hover:text-[#ff6b00] group-hover:translate-x-0.5 transition-all" />

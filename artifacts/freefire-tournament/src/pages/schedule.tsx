@@ -3,6 +3,7 @@ import { Calendar, Clock, Map, ChevronDown, ChevronUp, Trophy, Target, Star } fr
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { useGetMatchSchedule, getGetMatchScheduleQueryKey } from "@workspace/api-client-react";
+import { formatBDTime, formatBDDate } from "@/lib/bdTime";
 
 const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
   scheduled: { label: "Scheduled", color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10", dot: "bg-yellow-400" },
@@ -107,10 +108,10 @@ function MatchRow({ match, expanded, onToggle }: { match: any; expanded: boolean
           <div className="text-right">
             <div className="flex items-center gap-1 text-[#a0a0b0] text-sm justify-end" data-testid={`text-match-time-${match.id}`}>
               <Clock className="w-3.5 h-3.5" />
-              {new Date(match.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {formatBDTime(match.scheduledAt)}
             </div>
             <div className="text-[#606070] text-xs">
-              {new Date(match.scheduledAt).toLocaleDateString("en-BD", { day: "numeric", month: "short", year: "numeric" })}
+              {formatBDDate(match.scheduledAt)}
             </div>
           </div>
           {hasResults && (

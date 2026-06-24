@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
+import { parseBDDate } from "@/lib/bdTime";
 import {
   Swords, Users, Lock, Globe, ChevronRight, CheckCircle,
   XCircle, Timer, Copy, Trash2, Plus, RefreshCw,
@@ -32,7 +33,9 @@ function getEffectiveStatus(match: any): string {
   if (match.status === "pending_approval") return "pending_approval";
   if (match.status === "active" || match.status === "ended" || match.status === "cancelled") return match.status;
   if (match.timerStartedAt && match.startDelayMinutes) {
-    const startMs = new Date(match.timerStartedAt).getTime() + match.startDelayMinutes * 60 * 1000;
+    // parseBDDate: treat naive timerStartedAt as UTC+6 so the active-check is
+    // correct regardless of server or browser timezone.
+    const startMs = parseBDDate(match.timerStartedAt).getTime() + match.startDelayMinutes * 60 * 1000;
     if (Date.now() >= startMs) return "active";
   }
   return match.status === "approved" ? "waiting" : (match.status || "waiting");
@@ -40,7 +43,7 @@ function getEffectiveStatus(match: any): string {
 
 function getStartsAt(match: any): Date | null {
   if (!match.timerStartedAt || !match.startDelayMinutes) return null;
-  return new Date(new Date(match.timerStartedAt).getTime() + match.startDelayMinutes * 60 * 1000);
+  return new Date(parseBDDate(match.timerStartedAt).getTime() + match.startDelayMinutes * 60 * 1000);
 }
 
 function copyToClipboard(text: string, toast: any) {

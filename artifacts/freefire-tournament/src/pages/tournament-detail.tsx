@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRoute, Link, useLocation, useSearch } from "wouter";
+import { parseBDDate, formatBDTime, formatBDDate } from "@/lib/bdTime";
 import {
   Trophy, Users, Calendar, Shield, ChevronLeft, Flame,
   UserPlus, UserMinus, Crown, Swords, CheckCircle, RefreshCw,
@@ -243,10 +244,11 @@ export default function TournamentDetailPage() {
   );
 
   // Room is "open" when credentials are visible but the scheduled start hasn't passed.
+  // parseBDDate: treat timezone-naive scheduledAt strings as UTC+6 (Bangladesh).
   const roomOpen = matches.some(m =>
     m.roomVisible && (
       m.status === "scheduled" ||
-      (m.status === "live" && new Date(m.scheduledAt).getTime() > nowMs)
+      (m.status === "live" && parseBDDate(m.scheduledAt).getTime() > nowMs)
     )
   );
 
@@ -549,7 +551,7 @@ export default function TournamentDetailPage() {
                       </div>
                       <div className="flex items-center gap-1.5 text-[#a0a0b0] text-xs">
                         <Clock className="w-3.5 h-3.5" />
-                        {new Date(match.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        {formatBDTime(match.scheduledAt)}
                       </div>
                     </div>
                     {match.roomVisible && isJoined ? (
@@ -602,12 +604,14 @@ export default function TournamentDetailPage() {
                 </h3>
                 <div className="space-y-3">
                   {upcomingMatches.map(match => {
-                    const scheduledMs = new Date(match.scheduledAt).getTime();
+                    // parseBDDate: treat naive timestamps as UTC+6 so release/hide
+                    // windows are correct regardless of server or browser timezone.
+                    const scheduledMs = parseBDDate(match.scheduledAt).getTime();
                     const releaseMs = match.roomReleaseAt
-                      ? new Date(match.roomReleaseAt).getTime()
+                      ? parseBDDate(match.roomReleaseAt).getTime()
                       : scheduledMs - 10 * 60 * 1000;
                     const hideMs = match.roomHideAt
-                      ? new Date(match.roomHideAt).getTime()
+                      ? parseBDDate(match.roomHideAt).getTime()
                       : scheduledMs + 60 * 60 * 1000;
                     const nowMs = Date.now();
                     const minsToRelease = Math.ceil((releaseMs - nowMs) / 60000);
@@ -624,8 +628,8 @@ export default function TournamentDetailPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-white text-sm font-bold">{new Date(match.scheduledAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
-                            <div className="text-[#a0a0b0] text-xs">{new Date(match.scheduledAt).toLocaleDateString()}</div>
+                            <div className="text-white text-sm font-bold">{formatBDTime(match.scheduledAt)}</div>
+                            <div className="text-[#a0a0b0] text-xs">{formatBDDate(match.scheduledAt)}</div>
                             {match.roomVisible ? (
                               <div className="text-[#ff6b00] text-[10px] font-black mt-0.5 flex items-center justify-end gap-1">
                                 <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse inline-block" /> Room Open
