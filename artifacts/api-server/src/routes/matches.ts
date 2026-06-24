@@ -164,12 +164,16 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       return res.status(404).json({ error: "Tournament not found." });
     }
 
-    // scheduledAt must be >= tournament.startDate (equal is allowed — match can start exactly when tournament begins)
     const scheduledAtDate = new Date(scheduledAt);
     if (isNaN(scheduledAtDate.getTime())) {
       return res.status(400).json({ error: "Invalid scheduledAt date." });
     }
-    if (scheduledAtDate < new Date(tournament.startDate)) {
+    // Only enforce the start-date floor when the tournament hasn't begun yet.
+    // If the tournament is already ongoing (startDate is in the past), any
+    // scheduled time — including "now" — is valid.
+    const tournamentStart = new Date(tournament.startDate);
+    const now = new Date();
+    if (tournamentStart > now && scheduledAtDate < tournamentStart) {
       return res.status(400).json({
         error: "Match scheduled time cannot be before the tournament start date.",
       });
