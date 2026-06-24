@@ -1138,37 +1138,51 @@ export default function TournamentDetailPage() {
               </button>
             </div>
 
-            {/* ── Game Mode Toggle ── */}
-            <div className="mb-5">
-              <div className="text-[#a0a0b0] text-[10px] uppercase tracking-widest font-bold mb-2">Game Mode</div>
-              <div className="flex gap-2">
-                {([
-                  { mode: "solo",  label: "Solo",  count: 1 },
-                  { mode: "duo",   label: "Duo",   count: 2 },
-                  { mode: "squad", label: "Squad", count: 4 },
-                ] as { mode: string; label: string; count: number }[]).map(({ mode, label, count }) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => handleModeChange(mode)}
-                    className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase border transition-all ${
-                      selectedMode === mode
-                        ? "bg-[#ff6b00] border-[#ff6b00] text-white shadow-[0_0_14px_rgba(255,107,0,0.35)]"
-                        : "bg-[#1a1a24] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/50 hover:text-white"
-                    }`}
-                  >
-                    {label}
-                    <div className="text-[10px] font-normal opacity-70 mt-0.5">{count}P</div>
-                  </button>
-                ))}
-              </div>
-              {entryFee > 0 && (
-                <div className="mt-2 text-center text-xs text-[#a0a0b0]">
-                  ৳{entryFee} × {getPlayerCount(selectedMode)} players ={" "}
-                  <span className="text-[#ff6b00] font-black">৳{modalFee}</span>
+            {/* ── Game Mode Toggle ── (shown only for duo/squad tournaments) */}
+            {(() => {
+              const tMode = (t?.mode ?? "squad").toLowerCase();
+              const allOptions: { mode: string; label: string; count: number }[] = [
+                { mode: "solo",  label: "Solo",  count: 1 },
+                { mode: "duo",   label: "Duo",   count: 2 },
+                { mode: "squad", label: "Squad", count: 4 },
+              ];
+              // solo  → no toggle (always 1 player, no choice)
+              // duo   → solo + duo only
+              // squad → all three
+              const available =
+                tMode === "solo"  ? [] :
+                tMode === "duo"   ? allOptions.slice(0, 2) :
+                allOptions;
+              if (available.length === 0) return null;
+              return (
+                <div className="mb-5">
+                  <div className="text-[#a0a0b0] text-[10px] uppercase tracking-widest font-bold mb-2">Game Mode</div>
+                  <div className="flex gap-2">
+                    {available.map(({ mode, label, count }) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => handleModeChange(mode)}
+                        className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase border transition-all ${
+                          selectedMode === mode
+                            ? "bg-[#ff6b00] border-[#ff6b00] text-white shadow-[0_0_14px_rgba(255,107,0,0.35)]"
+                            : "bg-[#1a1a24] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/50 hover:text-white"
+                        }`}
+                      >
+                        {label}
+                        <div className="text-[10px] font-normal opacity-70 mt-0.5">{count}P</div>
+                      </button>
+                    ))}
+                  </div>
+                  {entryFee > 0 && (
+                    <div className="mt-2 text-center text-xs text-[#a0a0b0]">
+                      ৳{entryFee} × {getPlayerCount(selectedMode)} players ={" "}
+                      <span className="text-[#ff6b00] font-black">৳{modalFee}</span>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              );
+            })()}
 
             <div className="space-y-4">
               {/* Player 1 (the user) */}
