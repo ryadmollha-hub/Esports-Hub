@@ -1,19 +1,19 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useLocation, Link } from "wouter";
 import {
-  Trophy, Shield, Clock, CheckCircle, XCircle,
+  Trophy, Clock, CheckCircle, XCircle,
   Edit, Save, X, ArrowDownCircle, ArrowUpCircle, User,
-  Key, EyeOff, Eye, BarChart2, Swords, Star, Copy
+  Key, EyeOff, Eye, BarChart2, Swords, Copy
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useGetMyRegistrations, useGetMyTeam, useGetMyProfile, useUpdateMyProfile } from "@workspace/api-client-react";
+import { useGetMyRegistrations, useGetMyProfile, useUpdateMyProfile } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useLanguage } from "@/lib/LanguageContext";
 import { apiBase as BASE } from "@/lib/apiBase";
 
-type DashTab = "profile" | "tournaments" | "team" | "deposits" | "withdrawals";
+type DashTab = "profile" | "tournaments" | "deposits" | "withdrawals";
 
 const statusColors: Record<string, string> = {
   approved: "text-[#00ff88] bg-[#00ff88]/10 border-[#00ff88]/30",
@@ -39,11 +39,9 @@ export default function DashboardPage() {
   }, [isLoading, authUser]);
 
   const { data: registrations = [], isLoading: loadingRegs } = useGetMyRegistrations();
-  const { data: myTeam } = useGetMyTeam();
   const { data: profile } = useGetMyProfile();
   const updateProfile = useUpdateMyProfile();
 
-  const team = myTeam as any;
   const regs = registrations as any[];
   const prof = profile as any;
 
@@ -109,15 +107,12 @@ export default function DashboardPage() {
     );
   };
 
-  const approved = regs.filter((r) => r.status === "approved").length;
-  const pending = regs.filter((r) => r.status === "pending").length;
   const deposits = walletTxs.filter((t) => t.type === "deposit");
   const withdrawals = walletTxs.filter((t) => t.type === "withdraw");
 
   const dashTabs: { id: DashTab; label: string; icon: any }[] = [
     { id: "profile", label: t("dash_profile"), icon: User },
     { id: "tournaments", label: t("dash_tournaments"), icon: Trophy },
-    { id: "team", label: t("dash_team"), icon: Shield },
     { id: "deposits", label: t("dash_deposits"), icon: ArrowDownCircle },
     { id: "withdrawals", label: t("dash_withdrawals"), icon: ArrowUpCircle },
   ];
@@ -138,34 +133,6 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#0a0a0f] text-white pb-24">
       <Navbar />
       <div className="max-w-5xl mx-auto px-4 pt-16 pb-6">
-
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5">
-          <div className="w-12 h-12 rounded-full bg-[#ff6b00]/20 border-2 border-[#ff6b00] flex items-center justify-center shrink-0">
-            <User className="w-6 h-6 text-[#ff6b00]" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black">
-              Welcome, <span className="text-[#ff6b00]">{prof?.displayName ?? prof?.username ?? authUser?.username ?? "Player"}</span>
-            </h1>
-            <p className="text-[#a0a0b0] text-xs">{authUser?.email}</p>
-            {prof?.freefireNickname && <p className="text-[#a0a0b0] text-xs">FF: {prof.freefireNickname} <span className="font-mono">({prof.freefireUid})</span></p>}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-5">
-          {[
-            { label: "Registered", value: regs.length, icon: Trophy, color: "text-[#ff6b00]" },
-            { label: "Approved", value: approved, icon: CheckCircle, color: "text-[#00ff88]" },
-            { label: "Pending", value: pending, icon: Clock, color: "text-yellow-400" },
-            { label: "Team", value: team ? "Active" : "None", icon: Shield, color: team ? "text-[#ff6b00]" : "text-[#a0a0b0]" },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-3">
-              <stat.icon className={`w-4 h-4 ${stat.color} mb-1.5`} />
-              <div className={`text-xl font-black ${stat.color}`}>{stat.value}</div>
-              <div className="text-[#a0a0b0] text-xs mt-0.5">{stat.label}</div>
-            </div>
-          ))}
-        </div>
 
         <div className="flex gap-1 overflow-x-auto pb-1 mb-4">
           {dashTabs.map((tab) => (
@@ -377,61 +344,6 @@ export default function DashboardPage() {
                     </div>
                   );
                 })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === "team" && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-black uppercase">Team <span className="text-[#ff6b00]">History</span></h2>
-              <Link href="/teams/my" className="text-[#ff6b00] text-sm font-bold hover:underline">Manage Team →</Link>
-            </div>
-            {team ? (
-              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <Shield className="w-12 h-12 text-[#ff6b00]" />
-                  <div>
-                    <div className="font-black text-white text-xl">{team.name}</div>
-                    {team.tag && <div className="text-[#a0a0b0] text-sm">[{team.tag}]</div>}
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {[
-                    { label: "Total Wins", value: team.totalWins ?? 0 },
-                    { label: "Total Kills", value: team.totalKills ?? 0 },
-                    { label: "Members", value: team.members?.filter((m: any) => m.status === "active").length ?? 0 },
-                    { label: "Status", value: "Active" },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="border border-[#2a2a36] rounded-xl p-3 text-center">
-                      <div className="text-[#ff6b00] font-black text-xl">{value}</div>
-                      <div className="text-[#a0a0b0] text-xs uppercase mt-1">{label}</div>
-                    </div>
-                  ))}
-                </div>
-                {team.members && team.members.length > 0 && (
-                  <div className="mt-4">
-                    <h3 className="text-sm font-black uppercase text-[#a0a0b0] mb-2">Members</h3>
-                    <div className="space-y-2">
-                      {team.members.map((m: any) => (
-                        <div key={m.id} className="flex items-center justify-between bg-[#1a1a24] rounded-lg px-3 py-2">
-                          <span className="text-white text-sm">{m.playerName ?? m.userId}</span>
-                          <div className="flex gap-2">
-                            <span className="text-xs text-[#a0a0b0] capitalize">{m.role}</span>
-                            <span className={`text-xs px-2 py-0.5 rounded font-bold uppercase ${m.status === "active" ? "text-[#00ff88] bg-[#00ff88]/10" : "text-yellow-400 bg-yellow-400/10"}`}>{m.status}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center">
-                <Shield className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/30" />
-                <p className="text-[#a0a0b0] mb-4">You are not part of a team yet</p>
-                <Link href="/teams/my" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-bold uppercase text-sm rounded-xl hover:bg-[#e66000] transition-all">Create or Join a Team</Link>
               </div>
             )}
           </div>
