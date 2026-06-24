@@ -1,0 +1,25 @@
+We need to overhaul the Match Rules system and the User Registration modal based on new functional specifications and UI screenshots:
+
+1. GLOBAL CATEGORY RULES SYSTEM:
+- Stop requiring individual rules per match. Remove the match-specific rules input from the single match creation schema.
+- Update the Admin Panel to feature a centralized "Category Rules Management" section. Admins should select a Category (e.g., "CS", "BR", "LOL") and save ONE global rule block for that entire category.
+- When a user views any match details on the frontend UI, the system must automatically fetch and display the global rules linked to that match's category. 
+
+2. CS MATCH RULES UI DESIGN (Copy-Paste Text):
+Please populate the default Global CS Category Rule with this cleanly structured text:
+"🎯 Clash Squad (CS) Match Rules & Regulations:
+• 🚫 HACKS & CHEATS: Strictly prohibited. Use of any third-party configuration, macro, or cheat will result in an immediate permanent ban and wallet forfeiture.
+• 🕒 TIMING: Players must join the room 5 minutes before the match start time. Late entries will not be accommodated or refunded.
+• 📱 DEVICE RESTRICTION: Emulator play is not allowed unless explicitly mentioned in the title. Mobile/Tablet devices only.
+• 🛡️ FAIR PLAY: Friendly fire exploits, teaming up with opponents, or abusive language in chat will cause instant disqualification."
+
+3. DYNAMIC REGISTRATION MODAL WITH GAME MODE SELECTOR:
+- Update the User Registration Modal UI to match the layout in the uploaded screenshots.
+- Add a Toggle or Radio Button selector at the top of the registration form for the user to choose their game mode: [ SOLO ] / [ DUO ] / [ SQUAD ].
+- Dynamically calculate the Entry Fee display and wallet deduction based on this choice:
+  * If SOLO is selected: Total = Base Entry Fee * 1
+  * If DUO is selected: Total = Base Entry Fee * 2 (Render input fields for 1 Teammate name)
+  * If SQUAD is selected: Total = Base Entry Fee * 4 (Render input fields for 3 Teammate names)
+- Update the "CONTINUE" submission button text to dynamically show the updated fee (e.g., "CONTINUE (৳40 FEE)"). Ensure the backend validates and deducts this correct dynamic amount from the Team Leader's wallet balance.
+
+Please rewrite the match schemas, registration controllers, and frontend modal views to apply these structural changes now.

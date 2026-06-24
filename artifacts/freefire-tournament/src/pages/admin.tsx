@@ -115,9 +115,6 @@ export default function AdminPage() {
   const [matchForm, setMatchForm] = useState({ matchNumber: "", scheduledAt: "", mapName: "", roomId: "", roomPassword: "", roomReleaseMinutes: "10" });
   const [showMatchForm, setShowMatchForm] = useState(false);
 
-  // Rules modal state
-  const [showRulesModal, setShowRulesModal] = useState(false);
-  const [rulesModalTournamentId, setRulesModalTournamentId] = useState<number | null>(null);
   const [showCommunityRulesModal, setShowCommunityRulesModal] = useState(false);
 
   // Manage Room modal state: { tournamentId, matchId } or null
@@ -3005,64 +3002,10 @@ export default function AdminPage() {
           {activeTab === "rules" && (
             <div>
               <div className="mb-6">
-                <h1 className="text-2xl font-black uppercase">Match Rules <span className="text-[#ff6b00]">Configuration</span></h1>
-                <p className="text-[#a0a0b0] text-sm mt-1">Configure in-game rules displayed to players for each tournament.</p>
+                <h1 className="text-2xl font-black uppercase">Category <span className="text-[#ff6b00]">Rules</span></h1>
+                <p className="text-[#a0a0b0] text-sm mt-1">Set one global rule block per game category. All players in that category will see these rules.</p>
               </div>
-
-              {tournamentsLoading ? (
-                <div className="space-y-3">
-                  {[1,2,3].map((i) => <div key={i} className="h-16 bg-[#12121a] rounded-xl border border-[#ff6b00]/10 animate-pulse" />)}
-                </div>
-              ) : tournaments.length === 0 ? (
-                <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-10 text-center text-[#a0a0b0] text-sm">
-                  <div className="text-4xl mb-3">⚙️</div>
-                  <div className="font-black text-white mb-1">No Tournaments Yet</div>
-                  <div>Create a tournament first to configure its match rules.</div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {tournaments.map((t: any) => (
-                    <div key={t.id} className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/10 px-6 py-4 flex items-center justify-between gap-4">
-                      <div>
-                        <div className="font-black text-white">{t.name}</div>
-                        <div className="text-xs text-[#a0a0b0] mt-0.5">{t.mode} · {t.status}</div>
-                      </div>
-                      <button
-                        onClick={() => { setRulesModalTournamentId(t.id); setShowRulesModal(true); }}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] font-black text-xs uppercase rounded-xl hover:bg-[#ff6b00]/20 transition-colors shrink-0"
-                      >
-                        <Settings className="w-3.5 h-3.5" /> ⚙️ Configure Match Rules
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Rules Modal Overlay */}
-              {showRulesModal && rulesModalTournamentId !== null && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                  <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-[#ff6b00]/10">
-                      <div>
-                        <h2 className="font-black text-white text-base uppercase">⚙️ Configure Match Rules</h2>
-                        <p className="text-[#a0a0b0] text-xs mt-0.5">
-                          {tournaments.find((t: any) => t.id === rulesModalTournamentId)?.name}
-                        </p>
-                      </div>
-                      <button onClick={() => setShowRulesModal(false)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#1a1a24] text-[#a0a0b0] hover:text-white hover:bg-[#2a2a34] transition-colors">
-                        ✕
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-6">
-                      <RulesTab
-                        apiFetch={apiFetch}
-                        toast={toast}
-                        tournaments={tournaments.filter((t: any) => t.id === rulesModalTournamentId)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
+              <CategoryRulesTab apiFetch={apiFetch} toast={toast} />
             </div>
           )}
 
@@ -4028,189 +3971,144 @@ export default function AdminPage() {
   );
 }
 
-function RulesTab({ apiFetch, toast, tournaments }: { apiFetch: any; toast: any; tournaments: any[] }) {
-  const [selectedTournament, setSelectedTournament] = useState<number | null>(null);
-  const [rules, setRules] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [editingRule, setEditingRule] = useState<any>(null);
-  const [form, setForm] = useState({ title: "", content: "", orderIndex: "0" });
-  const [submitting, setSubmitting] = useState(false);
+const CS_DEFAULT_RULES = `🎯 Clash Squad (CS) Match Rules & Regulations:
+• 🚫 HACKS & CHEATS: Strictly prohibited. Use of any third-party configuration, macro, or cheat will result in an immediate permanent ban and wallet forfeiture.
+• 🕒 TIMING: Players must join the room 5 minutes before the match start time. Late entries will not be accommodated or refunded.
+• 📱 DEVICE RESTRICTION: Emulator play is not allowed unless explicitly mentioned in the title. Mobile/Tablet devices only.
+• 🛡️ FAIR PLAY: Friendly fire exploits, teaming up with opponents, or abusive language in chat will cause instant disqualification.`;
 
-  const loadRules = async (tid: number) => {
+const CATEGORY_OPTIONS = [
+  { value: "BR",        label: "BR — Battle Royale" },
+  { value: "CS",        label: "CS — Clash Squad" },
+  { value: "LONE_WOLF", label: "LONE WOLF — 1v1 Elimination" },
+  { value: "FREE",      label: "FREE — Free Match / Giveaway" },
+  { value: "SOLO",      label: "SOLO — Solo Survival" },
+];
+
+function CategoryRulesTab({ apiFetch, toast }: { apiFetch: any; toast: any }) {
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [rules, setRules] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [allRules, setAllRules] = useState<any[]>([]);
+
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiFetch(`/tournaments/${tid}/rules`);
-      if (res.ok) setRules(await res.json());
+      const res = await apiFetch("/admin/category-rules");
+      if (res.ok) setAllRules(await res.json());
     } catch {} finally { setLoading(false); }
+  }, [apiFetch]);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  const handleCategoryChange = (cat: string) => {
+    setSelectedCategory(cat);
+    const existing = allRules.find((r) => r.category === cat);
+    setRules(existing ? existing.rules : cat === "CS" ? CS_DEFAULT_RULES : "");
   };
 
-  useEffect(() => {
-    if (selectedTournament) loadRules(selectedTournament);
-  }, [selectedTournament]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTournament) return;
-    setSubmitting(true);
+  const handleSave = async () => {
+    if (!selectedCategory) return toast({ title: "Select a category first", variant: "destructive" });
+    if (!rules.trim()) return toast({ title: "Rules cannot be empty", variant: "destructive" });
+    setSaving(true);
     try {
-      const url = editingRule ? `/rules/${editingRule.id}` : `/tournaments/${selectedTournament}/rules`;
-      const method = editingRule ? "PATCH" : "POST";
-      const res = await apiFetch(url, {
-        method,
-        body: JSON.stringify({
-          title: form.title,
-          content: form.content,
-          orderIndex: parseInt(form.orderIndex) || 0,
-        }),
+      const res = await apiFetch("/admin/category-rules", {
+        method: "POST",
+        body: JSON.stringify({ category: selectedCategory, rules: rules.trim() }),
       });
       if (res.ok) {
-        toast({ title: editingRule ? "Rule updated!" : "Rule added!" });
-        setShowForm(false);
-        setEditingRule(null);
-        setForm({ title: "", content: "", orderIndex: "0" });
-        loadRules(selectedTournament);
+        toast({ title: "✅ Rules saved!", description: `${selectedCategory} category rules updated.` });
+        loadAll();
       } else {
         const d = await safeJson(res);
-        toast({ title: "Error", description: d.error, variant: "destructive" });
+        toast({ title: "Error", description: d.error ?? "Save failed", variant: "destructive" });
       }
     } catch {
       toast({ title: "Connection error", variant: "destructive" });
-    } finally { setSubmitting(false); }
-  };
-
-  const deleteRule = async (id: number) => {
-    if (!confirm("Delete this rule?")) return;
-    if (!selectedTournament) return;
-    const res = await apiFetch(`/rules/${id}`, { method: "DELETE" });
-    if (res.ok) { toast({ title: "Rule deleted" }); loadRules(selectedTournament); }
-  };
-
-  const startEdit = (rule: any) => {
-    setEditingRule(rule);
-    setForm({ title: rule.title, content: rule.content, orderIndex: String(rule.orderIndex) });
-    setShowForm(true);
+    } finally { setSaving(false); }
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-black uppercase">Game <span className="text-[#ff6b00]">Rules</span></h1>
-        {selectedTournament && (
-          <button
-            onClick={() => { setEditingRule(null); setForm({ title: "", content: "", orderIndex: String(rules.length) }); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white rounded-xl text-sm font-bold uppercase hover:bg-[#e66000] transition-colors"
+    <div className="space-y-6 max-w-2xl">
+      {/* Category selector */}
+      <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/10 p-6 space-y-4">
+        <div>
+          <label className="label-sm mb-2 block">Game Category</label>
+          <select
+            value={selectedCategory}
+            onChange={(e) => handleCategoryChange(e.target.value)}
+            className="admin-input max-w-sm"
           >
-            <Plus className="w-4 h-4" /> Add Rule
-          </button>
+            <option value="">— Select a category —</option>
+            {CATEGORY_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>{c.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {selectedCategory && (
+          <>
+            <div>
+              <label className="label-sm mb-2 block">
+                Rules for <span className="text-[#ff6b00]">{selectedCategory}</span>
+                <span className="ml-2 text-[10px] text-[#606070] normal-case">(shown to all players in this category)</span>
+              </label>
+              <textarea
+                value={rules}
+                onChange={(e) => setRules(e.target.value)}
+                rows={10}
+                placeholder="Enter rules for this category..."
+                className="admin-input resize-y font-mono text-xs leading-relaxed"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleSave}
+                disabled={saving || !rules.trim()}
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] disabled:opacity-50 transition-colors"
+              >
+                {saving ? "Saving..." : "💾 Save Rules"}
+              </button>
+              {selectedCategory === "CS" && !allRules.find((r) => r.category === "CS") && (
+                <span className="text-xs text-[#a0a0b0]">Pre-filled with default CS rules — edit as needed.</span>
+              )}
+            </div>
+          </>
         )}
       </div>
 
-      <div className="mb-6">
-        <label className="label-sm mb-2 block">Select Tournament</label>
-        <select
-          value={selectedTournament ?? ""}
-          onChange={(e) => {
-            const tid = e.target.value ? parseInt(e.target.value) : null;
-            setSelectedTournament(tid);
-            setShowForm(false);
-            setEditingRule(null);
-          }}
-          className="admin-input max-w-sm"
-        >
-          <option value="">-- Select a tournament --</option>
-          {tournaments.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {selectedTournament && (
-        <>
-          {showForm && (
-            <div className="bg-[#12121a] border border-[#ff6b00]/20 rounded-xl p-6 mb-4">
-              <h2 className="font-black uppercase text-[#ff6b00] mb-4">{editingRule ? "Edit Rule" : "Add New Rule"}</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="md:col-span-3">
-                    <label className="label-sm">Rule Title *</label>
-                    <input
-                      value={form.title}
-                      onChange={(e) => setForm({ ...form, title: e.target.value })}
-                      required
-                      placeholder="e.g. No Hacking / Cheating"
-                      className="admin-input"
-                    />
-                  </div>
-                  <div>
-                    <label className="label-sm">Order #</label>
-                    <input
-                      type="number"
-                      value={form.orderIndex}
-                      onChange={(e) => setForm({ ...form, orderIndex: e.target.value })}
-                      min="0"
-                      className="admin-input"
-                    />
-                  </div>
-                </div>
+      {/* Saved rules list */}
+      <div>
+        <h2 className="font-black uppercase text-sm text-[#a0a0b0] mb-3">Saved Categories</h2>
+        {loading ? (
+          <div className="space-y-2">
+            {[1,2,3].map((i) => <div key={i} className="h-12 bg-[#12121a] rounded-xl animate-pulse" />)}
+          </div>
+        ) : allRules.length === 0 ? (
+          <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-8 text-center text-[#a0a0b0] text-sm">
+            <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-20" />
+            <p>No category rules saved yet.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {allRules.map((r) => (
+              <div key={r.category} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 px-5 py-3 flex items-center justify-between gap-4">
                 <div>
-                  <label className="label-sm">Rule Content *</label>
-                  <textarea
-                    value={form.content}
-                    onChange={(e) => setForm({ ...form, content: e.target.value })}
-                    required
-                    rows={3}
-                    placeholder="Describe the rule in detail..."
-                    className="admin-input resize-none"
-                  />
+                  <span className="font-black text-white text-sm">{r.category}</span>
+                  <span className="ml-3 text-[#a0a0b0] text-xs line-clamp-1">{r.rules.slice(0, 80)}{r.rules.length > 80 ? "…" : ""}</span>
                 </div>
-                <div className="flex gap-3">
-                  <button type="submit" disabled={submitting} className="px-6 py-2.5 bg-[#ff6b00] text-white font-bold text-sm uppercase rounded-xl hover:bg-[#e66000] disabled:opacity-50 transition-colors">
-                    {submitting ? "Saving..." : editingRule ? "Update Rule" : "Add Rule"}
-                  </button>
-                  <button type="button" onClick={() => { setShowForm(false); setEditingRule(null); }} className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold text-sm uppercase rounded-xl hover:text-white transition-colors">
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {loading ? (
-            <div className="space-y-3">
-              {[1,2,3].map((i) => <div key={i} className="h-16 bg-[#12121a] rounded-xl animate-pulse" />)}
-            </div>
-          ) : rules.length === 0 ? (
-            <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-12 text-center text-[#a0a0b0]">
-              <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-20" />
-              <p>No rules added for this tournament yet.</p>
-              <p className="text-xs mt-1">Click "Add Rule" to create the first rule.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {rules.map((rule: any, i: number) => (
-                <div key={rule.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 flex items-start gap-4">
-                  <div className="w-7 h-7 rounded-full bg-[#ff6b00]/15 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black flex items-center justify-center shrink-0 mt-0.5">
-                    {i + 1}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-bold text-white text-sm mb-1">{rule.title}</div>
-                    <div className="text-[#a0a0b0] text-sm leading-relaxed whitespace-pre-line">{rule.content}</div>
-                  </div>
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => startEdit(rule)} className="p-2 bg-blue-400/10 border border-blue-400/20 rounded-lg text-blue-400 hover:bg-blue-400/20 transition-colors">
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => deleteRule(rule.id)} className="p-2 bg-[#ff2244]/10 border border-[#ff2244]/20 rounded-lg text-[#ff2244] hover:bg-[#ff2244]/20 transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+                <button
+                  onClick={() => handleCategoryChange(r.category)}
+                  className="shrink-0 text-xs px-3 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/20 text-[#ff6b00] rounded-lg hover:bg-[#ff6b00]/20 transition-colors font-bold"
+                >
+                  Edit
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

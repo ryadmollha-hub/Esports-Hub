@@ -68,11 +68,9 @@ interface TeamMember {
   name: string;
 }
 
-interface Rule {
-  id: number;
-  title: string;
-  content: string;
-  orderIndex: number;
+interface CategoryRule {
+  category: string;
+  rules: string;
 }
 
 interface MatchResult {
@@ -109,7 +107,7 @@ export default function TournamentDetailPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [results, setResults] = useState<Participant[] | null>(null);
   const [resultsLoading, setResultsLoading] = useState(false);
-  const [rules, setRules] = useState<Rule[]>([]);
+  const [categoryRules, setCategoryRules] = useState<CategoryRule | null>(null);
   const [matches, setMatches] = useState<MatchInfo[]>([]);
   const [loadingPart, setLoadingPart] = useState(true);
   const [joining, setJoining] = useState(false);
@@ -127,6 +125,7 @@ export default function TournamentDetailPage() {
     name: "",
     members: [] as TeamMember[],
   });
+  const [selectedMode, setSelectedMode] = useState<string>("solo");
 
   const { data: tournament, isLoading } = useGetTournament(id, {
     query: { enabled: !!id, queryKey: getGetTournamentQueryKey(id), refetchInterval: 30000 },
@@ -159,11 +158,16 @@ export default function TournamentDetailPage() {
 
   const loadRules = useCallback(async () => {
     if (!id) return;
+    const category = t?.gameMode;
+    if (!category) { setCategoryRules(null); return; }
     try {
-      const res = await fetch(`${apiBase}/api/tournaments/${id}/rules`);
-      if (res.ok) setRules(await res.json());
+      const res = await fetch(`${apiBase}/api/category-rules/${encodeURIComponent(category)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCategoryRules({ category: data.category ?? category, rules: data.rules ?? "" });
+      }
     } catch {}
-  }, [id]);
+  }, [id, t?.gameMode]);
 
   const loadMatches = useCallback(async () => {
     if (!id) return;
@@ -203,7 +207,8 @@ export default function TournamentDetailPage() {
   // Initialize team members when tournament mode becomes known
   useEffect(() => {
     if (t?.mode) {
-      const count = modePlayerCount[t.mode] ?? 1;
+      setSelectedMode(t.mode);
+      const count = getPlayerCount(t.mode);
       const membersNeeded = count - 1;
       setRegForm(prev => ({
         ...prev,
@@ -261,9 +266,8 @@ export default function TournamentDetailPage() {
     setShowFeeModal(false);
     setShowRegistrationModal(false);
     try {
-      const mode = t?.mode ?? "solo";
-      const playerCount = modePlayerCount[mode] ?? 1;
-      const teamMembers = playerCount > 1 ? regForm.members : undefined;
+      const modalCount = getPlayerCount(selectedMode);
+      const teamMembers = modalCount > 1 ? regForm.members.slice(0, modalCount - 1) : undefined;
 
       // Validate
       if (!regForm.uid.trim()) {
@@ -323,6 +327,16 @@ export default function TournamentDetailPage() {
     } else {
       doJoin();
     }
+  };
+
+  const handleModeChange = (mode: string) => {
+    setSelectedMode(mode);
+    const count = getPlayerCount(mode);
+    const membersNeeded = count - 1;
+    setRegForm(prev => ({
+      ...prev,
+      members: Array.from({ length: membersNeeded }, (_, i) => prev.members[i] ?? { uid: "", name: "" }),
+    }));
   };
 
   const doLeave = async () => {
@@ -404,6 +418,7 @@ export default function TournamentDetailPage() {
   const hasWinner = !!t.winnerId && !!t.winnerName;
   const playerCount = getPlayerCount(t.mode);
   const totalEntryFee = entryFee * playerCount;
+  const modalFee = entryFee * getPlayerCount(selectedMode);
 
   const podiumResults = results?.filter((r) => r.resultRank && r.resultRank <= 3)
     .sort((a, b) => (a.resultRank ?? 99) - (b.resultRank ?? 99)) ?? [];
@@ -1116,12 +1131,43 @@ export default function TournamentDetailPage() {
           <div className="w-full max-w-md bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-black uppercase text-white flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-[#ff6b00]" />
-                Register — {t.mode?.charAt(0).toUpperCase() + t.mode?.slice(1)}
+                <UserPlus className="w-5 h-5 text-[#ff6b00]" /> Register
               </h3>
               <button onClick={() => setShowRegistrationModal(false)} className="text-[#a0a0b0] hover:text-white">
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            {/* ── Game Mode Toggle ── */}
+            <div className="mb-5">
+              <div className="text-[#a0a0b0] text-[10px] uppercase tracking-widest font-bold mb-2">Game Mode</div>
+              <div className="flex gap-2">
+                {([
+                  { mode: "solo",  label: "Solo",  count: 1 },
+                  { mode: "duo",   label: "Duo",   count: 2 },
+                  { mode: "squad", label: "Squad", count: 4 },
+                ] as { mode: string; label: string; count: number }[]).map(({ mode, label, count }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => handleModeChange(mode)}
+                    className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase border transition-all ${
+                      selectedMode === mode
+                        ? "bg-[#ff6b00] border-[#ff6b00] text-white shadow-[0_0_14px_rgba(255,107,0,0.35)]"
+                        : "bg-[#1a1a24] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/50 hover:text-white"
+                    }`}
+                  >
+                    {label}
+                    <div className="text-[10px] font-normal opacity-70 mt-0.5">{count}P</div>
+                  </button>
+                ))}
+              </div>
+              {entryFee > 0 && (
+                <div className="mt-2 text-center text-xs text-[#a0a0b0]">
+                  ৳{entryFee} × {getPlayerCount(selectedMode)} players ={" "}
+                  <span className="text-[#ff6b00] font-black">৳{modalFee}</span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -1198,7 +1244,7 @@ export default function TournamentDetailPage() {
                 disabled={joining}
                 className="w-full py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 text-sm"
               >
-                {joining ? "Joining..." : totalEntryFee > 0 ? `Continue (৳${totalEntryFee} fee)` : "Join Tournament"}
+                {joining ? "Joining..." : modalFee > 0 ? `Continue (৳${modalFee} fee)` : "Join Tournament"}
               </button>
             </div>
           </div>
@@ -1226,31 +1272,31 @@ export default function TournamentDetailPage() {
                 <span className="text-[#a0a0b0]">Mode</span>
                 <span className="text-white font-bold uppercase">{t.mode}</span>
               </div>
-              {playerCount > 1 ? (
+              {getPlayerCount(selectedMode) > 1 ? (
                 <>
                   <div className="flex justify-between text-sm">
                     <span className="text-[#a0a0b0]">Per Player</span>
-                    <span className="text-white font-bold">৳{entryFee} × {playerCount}</span>
+                    <span className="text-white font-bold">৳{entryFee} × {getPlayerCount(selectedMode)}</span>
                   </div>
                   <div className="flex justify-between text-sm border-t border-[#2a2a36] pt-2">
                     <span className="text-[#a0a0b0] font-bold">Total Fee</span>
-                    <span className="text-[#ff6b00] font-black">৳{totalEntryFee}</span>
+                    <span className="text-[#ff6b00] font-black">৳{modalFee}</span>
                   </div>
                 </>
               ) : (
                 <div className="flex justify-between text-sm">
                   <span className="text-[#a0a0b0]">Entry Fee</span>
-                  <span className="text-[#ff6b00] font-black">৳{totalEntryFee}</span>
+                  <span className="text-[#ff6b00] font-black">৳{modalFee}</span>
                 </div>
               )}
               <div className="flex justify-between text-sm border-t border-[#2a2a36] pt-2">
                 <span className="text-[#a0a0b0]">Your Balance</span>
-                <span className={`font-black ${walletBalance !== null && walletBalance >= totalEntryFee ? "text-[#00ff88]" : "text-[#ff2244]"}`}>
+                <span className={`font-black ${walletBalance !== null && walletBalance >= modalFee ? "text-[#00ff88]" : "text-[#ff2244]"}`}>
                   ৳{walletBalance?.toFixed(2) ?? "..."}
                 </span>
               </div>
             </div>
-            {walletBalance !== null && walletBalance < totalEntryFee ? (
+            {walletBalance !== null && walletBalance < modalFee ? (
               <div className="space-y-3">
                 <p className="text-[#ff2244] text-sm text-center font-bold">Insufficient balance to join.</p>
                 <Link href="/wallet" onClick={() => setShowFeeModal(false)}
@@ -1261,11 +1307,11 @@ export default function TournamentDetailPage() {
             ) : (
               <div className="space-y-3">
                 <p className="text-[#a0a0b0] text-sm text-center">
-                  ৳{totalEntryFee} will be deducted from your wallet instantly.
+                  ৳{modalFee} will be deducted from your wallet instantly.
                 </p>
                 <button onClick={() => doJoin()} disabled={joining}
                   className="w-full py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 text-sm">
-                  {joining ? "Joining..." : `Confirm & Pay ৳${totalEntryFee}`}
+                  {joining ? "Joining..." : `Confirm & Pay ৳${modalFee}`}
                 </button>
               </div>
             )}
@@ -1290,22 +1336,12 @@ export default function TournamentDetailPage() {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="overflow-y-auto flex-1 space-y-4 pr-1">
-              {rules.length === 0 ? (
-                <p className="text-[#a0a0b0] text-center py-8">No rules posted yet.</p>
-              ) : rules.map((rule, i) => (
-                <div key={rule.id} className="border-b border-[#1a1a24] pb-4 last:border-0">
-                  <div className="flex items-start gap-3">
-                    <span className="shrink-0 w-6 h-6 rounded-full bg-[#ff6b00]/20 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black flex items-center justify-center mt-0.5">
-                      {i + 1}
-                    </span>
-                    <div>
-                      <div className="text-white font-bold text-sm mb-1">{rule.title}</div>
-                      <div className="text-[#a0a0b0] text-sm leading-relaxed whitespace-pre-line">{rule.content}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-y-auto flex-1 pr-1">
+              {!categoryRules || !categoryRules.rules ? (
+                <p className="text-[#a0a0b0] text-center py-8">No rules posted yet for this category.</p>
+              ) : (
+                <div className="text-[#a0a0b0] text-sm leading-relaxed whitespace-pre-line">{categoryRules.rules}</div>
+              )}
             </div>
           </div>
         </div>

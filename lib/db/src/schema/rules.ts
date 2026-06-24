@@ -14,3 +14,18 @@ export const tournamentRulesTable = pgTable("tournament_rules", {
 export const insertTournamentRuleSchema = createInsertSchema(tournamentRulesTable).omit({ id: true, createdAt: true });
 export type InsertTournamentRule = z.infer<typeof insertTournamentRuleSchema>;
 export type TournamentRule = typeof tournamentRulesTable.$inferSelect;
+
+// ── Global Category Rules ─────────────────────────────────────────────────────
+// One rule block per game category (BR, CS, LONE_WOLF, FREE, SOLO).
+// Replaces per-tournament and per-match individual rules.
+export const categoryRulesTable = pgTable("category_rules", {
+  id: serial("id").primaryKey(),
+  category: text("category").notNull().unique(), // BR | CS | LONE_WOLF | FREE | SOLO
+  rules: text("rules").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCategoryRuleSchema = createInsertSchema(categoryRulesTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCategoryRule = z.infer<typeof insertCategoryRuleSchema>;
+export type CategoryRule = typeof categoryRulesTable.$inferSelect;
