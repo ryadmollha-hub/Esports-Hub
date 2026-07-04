@@ -14,3 +14,4 @@ export * from "./auditLogs";
 export * from "./supportTickets";
 export * from "./userMatches";
 export * from "./reports";
+export * from "./hypeBoard";
