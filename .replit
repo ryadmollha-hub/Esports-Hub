@@ -33,7 +33,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "pnpm --filter @workspace/freefire-tournament run dev"
+args = "PORT=5000 BASE_PATH=/ artifacts/freefire-tournament/node_modules/.bin/vite --config artifacts/freefire-tournament/vite.config.ts --host 0.0.0.0"
 waitForPort = 5000
 
 [[workflows.workflow]]
@@ -45,7 +45,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "PORT=8080 pnpm --filter @workspace/api-server run dev"
+args = "cd artifacts/api-server && PORT=8080 NODE_ENV=development node --enable-source-maps ./dist/index.mjs"
 waitForPort = 8080
 
 [agent]
@@ -59,18 +59,6 @@ timeoutMs = 20000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 8080
-externalPort = 8080
-
-[[ports]]
-localPort = 8081
-externalPort = 8081
-
-[[ports]]
-localPort = 8082
-externalPort = 3002
 
 [[ports]]
 localPort = 24250
@@ -88,3 +76,4 @@ JWT_SECRET = "0b8cb7f78c149cec7a2e26a19a76492ead7944b79a3f19b0cbf361559d8064f601
 ADMIN_SECRET = "ebfb0c185074330cadf988e2e3e1f4acbc5532524ae445cb631f87f66ef2d073"
 ADMIN_USERNAME = "BLACKCODE"
 ADMIN_PASSWORD = "USER505"
+API_PORT = "8080"
