@@ -1031,36 +1031,30 @@ export default function TournamentDetailPage() {
                   </button>
                 </div>
 
-                {/* Input area — only for logged-in approved players before tournament ends */}
+                {/* Input area — any logged-in user can post hype */}
                 {user && t?.status !== "ended" && t?.status !== "completed" && t?.status !== "cancelled" && (
                   <div className="px-5 py-3 border-b border-[#1a1a24] bg-[#0e0e18]">
-                    {isJoined ? (
-                      <div className="flex gap-2">
-                        <div className="flex-1 relative">
-                          <input
-                            value={hypeText}
-                            onChange={e => setHypeText(e.target.value.slice(0, 120))}
-                            onKeyDown={e => e.key === "Enter" && postHype()}
-                            placeholder="তোমার হাইপ লেখো... 🔥"
-                            className="w-full bg-[#1a1a24] border border-[#2a2a36] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#505060] focus:outline-none focus:border-[#ff6b00]/50 pr-12"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#404055]">
-                            {hypeText.length}/120
-                          </span>
-                        </div>
-                        <button
-                          onClick={postHype}
-                          disabled={hypePosting || !hypeText.trim()}
-                          className="bg-[#ff6b00] hover:bg-[#e05f00] disabled:opacity-40 text-white font-black text-xs px-3 py-2 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1"
-                        >
-                          {hypePosting ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "🔥 পোস্ট"}
-                        </button>
+                    <div className="flex gap-2">
+                      <div className="flex-1 relative">
+                        <input
+                          value={hypeText}
+                          onChange={e => setHypeText(e.target.value.slice(0, 120))}
+                          onKeyDown={e => e.key === "Enter" && postHype()}
+                          placeholder="তোমার হাইপ লেখো... 🔥"
+                          className="w-full bg-[#1a1a24] border border-[#2a2a36] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#505060] focus:outline-none focus:border-[#ff6b00]/50 pr-12"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#404055]">
+                          {hypeText.length}/120
+                        </span>
                       </div>
-                    ) : (
-                      <p className="text-[#505060] text-xs text-center py-1">
-                        🔒 শুধুমাত্র অনুমোদিত প্লেয়াররা হাইপ পোস্ট করতে পারবে
-                      </p>
-                    )}
+                      <button
+                        onClick={postHype}
+                        disabled={hypePosting || !hypeText.trim()}
+                        className="bg-[#ff6b00] hover:bg-[#e05f00] disabled:opacity-40 text-white font-black text-xs px-3 py-2 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1"
+                      >
+                        {hypePosting ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : "🔥 পোস্ট"}
+                      </button>
+                    </div>
                   </div>
                 )}
 

@@ -38,22 +38,7 @@ router.post("/tournaments/:id/hype", async (req, res) => {
       return res.status(400).json({ error: "Message too long (max 120 characters)." });
     }
 
-    // Check user is registered for this tournament (approved)
-    const [reg] = await db
-      .select({ id: registrationsTable.id })
-      .from(registrationsTable)
-      .where(
-        and(
-          eq(registrationsTable.tournamentId, tournamentId),
-          eq(registrationsTable.userId, userId),
-          eq(registrationsTable.status, "approved"),
-        ),
-      )
-      .limit(1);
-
-    if (!reg) {
-      return res.status(403).json({ error: "Only approved players can post hype." });
-    }
+    // Any logged-in user can post hype (no registration required)
 
     // Rate limit: 1 message per 10 minutes per user per tournament
     const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);

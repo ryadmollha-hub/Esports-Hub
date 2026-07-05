@@ -98,28 +98,28 @@ export default function Home() {
   const nextTournament = featured[0];
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
+    <div className="min-h-screen bg-[#080c14] text-white">
       <Navbar />
 
       {/* ── HERO ── */}
-      <section className="relative min-h-[88dvh] flex flex-col items-center justify-center text-center px-4 overflow-hidden">
+      <section className="relative min-h-[75dvh] flex flex-col items-center justify-center text-center px-4 overflow-hidden pt-12">
         {/* BG image */}
-        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-[0.07]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0a0a0f]/60 via-[#0a0a0f]/10 to-[#0a0a0f]" />
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-[0.06]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#080c14]/70 via-[#080c14]/20 to-[#080c14]" />
 
-        {/* Grid */}
-        <div className="absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "linear-gradient(rgba(255,107,0,0.8) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,0,0.8) 1px,transparent 1px)", backgroundSize: "48px 48px" }} />
+        {/* Grid pattern */}
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(rgba(255,69,0,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,69,0,1) 1px,transparent 1px)", backgroundSize: "44px 44px" }} />
 
         {/* Floating orbs */}
-        <FloatingOrb x="10%" y="20%" size={200} color="rgba(255,107,0,0.08)" delay={0} />
-        <FloatingOrb x="75%" y="15%" size={160} color="rgba(255,215,0,0.06)" delay={1.5} />
-        <FloatingOrb x="60%" y="60%" size={120} color="rgba(0,255,136,0.05)" delay={2.5} />
-        <FloatingOrb x="5%" y="65%" size={140} color="rgba(255,107,0,0.06)" delay={1} />
+        <FloatingOrb x="8%" y="18%" size={180} color="rgba(255,69,0,0.09)" delay={0} />
+        <FloatingOrb x="78%" y="12%" size={140} color="rgba(255,215,0,0.06)" delay={1.5} />
+        <FloatingOrb x="55%" y="65%" size={100} color="rgba(0,180,255,0.05)" delay={2.5} />
+        <FloatingOrb x="3%" y="70%" size={120} color="rgba(120,60,255,0.05)" delay={1} />
 
-        <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center gap-4">
+        <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center gap-3.5">
           {/* Badge */}
           <motion.div variants={fadeUp} initial="hidden" animate="show" custom={0}
-            className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/25 rounded-full text-[#ff6b00] text-[10px] font-black uppercase tracking-[0.2em]">
+            className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ff4500]/10 border border-[#ff4500]/25 rounded-full text-[#ff4500] text-[10px] font-black uppercase tracking-[0.2em]">
             <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
               <Flame className="w-2.5 h-2.5" />
             </motion.div>
@@ -128,9 +128,9 @@ export default function Home() {
 
           {/* Heading */}
           <motion.h1 variants={fadeUp} initial="hidden" animate="show" custom={1}
-            className="text-3xl sm:text-4xl md:text-6xl font-black uppercase leading-none tracking-tighter">
+            className="text-3xl sm:text-4xl md:text-5xl font-black uppercase leading-none tracking-tighter">
             <span className="text-white">{t("home_hero_1")} </span>
-            <span className="text-[#ff6b00]" style={{ textShadow: "0 0 40px rgba(255,107,0,0.5),0 0 80px rgba(255,107,0,0.2)" }}>
+            <span className="text-[#ff4500]" style={{ textShadow: "0 0 36px rgba(255,69,0,0.55),0 0 72px rgba(255,69,0,0.2)" }}>
               {t("home_hero_2")}
             </span>
             <br />
@@ -138,62 +138,59 @@ export default function Home() {
           </motion.h1>
 
           <motion.p variants={fadeUp} initial="hidden" animate="show" custom={2}
-            className="text-sm md:text-base text-[#a0a0b0] max-w-xl mx-auto leading-relaxed">
+            className="text-sm text-[#8890a8] max-w-md mx-auto leading-relaxed">
             {t("home_hero_desc")}
           </motion.p>
 
-          {/* Countdown card */}
-          {nextTournament && (
-            <motion.div variants={fadeUp} initial="hidden" animate="show" custom={3}
-              className="relative w-full max-w-xs rounded-xl overflow-hidden border border-[#ff6b00]/20 bg-[#0d0d15]/80 backdrop-blur-xl p-3.5">
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff6b00]/60 to-transparent" />
-              <p className="text-[#ff6b00] text-[9px] font-black uppercase tracking-[0.22em] mb-1">{t("home_next_tournament")}</p>
-              <CountdownTimer targetDate={nextTournament.countdownTo ?? nextTournament.startDate} className="text-xl justify-center font-black" />
-              <p className="text-white/50 font-semibold mt-1.5 truncate text-xs">{nextTournament.name}</p>
-            </motion.div>
-          )}
+          {/* Countdown + Stats row */}
+          <motion.div variants={fadeUp} initial="hidden" animate="show" custom={3} className="w-full max-w-lg flex flex-col sm:flex-row gap-2.5">
+            {nextTournament && (
+              <div className="relative flex-1 rounded-xl overflow-hidden border border-[#ff4500]/20 bg-[#0d1120]/90 backdrop-blur-xl p-3">
+                <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff4500]/60 to-transparent" />
+                <p className="text-[#ff4500] text-[9px] font-black uppercase tracking-[0.22em] mb-1">{t("home_next_tournament")}</p>
+                <CountdownTimer targetDate={nextTournament.countdownTo ?? nextTournament.startDate} className="text-lg justify-center font-black" />
+                <p className="text-white/40 font-semibold mt-1 truncate text-[10px]">{nextTournament.name}</p>
+              </div>
+            )}
 
-          {/* Stats */}
-          <motion.div variants={fadeUp} initial="hidden" animate="show" custom={4}
-            className="relative w-full max-w-lg rounded-xl overflow-hidden border border-[#ff6b00]/12 bg-[#0d0d15]/75 backdrop-blur-2xl shadow-[0_0_30px_rgba(255,107,0,0.06)]">
-            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff6b00]/60 to-transparent" />
-            <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04]">
-              <div className="flex items-center gap-1.5">
+            {/* Stats */}
+            <div className="relative flex-1 rounded-xl overflow-hidden border border-white/[0.06] bg-[#0d1120]/80 backdrop-blur-2xl">
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff4500]/40 to-transparent" />
+              <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-white/[0.04]">
                 <span className="relative flex">
                   <span className="animate-ping absolute inline-flex h-1.5 w-1.5 rounded-full bg-[#00ff88] opacity-75" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00ff88]" />
                 </span>
-                <span className="text-[#00ff88] text-[9px] font-black uppercase tracking-[0.25em]">Live Platform Stats</span>
+                <span className="text-[#00ff88] text-[9px] font-black uppercase tracking-[0.2em]">Live Stats</span>
               </div>
-              <span className="text-[#a0a0b0]/25 text-[8px] font-mono uppercase tracking-widest">FF ARENA</span>
-            </div>
-            <div className="grid grid-cols-3 divide-x divide-white/[0.04]">
-              {[
-                { icon: <Trophy className="w-3.5 h-3.5 text-[#ffd700]" />, color: "#ffd700", bg: "bg-[#ffd700]/10 border-[#ffd700]/20", value: "৳৫০,০০০+", label: "Prize\nDistributed" },
-                { icon: <Users className="w-3.5 h-3.5 text-[#00ff88]" />, color: "#00ff88", bg: "bg-[#00ff88]/10 border-[#00ff88]/20", value: "১,৪২০+", label: "Active\nPlayers" },
-                { icon: <Swords className="w-3.5 h-3.5 text-[#ff6b00]" />, color: "#ff6b00", bg: "bg-[#ff6b00]/10 border-[#ff6b00]/20", value: "৪৫০+", label: "Matches\nPlayed" },
-              ].map((s, i) => (
-                <div key={i} className="flex flex-col items-center gap-1 px-3 py-4">
-                  <div className={`w-7 h-7 rounded-lg border ${s.bg} flex items-center justify-center`}>{s.icon}</div>
-                  <div className="font-black text-base leading-none" style={{ color: s.color }}>{s.value}</div>
-                  <div className="text-[#a0a0b0] text-[8px] font-bold uppercase tracking-wide text-center leading-tight whitespace-pre">{s.label}</div>
-                </div>
-              ))}
+              <div className="grid grid-cols-3 divide-x divide-white/[0.04]">
+                {[
+                  { icon: <Trophy className="w-3 h-3 text-[#ffd700]" />, color: "#ffd700", value: "৳৫০K+", label: "Prize" },
+                  { icon: <Users className="w-3 h-3 text-[#00ff88]" />, color: "#00ff88", value: "১৪২০+", label: "Players" },
+                  { icon: <Swords className="w-3 h-3 text-[#ff4500]" />, color: "#ff4500", value: "৪৫০+", label: "Matches" },
+                ].map((s, i) => (
+                  <div key={i} className="flex flex-col items-center gap-0.5 px-2 py-2.5">
+                    <div className="mb-0.5">{s.icon}</div>
+                    <div className="font-black text-sm leading-none" style={{ color: s.color }}>{s.value}</div>
+                    <div className="text-[#8890a8] text-[8px] font-bold uppercase tracking-wide">{s.label}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
 
           {/* CTA Buttons */}
-          <motion.div variants={fadeUp} initial="hidden" animate="show" custom={5}
-            className="flex flex-col sm:flex-row gap-2.5 justify-center">
+          <motion.div variants={fadeUp} initial="hidden" animate="show" custom={4}
+            className="flex flex-col sm:flex-row gap-2 justify-center">
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
               <Link href="/tournaments"
-                className="px-6 py-2.5 bg-[#ff6b00] text-white font-black uppercase text-xs rounded-xl hover:bg-[#e66000] transition-all shadow-[0_0_20px_rgba(255,107,0,0.4)] hover:shadow-[0_0_36px_rgba(255,107,0,0.6)] flex items-center justify-center gap-2">
+                className="px-5 py-2.5 bg-[#ff4500] text-white font-black uppercase text-xs rounded-xl hover:bg-[#e03d00] transition-all shadow-[0_0_20px_rgba(255,69,0,0.4)] hover:shadow-[0_0_36px_rgba(255,69,0,0.6)] flex items-center justify-center gap-2">
                 <Trophy className="w-3.5 h-3.5" /> {t("home_find_tournaments")}
               </Link>
             </motion.div>
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
               <Link href="/leaderboard"
-                className="px-6 py-2.5 bg-transparent text-white font-black uppercase text-xs rounded-xl border border-[#ff6b00]/35 hover:border-[#ff6b00] hover:bg-[#ff6b00]/8 transition-all flex items-center justify-center gap-2">
+                className="px-5 py-2.5 bg-transparent text-white font-black uppercase text-xs rounded-xl border border-[#ff4500]/35 hover:border-[#ff4500] hover:bg-[#ff4500]/8 transition-all flex items-center justify-center gap-2">
                 <Zap className="w-3.5 h-3.5" /> {t("home_view_leaderboard")}
               </Link>
             </motion.div>
@@ -202,8 +199,8 @@ export default function Home() {
 
         {/* Scroll indicator */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
-          className="absolute bottom-5 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-[#a0a0b0]">
-          <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 1.6, repeat: Infinity }} className="w-px h-7 bg-gradient-to-b from-transparent to-[#ff6b00]/40" />
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 text-[#8890a8]">
+          <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 1.6, repeat: Infinity }} className="w-px h-6 bg-gradient-to-b from-transparent to-[#ff4500]/40" />
           <span className="text-[9px] uppercase tracking-widest">{t("home_scroll")}</span>
         </motion.div>
       </section>
@@ -211,22 +208,22 @@ export default function Home() {
       {/* ── HOW IT WORKS ── */}
       <SectionWrapper>
         <SectionHeader left={t("home_how_it")} right={t("home_works")} />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
           {[
-            { step: "01", icon: <Shield className="w-4 h-4" />, title: t("home_step1_title"), desc: t("home_step1_desc") },
-            { step: "02", icon: <Trophy className="w-4 h-4" />, title: t("home_step2_title"), desc: t("home_step2_desc") },
-            { step: "03", icon: <Target className="w-4 h-4" />, title: t("home_step3_title"), desc: t("home_step3_desc") },
-            { step: "04", icon: <Star className="w-4 h-4" />, title: t("home_step4_title"), desc: t("home_step4_desc") },
+            { step: "01", icon: <Shield className="w-3.5 h-3.5" />, title: t("home_step1_title"), desc: t("home_step1_desc") },
+            { step: "02", icon: <Trophy className="w-3.5 h-3.5" />, title: t("home_step2_title"), desc: t("home_step2_desc") },
+            { step: "03", icon: <Target className="w-3.5 h-3.5" />, title: t("home_step3_title"), desc: t("home_step3_desc") },
+            { step: "04", icon: <Star className="w-3.5 h-3.5" />, title: t("home_step4_title"), desc: t("home_step4_desc") },
           ].map((item, i) => (
             <motion.div key={item.step} variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i}
-              whileHover={{ y: -3, borderColor: "rgba(255,107,0,0.4)" }}
-              className="bg-[#12121a] border border-[#ff6b00]/10 rounded-xl p-3.5 text-center transition-colors group cursor-default">
-              <div className="text-[#ff6b00]/15 font-black text-3xl leading-none mb-1.5 group-hover:text-[#ff6b00]/25 transition-colors">{item.step}</div>
-              <div className="w-7 h-7 rounded-lg bg-[#ff6b00]/10 border border-[#ff6b00]/20 flex items-center justify-center text-[#ff6b00] mx-auto mb-2">
+              whileHover={{ y: -2, borderColor: "rgba(255,69,0,0.4)" }}
+              className="bg-[#0d1120] border border-[#ff4500]/10 rounded-xl p-3 text-center transition-colors group cursor-default">
+              <div className="text-[#ff4500]/12 font-black text-2xl leading-none mb-1 group-hover:text-[#ff4500]/22 transition-colors">{item.step}</div>
+              <div className="w-6 h-6 rounded-lg bg-[#ff4500]/10 border border-[#ff4500]/20 flex items-center justify-center text-[#ff4500] mx-auto mb-1.5">
                 {item.icon}
               </div>
-              <h3 className="font-black uppercase text-white text-xs mb-1">{item.title}</h3>
-              <p className="text-[#a0a0b0] text-[10px] leading-relaxed">{item.desc}</p>
+              <h3 className="font-black uppercase text-white text-[10px] mb-0.5">{item.title}</h3>
+              <p className="text-[#8890a8] text-[10px] leading-relaxed">{item.desc}</p>
             </motion.div>
           ))}
         </div>
@@ -236,13 +233,13 @@ export default function Home() {
       <SectionWrapper>
         <SectionHeader left={t("home_featured")} right={t("home_tournaments")} link={{ href: "/tournaments", label: t("home_view_all") }} />
         {loadingFeatured ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {[1,2,3].map((i) => <div key={i} className="h-40 bg-[#12121a] rounded-xl animate-pulse" />)}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            {[1,2,3].map((i) => <div key={i} className="h-36 bg-[#0d1120] rounded-xl animate-pulse" />)}
           </div>
         ) : featured.length === 0 ? (
           <EmptyState icon={<Trophy className="w-9 h-9 opacity-20" />} title={t("home_no_tournaments")} desc={t("home_no_tournaments_desc")} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {featured.map((item, i) => (
               <motion.div key={item.id} variants={fadeIn} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i}>
                 <TournamentCard t={item as any} featured />
@@ -256,20 +253,20 @@ export default function Home() {
       <SectionWrapper>
         <SectionHeader left={t("home_community")} right={t("home_matches")} link={{ href: "/matches", label: t("home_view_all") }} />
         {loadingCommunity ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[1,2,3].map((i) => <div key={i} className="h-28 bg-[#12121a] rounded-xl animate-pulse" />)}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+            {[1,2,3].map((i) => <div key={i} className="h-24 bg-[#0d1120] rounded-xl animate-pulse" />)}
           </div>
         ) : communityMatches.length === 0 ? (
-          <div className="text-center py-8 text-[#a0a0b0] bg-[#12121a] rounded-xl border border-[#ff6b00]/10">
-            <Swords className="w-9 h-9 mx-auto mb-2 opacity-20" />
+          <div className="text-center py-7 text-[#8890a8] bg-[#0d1120] rounded-xl border border-[#ff4500]/10">
+            <Swords className="w-8 h-8 mx-auto mb-2 opacity-20" />
             <p className="text-sm font-bold text-white/30">{t("home_no_community")}</p>
             <p className="text-xs mt-1">{t("home_no_community_desc")}</p>
-            <Link href="/matches" className="inline-block mt-3 px-4 py-1.5 bg-[#ff6b00] text-white font-bold text-xs rounded-lg hover:bg-[#e66000] transition-colors">
+            <Link href="/matches" className="inline-block mt-3 px-4 py-1.5 bg-[#ff4500] text-white font-bold text-xs rounded-lg hover:bg-[#e03d00] transition-colors">
               {t("home_host_match")}
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
             {communityMatches.slice(0, 6).map((m: any, i: number) => {
               const isFree = !m.entryFee || parseFloat(m.entryFee) === 0;
               const prize = m.prizePool ? parseFloat(m.prizePool) : 0;
@@ -277,21 +274,21 @@ export default function Home() {
               return (
                 <motion.div key={m.id} variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i}>
                   <Link href="/matches">
-                    <motion.div whileHover={{ y: -2, borderColor: "rgba(255,107,0,0.3)" }}
-                      className="bg-[#12121a] border border-[#ff6b00]/10 rounded-xl p-3.5 transition-all cursor-pointer group">
-                      <div className="flex items-start justify-between gap-2 mb-2">
+                    <motion.div whileHover={{ y: -2, borderColor: "rgba(255,69,0,0.3)" }}
+                      className="bg-[#0d1120] border border-[#ff4500]/10 rounded-xl p-3 transition-all cursor-pointer group">
+                      <div className="flex items-start justify-between gap-2 mb-1.5">
                         <div className="flex items-center gap-1.5 min-w-0">
                           {m.serialNumber && (
-                            <span className="shrink-0 text-[#ff6b00] font-mono text-[10px] bg-[#ff6b00]/10 border border-[#ff6b00]/20 px-1 py-0.5 rounded">{m.serialNumber}</span>
+                            <span className="shrink-0 text-[#ff4500] font-mono text-[10px] bg-[#ff4500]/10 border border-[#ff4500]/20 px-1 py-0.5 rounded">{m.serialNumber}</span>
                           )}
-                          <span className="text-white font-bold text-xs truncate group-hover:text-[#ff6b00] transition-colors">{m.matchName || m.matchType}</span>
+                          <span className="text-white font-bold text-xs truncate group-hover:text-[#ff4500] transition-colors">{m.matchName || m.matchType}</span>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          {m.isPrivate && <Lock className="w-2.5 h-2.5 text-[#a0a0b0]" />}
-                          <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-[#ff6b00]/10 text-[#ff6b00] uppercase">{m.matchMode ?? m.matchType}</span>
+                          {m.isPrivate && <Lock className="w-2.5 h-2.5 text-[#8890a8]" />}
+                          <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-[#ff4500]/10 text-[#ff4500] uppercase">{m.matchMode ?? m.matchType}</span>
                         </div>
                       </div>
-                      <p className="text-[#a0a0b0] text-[10px] mb-2">
+                      <p className="text-[#8890a8] text-[10px] mb-1.5">
                         {t("by")} <span className="text-white font-semibold">{m.creatorName}</span>
                       </p>
                       <div className="flex items-center gap-2.5 text-[10px]">
@@ -299,12 +296,12 @@ export default function Home() {
                           {isFree ? t("free") : `৳${m.entryFee}`}
                         </span>
                         {prize > 0 && <span className="text-yellow-400 font-bold flex items-center gap-0.5">🏆 ৳{prize.toFixed(0)}</span>}
-                        <span className="text-[#a0a0b0] ml-auto flex items-center gap-1">
+                        <span className="text-[#8890a8] ml-auto flex items-center gap-1">
                           <Users className="w-2.5 h-2.5" /> {m.filledSlots ?? 0}/{m.maxSlots}
                         </span>
                       </div>
                       {scheduledAt && (
-                        <div className="mt-1.5 text-[9px] text-[#606070]">
+                        <div className="mt-1 text-[9px] text-[#606070]">
                           {scheduledAt.toLocaleDateString(undefined, { month: "short", day: "numeric" })} · {scheduledAt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
                         </div>
                       )}
@@ -321,33 +318,33 @@ export default function Home() {
       <SectionWrapper>
         <SectionHeader left={t("home_top")} right={t("home_players")} link={{ href: "/leaderboard", label: t("home_full_leaderboard") }} />
         <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
-          className="bg-[#12121a] rounded-xl border border-[#ff6b00]/15 overflow-hidden">
+          className="bg-[#0d1120] rounded-xl border border-[#ff4500]/12 overflow-hidden">
           {loadingLb ? (
-            <div className="p-5 text-center text-[#a0a0b0] text-sm">{t("home_loading_rankings")}</div>
+            <div className="p-4 text-center text-[#8890a8] text-sm">{t("home_loading_rankings")}</div>
           ) : leaderboard.length === 0 ? (
             <EmptyState icon={<Users className="w-8 h-8 opacity-20" />} title={t("home_no_rankings")} desc={t("home_no_rankings_desc")} />
           ) : (
             <table className="w-full">
               <thead>
-                <tr className="border-b border-[#ff6b00]/8">
-                  <th className="text-left text-[#a0a0b0] text-[10px] uppercase py-2 px-3">{t("th_rank")}</th>
-                  <th className="text-left text-[#a0a0b0] text-[10px] uppercase py-2 px-3">{t("th_player")}</th>
-                  <th className="text-right text-[#a0a0b0] text-[10px] uppercase py-2 px-3">{t("th_kills")}</th>
-                  <th className="text-right text-[#a0a0b0] text-[10px] uppercase py-2 px-3">{t("th_points")}</th>
+                <tr className="border-b border-[#ff4500]/8">
+                  <th className="text-left text-[#8890a8] text-[10px] uppercase py-2 px-3">{t("th_rank")}</th>
+                  <th className="text-left text-[#8890a8] text-[10px] uppercase py-2 px-3">{t("th_player")}</th>
+                  <th className="text-right text-[#8890a8] text-[10px] uppercase py-2 px-3">{t("th_kills")}</th>
+                  <th className="text-right text-[#8890a8] text-[10px] uppercase py-2 px-3">{t("th_points")}</th>
                 </tr>
               </thead>
               <tbody>
                 {leaderboard.slice(0, 5).map((entry: any, i: number) => (
                   <motion.tr key={entry.rank} variants={fadeIn} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i}
-                    className="border-b border-[#ff6b00]/5 hover:bg-[#ff6b00]/4 transition-colors">
-                    <td className="py-2 px-3">
+                    className="border-b border-[#ff4500]/5 hover:bg-[#ff4500]/4 transition-colors">
+                    <td className="py-1.5 px-3">
                       <span className={`font-black text-xs ${rankColors[entry.rank - 1] ?? "text-white"}`}>
                         {entry.rank <= 3 ? ["🥇","🥈","🥉"][entry.rank - 1] : `#${entry.rank}`}
                       </span>
                     </td>
-                    <td className="py-2 px-3 font-medium text-white text-xs">{entry.playerName}</td>
-                    <td className="py-2 px-3 text-right text-[#ff6b00] font-bold text-xs">{entry.kills}</td>
-                    <td className="py-2 px-3 text-right text-white font-bold text-xs">{entry.points}</td>
+                    <td className="py-1.5 px-3 font-medium text-white text-xs">{entry.playerName}</td>
+                    <td className="py-1.5 px-3 text-right text-[#ff4500] font-bold text-xs">{entry.kills}</td>
+                    <td className="py-1.5 px-3 text-right text-white font-bold text-xs">{entry.points}</td>
                   </motion.tr>
                 ))}
               </tbody>
@@ -362,16 +359,16 @@ export default function Home() {
           <SectionHeader left={t("home_latest")} right={t("home_announcements")} />
           <div className="flex flex-col gap-2">
             {loadingAnn
-              ? [1,2].map((i) => <div key={i} className="h-12 bg-[#12121a] rounded-xl animate-pulse" />)
+              ? [1,2].map((i) => <div key={i} className="h-12 bg-[#0d1120] rounded-xl animate-pulse" />)
               : announcements.slice(0, 5).map((a: any, i: number) => (
                 <motion.div key={a.id} variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i}
-                  className={`rounded-xl border-l-4 px-3 py-2.5 bg-[#12121a] ${announcementTypeColors[a.type] ?? announcementTypeColors.info}`}>
+                  className={`rounded-xl border-l-4 px-3 py-2.5 bg-[#0d1120] ${announcementTypeColors[a.type] ?? announcementTypeColors.info}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h4 className="font-bold text-white text-xs">{a.title}</h4>
-                      <p className="text-[#a0a0b0] text-[10px] mt-0.5 line-clamp-2">{a.content}</p>
+                      <p className="text-[#8890a8] text-[10px] mt-0.5 line-clamp-2">{a.content}</p>
                     </div>
-                    <span className="text-[#a0a0b0] text-[9px] whitespace-nowrap">{new Date(a.createdAt).toLocaleDateString()}</span>
+                    <span className="text-[#8890a8] text-[9px] whitespace-nowrap">{new Date(a.createdAt).toLocaleDateString()}</span>
                   </div>
                 </motion.div>
               ))
@@ -388,17 +385,17 @@ export default function Home() {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function SectionWrapper({ children }: { children: React.ReactNode }) {
-  return <section className="max-w-6xl mx-auto px-4 py-7">{children}</section>;
+  return <section className="max-w-6xl mx-auto px-4 py-5">{children}</section>;
 }
 
 function SectionHeader({ left, right, link }: { left: string; right: string; link?: { href: string; label: string } }) {
   return (
-    <div className="flex items-center justify-between mb-4">
-      <h2 className="text-base md:text-lg font-black uppercase">
-        {left} <span className="text-[#ff6b00]">{right}</span>
+    <div className="flex items-center justify-between mb-3">
+      <h2 className="text-sm md:text-base font-black uppercase">
+        {left} <span className="text-[#ff4500]">{right}</span>
       </h2>
       {link && (
-        <Link href={link.href} className="flex items-center gap-0.5 text-[#ff6b00] text-[10px] font-bold hover:gap-1.5 transition-all">
+        <Link href={link.href} className="flex items-center gap-0.5 text-[#ff4500] text-[10px] font-bold hover:gap-1.5 transition-all">
           {link.label} <ChevronRight className="w-3 h-3" />
         </Link>
       )}
