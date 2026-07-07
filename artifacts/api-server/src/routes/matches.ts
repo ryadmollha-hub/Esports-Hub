@@ -100,7 +100,7 @@ router.get("/tournaments/:id/matches", async (req, res) => {
           .where(eq(matchResultsTable.matchId, m.id))
           .orderBy(matchResultsTable.rank);
 
-        const { roomVisible, effectiveStatus } = computeMatchVisibility(m);
+        const { roomVisible, roomWindowOpen, effectiveStatus } = computeMatchVisibility(m);
 
         // Auto-update status in DB when a time-based transition occurs
         // (scheduled→live at scheduledAt, or scheduled/live→completed at roomHideAt)
