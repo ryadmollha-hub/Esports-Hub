@@ -682,6 +682,7 @@ router.get("/matches/schedule", async (_req, res) => {
         roomId: matchesTable.roomId,
         roomPassword: matchesTable.roomPassword,
         roomReleaseAt: matchesTable.roomReleaseAt,
+        roomHideAt: matchesTable.roomHideAt,
         createdAt: matchesTable.createdAt,
         tournament: {
           id: tournamentsTable.id,

@@ -28,6 +28,13 @@ export default function CountdownTimer({ targetDate, className = "", onExpire }:
     // Date.now(): always UTC epoch ms — never reads system timezone.
     const targetMs = parseBDDate(targetDate).getTime();
 
+    // Reset expired state whenever targetDate changes to a future time.
+    // Without this reset, a reused component instance stays stuck showing
+    // "MATCH IS LIVE" even after parent passes a new future targetDate.
+    if (targetMs - Date.now() > 0) {
+      setExpired(false);
+    }
+
     const calc = () => {
       const diff = targetMs - Date.now();
       if (diff <= 0) {
