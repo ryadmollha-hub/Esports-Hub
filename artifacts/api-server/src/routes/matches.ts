@@ -6,6 +6,7 @@ import { requireAdmin } from "../middlewares/requireAdmin";
 import { logger } from "../lib/logger";
 import { nextMatchSerial } from "../lib/matchSerial";
 import { bulkCreateNotifications } from "../lib/notificationHelper";
+import { updateRatingsFromMatch } from "../lib/ratingEngine";
 
 const router: IRouter = Router();
 
@@ -535,6 +536,14 @@ router.patch("/matches/:id/results", async (req, res) => {
     }
 
     res.json({ success: true, match: { ...match, results: savedResults } });
+
+    // Non-blocking: update FF Arena ratings. A failure here must NOT affect the
+    // response already sent above — this runs after the response is flushed.
+    if (match) {
+      updateRatingsFromMatch(id, match.tournamentId).catch((e) =>
+        logger.error({ err: e, matchId: id }, "Background rating update failed"),
+      );
+    }
   } catch (err) {
     logger.error({ err }, "Failed to save results");
     res.status(500).json({ error: "Failed to save results." });
@@ -716,6 +725,11 @@ router.patch("/admin/matches/:id/team-results", async (req, res) => {
 
     logger.info({ matchId: id, resultsCount: resultRows.length, teamsRewarded, totalPrize }, "Team results saved with auto prize distribution");
     res.json({ success: true, resultsCount: resultRows.length, teamsRewarded, totalPrize });
+
+    // Non-blocking: update FF Arena ratings after response is already sent.
+    updateRatingsFromMatch(id, match.tournamentId).catch((e) =>
+      logger.error({ err: e, matchId: id }, "Background rating update (team-results) failed"),
+    );
   } catch (err) {
     logger.error({ err }, "Failed to save team results");
     res.status(500).json({ error: "Failed to save team results." });

@@ -20,6 +20,7 @@ import supportRouter from "./support";
 import userMatchesRouter from "./userMatches";
 import prizeDistributionRouter from "./prizeDistribution";
 import hypeBoardRouter from "./hypeBoard";
+import ratingsRouter from "./ratings";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(supportRouter);
 router.use(userMatchesRouter);
 router.use(prizeDistributionRouter);
 router.use(hypeBoardRouter);
+router.use(ratingsRouter);
 
 export default router;

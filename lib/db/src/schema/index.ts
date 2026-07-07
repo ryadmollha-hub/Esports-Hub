@@ -15,3 +15,4 @@ export * from "./supportTickets";
 export * from "./userMatches";
 export * from "./reports";
 export * from "./hypeBoard";
+export * from "./ratings";

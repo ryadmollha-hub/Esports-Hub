@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import {
   User, Trophy, Wallet, Shield, History, ChevronRight,
@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
+import RankBadge, { getTierInfo, getTierProgress } from "@/components/RankBadge";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useGetMyProfile, useUpdateMyProfile } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
@@ -70,6 +71,7 @@ export default function ProfilePage() {
   const [myMatches, setMyMatches] = useState<any[]>([]);
   const [myMatchesLoading, setMyMatchesLoading] = useState(false);
   const [deletingMatchId, setDeletingMatchId] = useState<number | null>(null);
+  const [arenaRating, setArenaRating] = useState<{ rating: number; tier: string; totalMatches: number; totalWins: number } | null>(null);
 
   const { data: profile, refetch } = useGetMyProfile();
   const updateProfile = useUpdateMyProfile();
@@ -83,6 +85,14 @@ export default function ProfilePage() {
   }, [prof]);
   useEffect(() => {
     if (authUser) authFetch("/wallet/balance").then(async (res) => { if (res.ok) { const d = await res.json(); setWalletBalance(d.balance ?? 0); } }).catch(() => {});
+  }, [authUser]);
+
+  useEffect(() => {
+    if (authUser?.userId) {
+      authFetch(`/ratings/user/${authUser.userId}`)
+        .then(async (res) => { if (res.ok) { const d = await res.json(); setArenaRating(d.rating ?? null); } })
+        .catch(() => {});
+    }
   }, [authUser]);
 
   const loadMyMatches = async () => {
@@ -254,6 +264,62 @@ export default function ProfilePage() {
                 {earnedBadges.length === 0 && (
                   <p className="text-center text-[#4a4a5a] text-xs mt-2">Join a tournament to earn your first badge!</p>
                 )}
+              </motion.div>
+
+              {/* ── FF Arena Rank Card ── */}
+              <motion.div variants={fadeUp} initial="hidden" animate="show" custom={2}
+                className="mb-4">
+                <Link href="/rankings"
+                  className="flex items-center gap-4 p-4 rounded-2xl border transition-all hover:opacity-90 group"
+                  style={arenaRating
+                    ? { background: `${getTierInfo(arenaRating.rating).color}0d`, borderColor: `${getTierInfo(arenaRating.rating).color}35` }
+                    : { background: "#12121a", borderColor: "#2a2a36" }
+                  }
+                >
+                  {/* Tier icon */}
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl shrink-0 border"
+                    style={arenaRating
+                      ? { background: `${getTierInfo(arenaRating.rating).color}20`, borderColor: `${getTierInfo(arenaRating.rating).color}45`, boxShadow: `0 0 18px ${getTierInfo(arenaRating.rating).color}30` }
+                      : { background: "#1a1a24", borderColor: "#2a2a36" }
+                    }
+                  >
+                    {arenaRating ? getTierInfo(arenaRating.rating).emoji : "🎖️"}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-[#606070] mb-0.5">FF Arena Rank</div>
+                    {arenaRating ? (
+                      <>
+                        <RankBadge rating={arenaRating.rating} size="md" showRating />
+                        {/* Progress bar to next tier */}
+                        <div className="mt-2">
+                          <div className="flex justify-between text-[9px] text-[#606070] mb-1">
+                            <span>{arenaRating.totalMatches} matches · {arenaRating.totalWins} wins</span>
+                            <span>{getTierProgress(arenaRating.rating)}% to next</span>
+                          </div>
+                          <div className="h-1 bg-[#1a1a24] rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{
+                                width: `${getTierProgress(arenaRating.rating)}%`,
+                                background: getTierInfo(arenaRating.rating).color,
+                                boxShadow: `0 0 6px ${getTierInfo(arenaRating.rating).color}`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-white font-black text-sm">Unranked</div>
+                        <div className="text-[#606070] text-xs mt-0.5">Play tournaments to earn your rank</div>
+                      </>
+                    )}
+                  </div>
+
+                  <ChevronRight className="w-4 h-4 text-[#606070] group-hover:text-[#a0a0b0] transition-colors shrink-0" />
+                </Link>
               </motion.div>
 
               {/* My Match Requests button */}

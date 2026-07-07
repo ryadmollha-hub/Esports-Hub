@@ -46,6 +46,7 @@ const ReferralPage = lazy(() => import("@/pages/referral"));
 const SupportPage = lazy(() => import("@/pages/support"));
 const MyTicketsPage = lazy(() => import("@/pages/my-tickets"));
 const MyMatchesPage = lazy(() => import("@/pages/my-matches"));
+const RankingsPage  = lazy(() => import("@/pages/rankings"));
 const MatchCategoryPage = lazy(() => import("@/pages/match-category"));
 const CommunityMatchesPage = lazy(() => import("@/pages/community-matches"));
 
@@ -110,6 +111,7 @@ function App() {
                         </Route>
                         <Route path="/tournaments/:id" component={TournamentDetailPage} />
                         <Route path="/leaderboard" component={LeaderboardPage} />
+                        <Route path="/rankings"   component={RankingsPage} />
                         <Route path="/schedule" component={SchedulePage} />
                         <Route path="/results" component={ResultsPage} />
                         <Route path="/prizes" component={PrizesPage} />

@@ -10,3 +10,4 @@
 - [Match Serial Number System](match-serial-system.md) — matchCountersTable atomically increments T-XXXX/C-XXXX via INSERT…ON CONFLICT DO UPDATE RETURNING. serialNumber on matchesTable and userMatchesTable. nextMatchSerial() in api-server/src/lib/matchSerial.ts.
 - [Prize Distribution System](prize-distribution.md) — Per-match prize distribution. matchesTable: prizeDistributed+prizeDistributedAt. walletTransactionsTable: matchId. Route: prizeDistribution.ts. Team members looked up by freefireUid (additional members have no userId stored, only captain does).
 - [Backend workflow — no waitForPort](backend-workflow-no-waitforport.md) — "Start Backend" console workflow must omit waitForPort; platform detector times out even though server binds 8080 fine.
+- [Skill Rating System](skill-rating-system.md) — FF Arena exclusive: additive rating, 7 tiers, (match_id,user_id) unique constraint as idempotency lock, fire-and-forget hooks in both result routes.

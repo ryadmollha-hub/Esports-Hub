@@ -15,6 +15,7 @@ export default function Navbar() {
 
   const guestNavLinks = [
     { href: "/tournaments", label: t("nav_tournaments") },
+    { href: "/rankings",    label: "🏅 Rankings" },
     { href: "/prizes", label: t("nav_prizes") },
     { href: "/contact", label: t("nav_contact") },
     { href: "/support", label: t("nav_support") },
@@ -22,6 +23,7 @@ export default function Navbar() {
 
   const userNavLinks = [
     { href: "/tournaments", label: t("nav_tournaments") },
+    { href: "/rankings",    label: "🏅 Rankings" },
     { href: "/leaderboard", label: t("nav_leaderboard") },
     { href: "/schedule", label: t("nav_schedule") },
     { href: "/results", label: t("nav_results") },

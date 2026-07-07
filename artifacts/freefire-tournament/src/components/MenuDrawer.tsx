@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import {
   X, User, Wallet, Trophy, History, HeadphonesIcon,
-  LogOut, Shield, Flame, ChevronRight, Gift, Sun, Moon, Swords
+  LogOut, Shield, Flame, ChevronRight, Gift, Sun, Moon, Swords, Star
 } from "lucide-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { clearAdminSession, isAdminAuthenticated } from "@/lib/adminAuth";
@@ -40,6 +40,7 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
       { href: "/teams/my",   icon: Shield,          label: t("menu_team"),       desc: t("menu_team_desc") },
       { href: "/referral",   icon: Gift,            label: t("menu_referral"),   desc: t("menu_referral_desc") },
     ] : []),
+    { href: "/rankings",    icon: Star,            label: "🏅 Skill Rankings",   desc: "FF Arena verified rank system" },
     { href: "/leaderboard", icon: History,         label: t("menu_leaderboard"), desc: t("menu_leaderboard_desc") },
     { href: "/support",     icon: HeadphonesIcon,  label: t("menu_support"),     desc: t("menu_support_desc") },
   ];
