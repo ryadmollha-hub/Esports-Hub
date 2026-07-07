@@ -964,11 +964,11 @@ export default function AdminPage() {
           entryFee: adminMatchForm.entryFee || "0",
           perKill: adminMatchForm.perKill || "0",
           mapName: adminMatchForm.mapName || undefined,
-          scheduledAt: adminMatchForm.scheduledAt || undefined,
+          scheduledAt: adminMatchForm.scheduledAt ? new Date(adminMatchForm.scheduledAt + "+06:00").toISOString() : undefined,
           description: adminMatchForm.description || undefined,
           isPrivate: false,
-          roomReleaseTime: adminMatchForm.roomReleaseTime || undefined,
-          roomHideTime: adminMatchForm.roomHideTime || undefined,
+          roomReleaseTime: adminMatchForm.roomReleaseTime ? new Date(adminMatchForm.roomReleaseTime + "+06:00").toISOString() : undefined,
+          roomHideTime: adminMatchForm.roomHideTime ? new Date(adminMatchForm.roomHideTime + "+06:00").toISOString() : undefined,
         }),
       });
       if (res.ok) {
@@ -995,7 +995,7 @@ export default function AdminPage() {
       method: "POST",
       body: JSON.stringify({
         matchNumber: parseInt(matchForm.matchNumber),
-        scheduledAt: matchForm.scheduledAt,
+        scheduledAt: matchForm.scheduledAt ? new Date(matchForm.scheduledAt + "+06:00").toISOString() : undefined,
         mapName: matchForm.mapName || undefined,
         roomId: matchForm.roomId || undefined,
         roomPassword: matchForm.roomPassword || undefined,

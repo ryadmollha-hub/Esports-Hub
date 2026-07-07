@@ -24,14 +24,26 @@ const router: IRouter = Router();
 //   roomWindowOpen — true when the release window has started, even if creds not set yet
 //                    (lets frontend show "⏳ Room Not Released Yet" placeholder)
 //   effectiveStatus — computed status string used for display and DB sync
+// Convert a Date object or string to Unix epoch milliseconds.
+// Drizzle returns timestamp columns as Date objects; guards against the rare
+// case where the pg driver returns a raw string (e.g. "2026-07-07 11:39:53.649").
+// Using explicit epoch ms throughout ensures comparison is never ambiguous.
+function toEpochMs(d: Date | string | null | undefined): number {
+  if (!d) return NaN;
+  if (d instanceof Date) return d.getTime();
+  // Parse ISO strings (with Z / +offset) as-is; naive strings are stored as UTC on this server
+  return new Date(d).getTime();
+}
+
 function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
-  const now = new Date();
-  const startTime = new Date(match.scheduledAt);
+  const nowMs = Date.now(); // always UTC epoch ms — cannot be affected by server timezone
+
+  const startMs = toEpochMs(match.scheduledAt);
 
   // Default hide time: 2 hours after match start.
-  const hideAt = match.roomHideAt
-    ? new Date(match.roomHideAt)
-    : new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
+  const hideMs = match.roomHideAt
+    ? toEpochMs(match.roomHideAt)
+    : startMs + 2 * 60 * 60 * 1000;
 
   // If already manually marked completed, honour it immediately.
   if (match.status === "completed") {
@@ -39,20 +51,20 @@ function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
   }
 
   // Default release: 5 minutes before match start (Phase 2 boundary).
-  const releaseAt = match.roomReleaseAt
-    ? new Date(match.roomReleaseAt)
-    : new Date(startTime.getTime() - 5 * 60 * 1000);
+  const releaseMs = match.roomReleaseAt
+    ? toEpochMs(match.roomReleaseAt)
+    : startMs - 5 * 60 * 1000;
 
   let roomVisible = false;
   let roomWindowOpen = false;
   let effectiveStatus: string = match.status;
 
-  if (now >= hideAt) {
+  if (nowMs >= hideMs) {
     // Phase 4: past the hide/end time → auto-complete, hide room
     effectiveStatus = "completed";
     roomVisible = false;
     roomWindowOpen = false;
-  } else if (now >= releaseAt) {
+  } else if (nowMs >= releaseMs) {
     // Phase 2 / 3: within the release window
     roomWindowOpen = true;
     if (match.roomId) {
@@ -60,8 +72,8 @@ function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
       roomVisible = true;
     }
     if (effectiveStatus === "scheduled") {
-      // Advance status based on whether match has started
-      effectiveStatus = now >= startTime ? "live" : "room_released";
+      // Advance status: LIVE only if current UTC epoch >= match start UTC epoch
+      effectiveStatus = nowMs >= startMs ? "live" : "room_released";
     }
   }
   // else Phase 1: Coming Soon — room hidden, window not open

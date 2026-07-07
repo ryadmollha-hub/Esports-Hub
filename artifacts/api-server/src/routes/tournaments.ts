@@ -175,12 +175,18 @@ router.post("/tournaments/:id/join", async (req, res) => {
       .from(matchesTable)
       .where(eq(matchesTable.tournamentId, id));
 
-    const now = new Date();
-    // A match is "effectively live" only when the actual clock has passed its start time
-    // and it hasn't been marked completed (completed matches are handled separately below).
-    const hasActuallyStarted = allMatchesForTournament.some(
-      m => m.status !== "completed" && now >= new Date(m.scheduledAt),
-    );
+    // Use explicit UTC epoch milliseconds — immune to Date constructor timezone quirks.
+    // Date.now() is always UTC epoch ms. Drizzle returns timestamp columns as Date objects;
+    // .getTime() extracts the epoch ms regardless of server timezone configuration.
+    const nowMs = Date.now();
+    // A match is "effectively live" only when current UTC epoch >= match start UTC epoch.
+    // Matches in "room_released" phase (nowMs < startMs) must NOT block registration.
+    const hasActuallyStarted = allMatchesForTournament.some(m => {
+      const startMs = m.scheduledAt instanceof Date
+        ? m.scheduledAt.getTime()
+        : new Date(m.scheduledAt).getTime();
+      return m.status !== "completed" && nowMs >= startMs;
+    });
     const hasCompleted = allMatchesForTournament.some(m => m.status === "completed");
 
     if (hasActuallyStarted) {
