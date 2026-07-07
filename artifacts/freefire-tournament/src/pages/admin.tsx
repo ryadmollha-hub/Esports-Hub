@@ -263,7 +263,12 @@ export default function AdminPage() {
     }
     setCreatingTournamentMatch((prev) => ({ ...prev, [tournamentId]: true }));
     try {
-      const scheduledAtISO = form?.scheduledAt ? new Date(form.scheduledAt).toISOString() : new Date().toISOString();
+      // Anchor admin-entered time to Bangladesh timezone (UTC+6).
+      // When the field is left blank, send undefined — the backend will fall back to
+      // the tournament's own startDate, ensuring the match NEVER defaults to "right now".
+      const scheduledAtISO = form?.scheduledAt
+        ? new Date(form.scheduledAt + "+06:00").toISOString()
+        : undefined;
       const res = await apiFetch(`/tournaments/${tournamentId}/matches`, {
         method: "POST",
         body: JSON.stringify({
