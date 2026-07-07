@@ -6,12 +6,8 @@ import { startMatchScheduler } from "./lib/matchScheduler";
 const REQUIRED_ENV = ["DATABASE_URL", "JWT_SECRET", "ADMIN_USERNAME", "ADMIN_PASSWORD", "ADMIN_SECRET"] as const;
 const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
 if (missing.length > 0) {
-  if (process.env.NODE_ENV === "production") {
-    console.error(`[FATAL] Missing required environment variables: ${missing.join(", ")}`);
-    process.exit(1);
-  } else {
-    console.warn(`[WARN] Missing env vars (using insecure defaults for dev): ${missing.join(", ")}`);
-  }
+  console.error(`[FATAL] Missing required environment variables: ${missing.join(", ")}`);
+  process.exit(1);
 }
 
 const rawPort = process.env["PORT"] ?? "8080";
