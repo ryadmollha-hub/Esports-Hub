@@ -288,14 +288,12 @@ export default function TournamentDetailPage() {
 
   // Match-level status buckets — derived from what the API returns (effectiveStatus),
   // which already has computeMatchVisibility applied server-side.
-  // BUG FIX 1: do NOT gate liveMatches on scheduledAt — if the admin explicitly
-  // set a match to "live", registration must close immediately regardless of start time.
   const liveMatches        = matches.filter(m => m.status === "live");
   const upcomingMatches    = matches.filter(m => m.status === "scheduled" || m.status === "room_released");
   const completedMatches   = matches.filter(m => m.status === "completed");
   const matchesWithResults = matches.filter(m => m.results && m.results.length > 0);
 
-  // BUG FIX 2: isEnded must include match-level completion.
+  // isEnded must include match-level completion.
   // When admin marks a match "completed" via PATCH /matches/:id, only the match record
   // changes — the parent tournament t.status stays "upcoming". Without this check the
   // JOIN button would wrongly remain visible after match completion.
@@ -309,10 +307,18 @@ export default function TournamentDetailPage() {
   // This is the distinct phase between room credentials being visible and match start.
   const roomOpen = matches.some(m => m.status === "room_released");
 
-  // Tournament is "live" when the tournament-level status is live/ongoing,
-  // OR when the admin has manually set any match to "live" status.
+  // Hard frontend guard: a tournament can NEVER be shown as LIVE until its official
+  // startDate has been reached in real wall-clock time. This mirrors the backend rule
+  // in computeMatchVisibility and acts as a second layer of defence against any match
+  // that was incorrectly promoted early (e.g. stale DB value, admin mis-click).
+  const _tStartRaw = t?.startDate ? new Date(t.startDate).getTime() : NaN;
+  const tournamentStartMs = Number.isFinite(_tStartRaw) ? _tStartRaw : 0;
+  const tournamentActuallyStarted = tournamentStartMs > 0 && Date.now() >= tournamentStartMs;
+
+  // Tournament is "live" only when its startTime has genuinely passed AND either the
+  // tournament-level status is live/ongoing, or a match has reached live status.
   // Guard: not "live" when already ended (completed takes precedence).
-  const isLive = !isEnded && (
+  const isLive = !isEnded && tournamentActuallyStarted && (
     t?.status === "live" ||
     t?.status === "ongoing" ||
     liveMatches.length > 0

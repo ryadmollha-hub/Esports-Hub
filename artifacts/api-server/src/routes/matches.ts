@@ -35,25 +35,53 @@ function toEpochMs(d: Date | string | null | undefined): number {
   return new Date(d).getTime();
 }
 
-function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
+// tournamentStartMs is the parent tournament's startDate as UTC epoch ms.
+// A match MUST NOT become "live" before the tournament officially begins,
+// regardless of the match's own scheduledAt value.
+function computeMatchVisibility(
+  match: typeof matchesTable.$inferSelect,
+  tournamentStartMs?: number,
+) {
   const nowMs = Date.now(); // always UTC epoch ms — cannot be affected by server timezone
 
   const startMs = toEpochMs(match.scheduledAt);
 
-  // Default hide time: 2 hours after match start.
+  // Guard: if parsed timestamps are NaN (corrupt/missing data) treat the match
+  // as safely upcoming so it never gets silently promoted to live or completed.
+  if (!Number.isFinite(startMs)) {
+    return { roomVisible: false, roomWindowOpen: false, effectiveStatus: match.status as string };
+  }
+  if (tournamentStartMs != null && !Number.isFinite(tournamentStartMs)) {
+    tournamentStartMs = undefined;
+  }
+
+  // A match may ONLY become LIVE when BOTH its own scheduledAt AND the parent
+  // tournament's startTime have been reached. This prevents matches created before
+  // (or with scheduledAt equal to) the creation timestamp from instantly going LIVE
+  // while the tournament is still in its upcoming phase.
+  //
+  // This gate also corrects matches that were incorrectly promoted to "live" in the DB
+  // before the tournament started (e.g. due to a creation-time scheduledAt bug).
+  const liveThresholdMs = tournamentStartMs != null
+    ? Math.max(startMs, tournamentStartMs)
+    : startMs;
+
+  // Default hide time: 2 hours after the LIVE threshold (not raw scheduledAt).
+  // This prevents stale records (where scheduledAt << tournament start) from
+  // auto-completing before the tournament has even begun.
   const hideMs = match.roomHideAt
     ? toEpochMs(match.roomHideAt)
-    : startMs + 2 * 60 * 60 * 1000;
+    : liveThresholdMs + 2 * 60 * 60 * 1000;
 
   // If already manually marked completed, honour it immediately.
   if (match.status === "completed") {
     return { roomVisible: false, roomWindowOpen: false, effectiveStatus: "completed" as string };
   }
 
-  // Default release: 5 minutes before match start (Phase 2 boundary).
+  // Default release: 5 minutes before the live threshold (Phase 2 boundary).
   const releaseMs = match.roomReleaseAt
     ? toEpochMs(match.roomReleaseAt)
-    : startMs - 5 * 60 * 1000;
+    : liveThresholdMs - 5 * 60 * 1000;
 
   let roomVisible = false;
   let roomWindowOpen = false;
@@ -71,9 +99,8 @@ function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
       // Admin has submitted credentials — show them
       roomVisible = true;
     }
-    if (effectiveStatus === "scheduled") {
-      // Advance status: LIVE only if current UTC epoch >= match start UTC epoch
-      effectiveStatus = nowMs >= startMs ? "live" : "room_released";
+    if (effectiveStatus === "scheduled" || effectiveStatus === "room_released" || effectiveStatus === "live") {
+      effectiveStatus = nowMs >= liveThresholdMs ? "live" : "room_released";
     }
   }
   // else Phase 1: Coming Soon — room hidden, window not open
@@ -86,6 +113,16 @@ function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
 router.get("/tournaments/:id/matches", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+
+    // Fetch tournament startDate so computeMatchVisibility can enforce the rule:
+    // a match must NEVER become "live" before its parent tournament has started.
+    const [tournament] = await db
+      .select({ id: tournamentsTable.id, startDate: tournamentsTable.startDate })
+      .from(tournamentsTable)
+      .where(eq(tournamentsTable.id, id));
+
+    const tournamentStartMs = tournament?.startDate ? toEpochMs(tournament.startDate) : undefined;
+
     const matches = await db
       .select()
       .from(matchesTable)
@@ -100,14 +137,22 @@ router.get("/tournaments/:id/matches", async (req, res) => {
           .where(eq(matchResultsTable.matchId, m.id))
           .orderBy(matchResultsTable.rank);
 
-        const { roomVisible, roomWindowOpen, effectiveStatus } = computeMatchVisibility(m);
+        const { roomVisible, roomWindowOpen, effectiveStatus } = computeMatchVisibility(m, tournamentStartMs);
 
-        // Auto-update status in DB when a time-based transition occurs
-        // (scheduled→live at scheduledAt, or scheduled/live→completed at roomHideAt)
-        if (effectiveStatus !== m.status && (effectiveStatus === "live" || effectiveStatus === "completed")) {
-          await db.update(matchesTable)
-            .set({ status: effectiveStatus })
-            .where(eq(matchesTable.id, m.id));
+        // Auto-sync DB status when the computed status differs from what's stored.
+        // Forward transitions (scheduled/room_released → live → completed) are written normally.
+        // Reverse correction (live → room_released): occurs when a match was incorrectly
+        // auto-promoted to "live" before the tournament's startTime was reached; correct it now.
+        if (effectiveStatus !== m.status) {
+          if (
+            effectiveStatus === "live" ||
+            effectiveStatus === "completed" ||
+            (m.status === "live" && effectiveStatus === "room_released")
+          ) {
+            await db.update(matchesTable)
+              .set({ status: effectiveStatus })
+              .where(eq(matchesTable.id, m.id));
+          }
         }
 
         return {
@@ -151,6 +196,7 @@ router.get("/matches/live", async (_req, res) => {
           mode: tournamentsTable.mode,
           bannerUrl: tournamentsTable.bannerUrl,
           status: tournamentsTable.status,
+          startDate: tournamentsTable.startDate,
         },
       })
       .from(matchesTable)
@@ -162,7 +208,10 @@ router.get("/matches/live", async (_req, res) => {
     // can see the Room Released → Match Live transition without a page change.
     const liveMatches = matches
       .map((m) => {
-        const { roomVisible, roomWindowOpen, effectiveStatus } = computeMatchVisibility(m as any);
+        const tStartMs = (m.tournament as any)?.startDate
+          ? toEpochMs((m.tournament as any).startDate)
+          : undefined;
+        const { roomVisible, roomWindowOpen, effectiveStatus } = computeMatchVisibility(m as any, tStartMs);
         return {
           ...m,
           status: effectiveStatus,
@@ -189,16 +238,12 @@ router.post("/tournaments/:id/matches", async (req, res) => {
     const id = parseInt(req.params.id);
     const { matchNumber, scheduledAt, mapName, status, roomId, roomPassword, roomReleaseAt } = req.body;
 
-    if (!scheduledAt) {
-      return res.status(400).json({ error: "scheduledAt is required." });
-    }
-
     const parsedMatchNumber = parseInt(matchNumber, 10);
     if (!matchNumber || isNaN(parsedMatchNumber) || parsedMatchNumber < 1) {
       return res.status(400).json({ error: "A valid match number is required." });
     }
 
-    // Validate that the tournament exists
+    // Validate that the tournament exists — fetch before using startDate as fallback.
     const [tournament] = await db
       .select({ id: tournamentsTable.id, startDate: tournamentsTable.startDate })
       .from(tournamentsTable)
@@ -208,9 +253,16 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       return res.status(404).json({ error: "Tournament not found." });
     }
 
-    const scheduledAtDate = new Date(scheduledAt);
-    if (isNaN(scheduledAtDate.getTime())) {
-      return res.status(400).json({ error: "Invalid scheduledAt date." });
+    // When scheduledAt is omitted, default to the tournament's own startDate so the
+    // match inherits the correct start threshold and never instantly becomes LIVE.
+    const scheduledAtDate = scheduledAt
+      ? new Date(scheduledAt)
+      : tournament.startDate
+        ? new Date(tournament.startDate)
+        : null;
+
+    if (!scheduledAtDate || isNaN(scheduledAtDate.getTime())) {
+      return res.status(400).json({ error: "scheduledAt is required (or tournament must have a startDate)." });
     }
 
 
@@ -706,6 +758,7 @@ router.get("/matches/schedule", async (_req, res) => {
           name: tournamentsTable.name,
           mode: tournamentsTable.mode,
           bannerUrl: tournamentsTable.bannerUrl,
+          startDate: tournamentsTable.startDate,
         },
       })
       .from(matchesTable)
@@ -715,7 +768,10 @@ router.get("/matches/schedule", async (_req, res) => {
     // Attach results for completed matches, apply visibility rules
     const result = await Promise.all(
       matches.map(async (m) => {
-        const { roomVisible, effectiveStatus } = computeMatchVisibility(m as any);
+        const tStartMs = (m.tournament as any)?.startDate
+          ? toEpochMs((m.tournament as any).startDate)
+          : undefined;
+        const { roomVisible, effectiveStatus } = computeMatchVisibility(m as any, tStartMs);
         let matchResults: any[] = [];
         if (m.status === "completed") {
           matchResults = await db
