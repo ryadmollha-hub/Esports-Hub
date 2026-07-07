@@ -4,13 +4,17 @@ A full-stack tournament management platform for Free Fire players. Users can reg
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080)
-- `pnpm --filter @workspace/freefire-tournament run dev` — run the frontend (port 24250)
+On Replit two workflows run in parallel (see "Project" run button):
+- **Start Backend** — `PORT=8080 node --enable-source-maps /home/runner/workspace/artifacts/api-server/dist/index.mjs` (console, port 8080). After any backend code change, rebuild first: `pnpm --filter @workspace/api-server run build`, then restart the workflow.
+- **Start application** — `pnpm install && PORT=5000 BASE_PATH=/ pnpm --filter @workspace/freefire-tournament run dev` (webview, port 5000). Vite proxies `/api` → `localhost:8080`.
+
+Other useful commands:
+- `pnpm --filter @workspace/api-server run build` — rebuild the API server (required before restarting Start Backend)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL`, `JWT_SECRET`
+- Required env (all pre-configured): `DATABASE_URL` (Replit-managed), `JWT_SECRET`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ADMIN_SECRET`
 
 ## Stack
 
