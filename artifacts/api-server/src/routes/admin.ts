@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { safeGetUserId } from "../lib/clerkAuth";
 import { audit, getClientIp } from "../lib/auditLog";
-import { adminLoginLimiter } from "../middlewares/rateLimiter";
+import { adminLoginLimiter, recordAdminLoginFailure, resetAdminLoginAttempts } from "../middlewares/rateLimiter";
 import { db } from "@workspace/db";
 import {
   usersTable,
@@ -47,6 +47,9 @@ async function requireAdmin(req: any, res: any): Promise<boolean> {
   }
 }
 
+// Note: adminLoginLimiter is intentionally a no-op passthrough here.
+// Rate limiting is applied INSIDE the handler, after credential verification,
+// so correct credentials always succeed regardless of prior failed attempts.
 router.post("/admin/login", adminLoginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -57,7 +60,9 @@ router.post("/admin/login", adminLoginLimiter, async (req, res) => {
       return res.status(400).json({ error: "username and password are required" });
     }
 
+    // ── Correct credentials: always succeed and clear any prior lock ──────────
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+      resetAdminLoginAttempts(req);
       await audit("admin.login.success", {
         req,
         details: { username, ip, userAgent: ua },
@@ -66,11 +71,21 @@ router.post("/admin/login", adminLoginLimiter, async (req, res) => {
       return res.json({ success: true, token: getAdminToken() });
     }
 
+    // ── Wrong credentials: record failure; block only after too many tries ────
+    const lockStatus = recordAdminLoginFailure(req);
     await audit("admin.login.failed", {
       req,
       details: { username, ip, userAgent: ua },
       severity: "critical",
     });
+
+    if (lockStatus.locked) {
+      return res.status(429).json({
+        success: false,
+        message: `Too many failed attempts. Try again in ${lockStatus.remainingMin} minute(s).`,
+      });
+    }
+
     return res.status(401).json({ error: "Invalid credentials" });
   } catch {
     return res.status(500).json({ error: "Login failed." });
