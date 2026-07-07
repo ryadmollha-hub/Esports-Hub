@@ -131,6 +131,97 @@ interface MatchInfo {
   resultsPublished?: boolean;
 }
 
+// ── MatchReleaseTimer ────────────────────────────────────────────────────────
+// Shows a precise per-match "Room ID releasing in MM:SS" countdown.
+// Calls onExpire ONCE when it hits zero so the parent can refresh match data.
+// Uses refs for the interval so it self-stops at expiry with no leak.
+function MatchReleaseTimer({ roomReleaseAt, onExpire }: { roomReleaseAt: string; onExpire?: () => void }) {
+  const [msLeft, setMsLeft] = useState<number>(() =>
+    Math.max(0, new Date(roomReleaseAt).getTime() - Date.now()),
+  );
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
+  const firedRef = useRef(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    firedRef.current = false;
+    const targetMs = new Date(roomReleaseAt).getTime();
+
+    const stop = () => {
+      if (intervalRef.current !== null) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+
+    const tick = () => {
+      const diff = targetMs - Date.now();
+      if (diff <= 0) {
+        setMsLeft(0);
+        stop(); // interval no longer needed — self-cleanup
+        if (!firedRef.current) {
+          firedRef.current = true;
+          onExpireRef.current?.();
+        }
+      } else {
+        setMsLeft(diff);
+      }
+    };
+
+    tick();
+    intervalRef.current = setInterval(tick, 1000);
+    return stop; // cleanup on unmount or roomReleaseAt change
+  }, [roomReleaseAt]);
+
+  if (msLeft <= 0) return null;
+
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const mins = Math.floor(msLeft / 60000);
+  const secs = Math.floor((msLeft % 60000) / 1000);
+
+  return (
+    <div className="mt-2 flex items-center gap-1.5 text-orange-400 text-xs font-bold">
+      <Clock className="w-3 h-3 shrink-0" />
+      Room ID releasing in: {pad(mins)}:{pad(secs)}
+    </div>
+  );
+}
+
+// ── MatchHideTimer ────────────────────────────────────────────────────────────
+// Wraps the credential / lock block for a live match.
+// When roomHideAt is reached client-side, replaces children with
+// "Room details are now closed." — even before the 30s poll syncs the server.
+function MatchHideTimer({ roomHideAt, children }: { roomHideAt?: string | null; children: React.ReactNode }) {
+  const [isClosed, setIsClosed] = useState<boolean>(() => {
+    if (!roomHideAt) return false;
+    return Date.now() >= new Date(roomHideAt).getTime();
+  });
+
+  useEffect(() => {
+    if (!roomHideAt) return;
+    const hideMs = new Date(roomHideAt).getTime();
+    const delay = hideMs - Date.now();
+    if (delay <= 0) { setIsClosed(true); return; }
+    const t = setTimeout(() => setIsClosed(true), delay);
+    return () => clearTimeout(t);
+  }, [roomHideAt]);
+
+  if (isClosed) {
+    return (
+      <div className="mt-3 flex items-center gap-3 bg-gray-500/10 border border-gray-500/20 rounded-lg px-4 py-3">
+        <Lock className="w-4 h-4 text-gray-400 shrink-0" />
+        <div>
+          <div className="text-gray-300 font-bold text-sm">Room details are now closed.</div>
+          <div className="text-[#a0a0b0] text-xs mt-0.5">The match has ended. Results will be published shortly.</div>
+        </div>
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 export default function TournamentDetailPage() {
   const [, params] = useRoute("/tournaments/:id");
   const [, setLocation] = useLocation();
@@ -288,6 +379,26 @@ export default function TournamentDetailPage() {
     const id = setInterval(() => loadMatches(), 30000);
     return () => clearInterval(id);
   }, [loadMatches]);
+
+  // Precise one-shot timeouts: reload matches exactly when the next timing
+  // event fires (roomReleaseAt, scheduledAt, or roomHideAt) so transitions
+  // happen in near-real-time without waiting up to 30 s for the poll.
+  useEffect(() => {
+    const now = Date.now();
+    const eventMs = matches
+      .flatMap((m) => [
+        m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null,
+        m.scheduledAt   ? new Date(m.scheduledAt).getTime()   : null,
+        m.roomHideAt    ? new Date(m.roomHideAt).getTime()     : null,
+      ])
+      .filter((t): t is number => t !== null && t > now);
+
+    if (eventMs.length === 0) return;
+    const next = Math.min(...eventMs);
+    const delay = next - now + 600; // +600 ms buffer so server state has settled
+    const timer = setTimeout(() => loadMatches(), delay);
+    return () => clearTimeout(timer);
+  }, [matches, loadMatches]);
 
   useEffect(() => {
     // Poll hype board every 30 s so new messages appear automatically
@@ -661,6 +772,7 @@ export default function TournamentDetailPage() {
                     targetDate={countdownTarget}
                     className="text-3xl gap-4"
                     onExpire={loadMatches}
+                    expiredText="MATCH IS STARTED"
                   />
                 </div>
               );
@@ -689,66 +801,70 @@ export default function TournamentDetailPage() {
                       </div>
                     </div>
 
-                    {/* Stage 3: Credentials visible to joined players */}
-                    {match.roomVisible && match.roomId && isJoined ? (
-                      <div className="grid grid-cols-2 gap-3 mt-3">
-                        <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-green-500/20">
-                          <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
-                            <Key className="w-3 h-3" /> Room ID
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="text-white font-mono font-black text-lg">{match.roomId}</div>
-                            <button
-                              onClick={() => copyToClipboard(match.roomId!, "Room ID")}
-                              className="shrink-0 text-xs font-bold text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-2 py-1 rounded-lg transition-colors"
-                            >
-                              Copy
-                            </button>
-                          </div>
-                        </div>
-                        <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-green-500/20">
-                          <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
-                            <Lock className="w-3 h-3" /> Password
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="text-white font-mono font-black text-lg flex-1">
-                              {showRoomPass ? match.roomPassword : "••••••"}
+                    {/* Stage 3: Credentials visible to joined players — wrapped in MatchHideTimer
+                        so the "Room details are now closed" message fires client-side exactly
+                        when roomHideAt is reached, without waiting for the 30 s poll. */}
+                    <MatchHideTimer roomHideAt={match.roomHideAt}>
+                      {match.roomVisible && match.roomId && isJoined ? (
+                        <div className="grid grid-cols-2 gap-3 mt-3">
+                          <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-green-500/20">
+                            <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
+                              <Key className="w-3 h-3" /> Room ID
                             </div>
-                            <button onClick={() => setShowRoomPass(!showRoomPass)} className="text-[#a0a0b0] hover:text-white shrink-0">
-                              {showRoomPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                            {showRoomPass && match.roomPassword && (
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="text-white font-mono font-black text-lg">{match.roomId}</div>
                               <button
-                                onClick={() => copyToClipboard(match.roomPassword!, "Password")}
+                                onClick={() => copyToClipboard(match.roomId!, "Room ID")}
                                 className="shrink-0 text-xs font-bold text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-2 py-1 rounded-lg transition-colors"
                               >
                                 Copy
                               </button>
-                            )}
+                            </div>
+                          </div>
+                          <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-green-500/20">
+                            <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
+                              <Lock className="w-3 h-3" /> Password
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-white font-mono font-black text-lg flex-1">
+                                {showRoomPass ? match.roomPassword : "••••••"}
+                              </div>
+                              <button onClick={() => setShowRoomPass(!showRoomPass)} className="text-[#a0a0b0] hover:text-white shrink-0">
+                                {showRoomPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                              {showRoomPass && match.roomPassword && (
+                                <button
+                                  onClick={() => copyToClipboard(match.roomPassword!, "Password")}
+                                  className="shrink-0 text-xs font-bold text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-2 py-1 rounded-lg transition-colors"
+                                >
+                                  Copy
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : match.roomWindowOpen && !match.roomSet && isJoined ? (
-                      /* Stage 2→3 transition: window open but admin hasn't submitted creds yet */
-                      <div className="mt-3 flex items-start gap-3 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3">
-                        <span className="text-xl shrink-0">⏳</span>
-                        <div>
-                          <div className="text-orange-400 font-black text-sm">Room Not Released Yet</div>
-                          <div className="text-orange-300/70 text-xs mt-0.5">
-                            Releasing Soon — stay on this page. Room ID &amp; Password will appear here automatically.
+                      ) : match.roomWindowOpen && !match.roomSet && isJoined ? (
+                        /* Stage 2→3 transition: window open but admin hasn't submitted creds yet */
+                        <div className="mt-3 flex items-start gap-3 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3">
+                          <span className="text-xl shrink-0">⏳</span>
+                          <div>
+                            <div className="text-orange-400 font-black text-sm">Room Not Released Yet</div>
+                            <div className="text-orange-300/70 text-xs mt-0.5">
+                              Releasing Soon — stay on this page. Room ID &amp; Password will appear here automatically.
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : !isJoined ? (
-                      <div className="mt-2 text-center text-[#a0a0b0] text-sm py-2 bg-[#1a1a24] rounded-lg">
-                        Join the tournament to view room credentials.
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 mt-2 text-[#a0a0b0] text-sm">
-                        <Lock className="w-4 h-4" />
-                        Room details will appear here once released.
-                      </div>
-                    )}
+                      ) : !isJoined ? (
+                        <div className="mt-2 text-center text-[#a0a0b0] text-sm py-2 bg-[#1a1a24] rounded-lg">
+                          Join the tournament to view room credentials.
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mt-2 text-[#a0a0b0] text-sm">
+                          <Lock className="w-4 h-4" />
+                          Room details will appear here once released.
+                        </div>
+                      )}
+                    </MatchHideTimer>
                   </div>
                 ))}
               </div>
@@ -779,6 +895,10 @@ export default function TournamentDetailPage() {
                           {match.roomVisible ? (
                             <div className="text-orange-400 text-[10px] font-black mt-0.5 flex items-center justify-end gap-1">
                               <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse inline-block" /> Room Released
+                            </div>
+                          ) : match.roomWindowOpen ? (
+                            <div className="text-yellow-400 text-[10px] font-bold mt-0.5 flex items-center justify-end gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-pulse inline-block" /> ⏳ Room Not Ready
                             </div>
                           ) : (
                             <div className="text-blue-400 text-[10px] font-bold mt-0.5">⏳ Coming Soon</div>
@@ -828,13 +948,22 @@ export default function TournamentDetailPage() {
                         </div>
                       ) : (
                         /* Locked state — always visible before credentials are released */
-                        <div className="mt-3 flex items-center gap-3 bg-[#0a0a0f]/40 border border-[#2a2a36] rounded-lg px-4 py-3">
-                          <span className="text-base shrink-0">🔒</span>
-                          <div className="text-[#a0a0b0] text-xs leading-relaxed">
-                            {isJoined
-                              ? "Room ID & Password will be revealed automatically here when the release timer hits zero."
-                              : "Join the tournament to see Room ID & Password when they are released."}
+                        <div className="mt-3">
+                          <div className="flex items-center gap-3 bg-[#0a0a0f]/40 border border-[#2a2a36] rounded-lg px-4 py-3">
+                            <span className="text-base shrink-0">🔒</span>
+                            <div className="text-[#a0a0b0] text-xs leading-relaxed">
+                              {isJoined
+                                ? "Room ID & Password will be revealed automatically here when the release timer hits zero."
+                                : "Join the tournament to see Room ID & Password when they are released."}
+                            </div>
                           </div>
+                          {/* Dedicated room release countdown — visible to ALL users (joined or not) */}
+                          {!match.roomWindowOpen && match.roomReleaseAt && (
+                            <MatchReleaseTimer
+                              roomReleaseAt={match.roomReleaseAt}
+                              onExpire={loadMatches}
+                            />
+                          )}
                         </div>
                       )}
                     </div>
@@ -858,14 +987,26 @@ export default function TournamentDetailPage() {
                       </div>
                       <div className="text-[#a0a0b0] text-xs">{formatBDDate(match.scheduledAt)}</div>
                     </div>
-                    {/* Stage 4 message: credentials hidden, awaiting results */}
-                    <div className="flex items-center gap-3 bg-gray-500/10 border border-gray-500/20 rounded-lg px-4 py-3">
-                      <CheckCircle className="w-4 h-4 text-gray-400 shrink-0" />
-                      <div>
-                        <div className="text-gray-300 font-bold text-sm">Match Ended</div>
-                        <div className="text-[#a0a0b0] text-xs mt-0.5">Waiting for Results — scores will be published shortly.</div>
+                    {/* Stage 4 message: "Room details are now closed" when roomHideAt just
+                        passed; otherwise the generic "Match Ended" waiting state. */}
+                    {match.roomHideAt && Date.now() >= new Date(match.roomHideAt).getTime()
+                      && (Date.now() - new Date(match.roomHideAt).getTime()) < 4 * 60 * 60 * 1000 ? (
+                      <div className="flex items-center gap-3 bg-gray-500/10 border border-gray-500/20 rounded-lg px-4 py-3">
+                        <Lock className="w-4 h-4 text-gray-400 shrink-0" />
+                        <div>
+                          <div className="text-gray-300 font-bold text-sm">Room details are now closed.</div>
+                          <div className="text-[#a0a0b0] text-xs mt-0.5">The match has ended. Results will be published shortly.</div>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="flex items-center gap-3 bg-gray-500/10 border border-gray-500/20 rounded-lg px-4 py-3">
+                        <CheckCircle className="w-4 h-4 text-gray-400 shrink-0" />
+                        <div>
+                          <div className="text-gray-300 font-bold text-sm">Match Ended</div>
+                          <div className="text-[#a0a0b0] text-xs mt-0.5">Waiting for Results — scores will be published shortly.</div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

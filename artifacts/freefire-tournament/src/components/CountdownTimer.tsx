@@ -5,6 +5,7 @@ interface CountdownTimerProps {
   targetDate: string | Date;
   className?: string;
   onExpire?: () => void;
+  expiredText?: string;
 }
 
 /**
@@ -19,7 +20,7 @@ interface CountdownTimerProps {
  *
  * Works identically on every server, container, account, or browser locale.
  */
-export default function CountdownTimer({ targetDate, className = "", onExpire }: CountdownTimerProps) {
+export default function CountdownTimer({ targetDate, className = "", onExpire, expiredText = "MATCH IS STARTED" }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
   const [expired, setExpired] = useState(false);
 
@@ -62,7 +63,7 @@ export default function CountdownTimer({ targetDate, className = "", onExpire }:
   if (expired) {
     return (
       <div className={`flex gap-1 items-center ${className}`} data-testid="countdown-timer">
-        <span className="font-mono font-black text-[#00ff88]">MATCH IS LIVE</span>
+        <span className="font-mono font-black text-[#00ff88]">{expiredText}</span>
       </div>
     );
   }

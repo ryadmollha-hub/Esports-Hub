@@ -32,21 +32,6 @@ author = "agent"
 task = "workflow.run"
 args = "Start application"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Start Backend"
-
-[[workflows.workflow]]
-name = "Start Backend"
-author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pnpm --filter @workspace/db run push && pnpm --filter @workspace/api-server run build && PORT=8080 node --enable-source-maps /home/runner/workspace/artifacts/api-server/dist/index.mjs"
-
 [agent]
 stack = "BEST_EFFORT_FALLBACK"
 expertMode = true
