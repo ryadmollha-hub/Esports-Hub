@@ -1,0 +1,32 @@
+CRITICAL FIX: RE-WRITE TOURNAMENT LIFE-CYCLE AND FIX ALL MISSING LOGIC (NO GIT dependencies)
+
+The recent git merge conflict corrupted the project files, and now some core tournament features are completely missing/broken. Do NOT use any Git commands. Instead, surgically inspect and re-write the local code in 'api-server/src/routes/matches.ts', 'freefire-tournament/src/pages/tournament-detail.tsx', and 'CountdownTimer.tsx' to restore the exact 5-stage tournament lifecycle.
+
+IMPLEMENT THE EXACT 5 STAGES DIRECTLY IN CODE (Bangladesh Time - Asia/Dhaka):
+
+1. STAGE 1: UPCOMING (match.startTime > currentTime)
+   - Status must be "Upcoming". Show live countdown timer until match starts.
+   - Credentials (Room ID & Password) MUST BE COMPLETELY HIDDEN from players.
+
+2. STAGE 2: ROOM ID RELEASING (Exactly 5 minutes before startTime)
+   - When (startTime - 5 minutes <= currentTime) AND (currentTime < startTime):
+   - The UI status/label must change to: "🔑 Room Opening" or "Room ID Releasing".
+   - IF the admin has submitted Room ID & Password, display them to registered/joined players with a "Copy" button.
+   - IF the admin has NOT submitted them yet, show this exact placeholder to registered players: "⏳ Room Not Released Yet — Releasing Soon — stay on this page. Room ID & Password will appear here automatically."
+
+3. STAGE 3: LIVE MATCH (startTime <= currentTime AND currentTime <= startTime + 2 hours)
+   - The match status must automatically flip to "LIVE" on both frontend and backend.
+   - Room ID and Password must REMAIN VISIBLE to registered players for up to 2 hours, so disconnected players can re-join the custom room.
+
+4. STAGE 4: MATCH COMPLETED
+   - When the admin sets status to "Completed", hide/archive the Room ID/Password block immediately. Show "Match Ended. Waiting for Results...".
+
+5. STAGE 5: RESULT PUBLISHED
+   - Once the admin submits scores/kills, render the "Leaderboard/Result" tab/button inside that specific tournament card so players can see winnings.
+
+STRICT FORMATTING & STABILITY RULES:
+- Fix any broken paths, missing variables, or broken conditional rendering (`if/else` or ternary operators) in 'tournament-detail.tsx'.
+- Do NOT delete or modify any existing JWT Authentication guards, Admin verification functions, or CSS styling structures.
+- Ensure Vite hot-reload works cleanly without any application crashes.
+
+Go through all these files now, fix the missing elements, and tell me when the complete lifecycle is 100% stable and operational.

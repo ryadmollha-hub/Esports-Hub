@@ -9,65 +9,64 @@ import { bulkCreateNotifications } from "../lib/notificationHelper";
 
 const router: IRouter = Router();
 
-// Helper: compute effective match status and whether room should be visible.
+// Helper: compute effective match status, room visibility, and whether the
+// release window has opened (even when admin hasn't submitted credentials yet).
 //
-// Status flow:
-//   scheduled (Coming Soon) → scheduled+roomVisible (Room Released) → live (Match Live) → completed (Match Completed)
+// 5-Stage Tournament Lifecycle (Bangladesh Time — UTC+6):
+//   Phase 1 UPCOMING       — scheduledAt > now                           (room hidden)
+//   Phase 2 ROOM OPENING   — (scheduledAt-5min) <= now < scheduledAt     (window open, creds may or may not be set)
+//   Phase 3 LIVE           — scheduledAt <= now <= scheduledAt+2h         (room visible if creds set)
+//   Phase 4 COMPLETED      — admin sets completed OR now > scheduledAt+2h (room hidden, show "Ended" msg)
+//   Phase 5 RESULT PUBLISHED — admin submits scores                       (leaderboard visible)
 //
-// Timestamps:
-//   roomReleaseAt  — when room credentials become visible (Phase 2 start)
-//   scheduledAt    — actual match start time             (Phase 3 start)
-//   roomHideAt     — when room hides / match ends        (Phase 4 start)
-//                    defaults to scheduledAt + 2 h when not explicitly set.
-//                    (Previously defaulted to scheduledAt itself, which hid the
-//                    room at match start and prevented the "live" flip — that was the bug.)
+// Key fields returned:
+//   roomVisible    — true only when creds exist AND timing window is active
+//   roomWindowOpen — true when the release window has started, even if creds not set yet
+//                    (lets frontend show "⏳ Room Not Released Yet" placeholder)
+//   effectiveStatus — computed status string used for display and DB sync
 function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
   const now = new Date();
   const startTime = new Date(match.scheduledAt);
 
-  // Default hide time: 2 hours after match start when admin hasn't set an explicit end time.
-  // IMPORTANT: the old default was `startTime` which caused the room to disappear the instant
-  // the match began and prevented the effectiveStatus from ever reaching "live".
+  // Default hide time: 2 hours after match start.
   const hideAt = match.roomHideAt
     ? new Date(match.roomHideAt)
     : new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
 
   // If already manually marked completed, honour it immediately.
   if (match.status === "completed") {
-    return { roomVisible: false, effectiveStatus: "completed" as string };
+    return { roomVisible: false, roomWindowOpen: false, effectiveStatus: "completed" as string };
   }
+
+  // Default release: 5 minutes before match start (Phase 2 boundary).
+  const releaseAt = match.roomReleaseAt
+    ? new Date(match.roomReleaseAt)
+    : new Date(startTime.getTime() - 5 * 60 * 1000);
 
   let roomVisible = false;
+  let roomWindowOpen = false;
   let effectiveStatus: string = match.status;
 
-  if (match.roomId) {
-    if (now >= hideAt) {
-      // Phase 4: past the hide/end time → auto-complete, hide room
-      effectiveStatus = "completed";
-      roomVisible = false;
-    } else if (match.roomReleaseAt) {
-      const releaseAt = new Date(match.roomReleaseAt);
-      if (now >= releaseAt) {
-        // Phase 2 / 3: room credentials are released
-        roomVisible = true;
-        // Only advance to "live" when the actual match start time has been reached.
-        // Room release alone does NOT make the match live.
-        if (effectiveStatus === "scheduled" && now >= startTime) {
-          effectiveStatus = "live"; // Phase 3: Match Live
-        } else if (effectiveStatus === "scheduled") {
-          effectiveStatus = "room_released"; // Phase 2: Room Released, match not yet started
-        }
-      }
-      // else: now < releaseAt → Phase 1 (Coming Soon), room hidden
-    } else {
-      // No release time configured: room visible only when admin manually set status to "live"
-      if (match.status === "live" && now >= startTime) {
-        roomVisible = true;
-      }
+  if (now >= hideAt) {
+    // Phase 4: past the hide/end time → auto-complete, hide room
+    effectiveStatus = "completed";
+    roomVisible = false;
+    roomWindowOpen = false;
+  } else if (now >= releaseAt) {
+    // Phase 2 / 3: within the release window
+    roomWindowOpen = true;
+    if (match.roomId) {
+      // Admin has submitted credentials — show them
+      roomVisible = true;
+    }
+    if (effectiveStatus === "scheduled") {
+      // Advance status based on whether match has started
+      effectiveStatus = now >= startTime ? "live" : "room_released";
     }
   }
+  // else Phase 1: Coming Soon — room hidden, window not open
 
-  return { roomVisible, effectiveStatus };
+  return { roomVisible, roomWindowOpen, effectiveStatus };
 }
 
 // ─── Get matches for a tournament ───────────────────────────────────────────
@@ -106,6 +105,7 @@ router.get("/tournaments/:id/matches", async (req, res) => {
           roomPassword: roomVisible ? m.roomPassword : null,
           roomSet: !!(m.roomId),   // true if admin has saved credentials, regardless of visibility timing
           roomVisible,
+          roomWindowOpen,          // true when the 5-min release window is active (even if creds not set)
           results,
         };
       })
@@ -150,13 +150,15 @@ router.get("/matches/live", async (_req, res) => {
     // can see the Room Released → Match Live transition without a page change.
     const liveMatches = matches
       .map((m) => {
-        const { roomVisible, effectiveStatus } = computeMatchVisibility(m as any);
+        const { roomVisible, roomWindowOpen, effectiveStatus } = computeMatchVisibility(m as any);
         return {
           ...m,
           status: effectiveStatus,
           roomId: roomVisible ? m.roomId : null,
           roomPassword: roomVisible ? m.roomPassword : null,
+          roomSet: !!(m.roomId),
           roomVisible,
+          roomWindowOpen,
         };
       })
       .filter((m) => m.status === "live" || m.status === "room_released");
@@ -200,12 +202,12 @@ router.post("/tournaments/:id/matches", async (req, res) => {
     }
 
 
-    // Default roomReleaseAt: 10 minutes before scheduledAt if not provided
+    // Default roomReleaseAt: 5 minutes before scheduledAt if not provided (Phase 2 boundary)
     let releaseAt: Date | null = null;
     if (roomReleaseAt) {
       releaseAt = new Date(roomReleaseAt);
     } else if (roomId) {
-      releaseAt = new Date(scheduledAtDate.getTime() - 10 * 60 * 1000);
+      releaseAt = new Date(scheduledAtDate.getTime() - 5 * 60 * 1000);
     }
 
     // Auto-generate permanent serial number (T-0001, T-0002, …)
@@ -248,9 +250,9 @@ router.patch("/matches/:id", async (req, res) => {
     if (roomReleaseAt !== undefined) {
       newReleaseAt = roomReleaseAt ? new Date(roomReleaseAt) : null;
     } else if (roomId && scheduledAt) {
-      newReleaseAt = new Date(new Date(scheduledAt).getTime() - 10 * 60 * 1000);
+      newReleaseAt = new Date(new Date(scheduledAt).getTime() - 5 * 60 * 1000);
     } else if (roomId && !roomReleaseAt && existing.scheduledAt) {
-      newReleaseAt = new Date(new Date(existing.scheduledAt).getTime() - 10 * 60 * 1000);
+      newReleaseAt = new Date(new Date(existing.scheduledAt).getTime() - 5 * 60 * 1000);
     }
 
     const [updated] = await db
@@ -308,8 +310,8 @@ router.patch("/matches/:id/room", async (req, res) => {
     const [existing] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
     if (!existing) return res.status(404).json({ error: "Match not found." });
 
-    // Release time: N minutes BEFORE scheduledAt (default 10 min before)
-    const minutesBefore = roomReleaseMinutesBefore ?? 10;
+    // Release time: N minutes BEFORE scheduledAt (default 5 min before — Phase 2 boundary)
+    const minutesBefore = roomReleaseMinutesBefore ?? 5;
     const releaseAt = minutesBefore === -1
       ? new Date() // -1 = manual/immediate release
       : new Date(new Date(existing.scheduledAt).getTime() - minutesBefore * 60 * 1000);

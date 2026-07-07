@@ -41,7 +41,7 @@ const statusConfig: Record<string, { color: string; label: string; dot: string }
   coming_soon:  { color: "bg-blue-500/20 text-blue-400 border border-blue-500/40",          label: "Coming Soon",       dot: "bg-blue-400" },
   live:         { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",           dot: "bg-emerald-400 animate-pulse" },
   ongoing:      { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",           dot: "bg-emerald-400 animate-pulse" },
-  room_open:    { color: "bg-orange-600/20 text-orange-400 border border-orange-500",       label: "🔑 Room Released",  dot: "bg-orange-400 animate-pulse" },
+  room_open:    { color: "bg-orange-600/20 text-orange-400 border border-orange-500",       label: "🔑 Room Opening",   dot: "bg-orange-400 animate-pulse" },
   ended:        { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Ended",             dot: "bg-red-400" },
   completed:    { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Completed",         dot: "bg-red-400" },
   cancelled:    { color: "bg-red-700/20 text-red-500 border border-red-700/40",             label: "Cancelled",         dot: "bg-red-500" },
@@ -92,6 +92,8 @@ interface MatchInfo {
   roomId?: string | null;
   roomPassword?: string | null;
   roomVisible?: boolean;
+  roomWindowOpen?: boolean;  // true when 5-min window is open, even if admin hasn't set creds yet
+  roomSet?: boolean;          // true if admin has saved credentials (regardless of visibility timing)
   roomReleaseAt?: string | null;
   roomHideAt?: string | null;
   results?: MatchResult[];
@@ -274,6 +276,15 @@ export default function TournamentDetailPage() {
   const entryFee = t ? Number(t.entryFee) : 0;
   const canLeave = false; // No leave / no refund policy — entry is final
   const nowMs = Date.now();
+
+  // Copy text to clipboard with a brief toast confirmation
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: `${label} copied!`, description: text });
+    }).catch(() => {
+      toast({ title: "Copy failed", description: "Please copy manually.", variant: "destructive" });
+    });
+  };
 
   // Match-level status buckets — derived from what the API returns (effectiveStatus),
   // which already has computeMatchVisibility applied server-side.
@@ -599,7 +610,7 @@ export default function TournamentDetailPage() {
               );
             })()}
 
-            {/* ── LIVE MATCHES SECTION ── */}
+            {/* ── STAGE 3: LIVE MATCHES SECTION ── */}
             {liveMatches.length > 0 && (
               <div className="space-y-3">
                 <h3 className="text-green-400 font-black uppercase text-sm tracking-wider flex items-center gap-2">
@@ -621,36 +632,65 @@ export default function TournamentDetailPage() {
                         {formatBDTime(match.scheduledAt)}
                       </div>
                     </div>
-                    {match.roomVisible && isJoined && Date.now() >= (match.roomReleaseAt ? parseBDDate(match.roomReleaseAt).getTime() : parseBDDate(match.scheduledAt).getTime()) ? (
+
+                    {/* Stage 3: Credentials visible to joined players */}
+                    {match.roomVisible && match.roomId && isJoined ? (
                       <div className="grid grid-cols-2 gap-3 mt-3">
-                        <div className="bg-[#0a0a0f]/60 rounded-lg p-3">
+                        <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-green-500/20">
                           <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
                             <Key className="w-3 h-3" /> Room ID
                           </div>
-                          <div className="text-white font-mono font-black text-lg">{match.roomId}</div>
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-white font-mono font-black text-lg">{match.roomId}</div>
+                            <button
+                              onClick={() => copyToClipboard(match.roomId!, "Room ID")}
+                              className="shrink-0 text-xs font-bold text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-2 py-1 rounded-lg transition-colors"
+                            >
+                              Copy
+                            </button>
+                          </div>
                         </div>
-                        <div className="bg-[#0a0a0f]/60 rounded-lg p-3">
+                        <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-green-500/20">
                           <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
                             <Lock className="w-3 h-3" /> Password
                           </div>
                           <div className="flex items-center gap-2">
-                            <div className="text-white font-mono font-black text-lg">
+                            <div className="text-white font-mono font-black text-lg flex-1">
                               {showRoomPass ? match.roomPassword : "••••••"}
                             </div>
-                            <button onClick={() => setShowRoomPass(!showRoomPass)} className="text-[#a0a0b0] hover:text-white">
+                            <button onClick={() => setShowRoomPass(!showRoomPass)} className="text-[#a0a0b0] hover:text-white shrink-0">
                               {showRoomPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
+                            {showRoomPass && match.roomPassword && (
+                              <button
+                                onClick={() => copyToClipboard(match.roomPassword!, "Password")}
+                                className="shrink-0 text-xs font-bold text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-2 py-1 rounded-lg transition-colors"
+                              >
+                                Copy
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
-                    ) : match.roomVisible && !isJoined && Date.now() >= (match.roomReleaseAt ? parseBDDate(match.roomReleaseAt).getTime() : parseBDDate(match.scheduledAt).getTime()) ? (
-                      <div className="text-center py-2 text-[#a0a0b0] text-sm">
-                        Join the tournament to view room details.
+                    ) : match.roomWindowOpen && !match.roomSet && isJoined ? (
+                      /* Stage 2→3 transition: window open but admin hasn't submitted creds yet */
+                      <div className="mt-3 flex items-start gap-3 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3">
+                        <span className="text-xl shrink-0">⏳</span>
+                        <div>
+                          <div className="text-orange-400 font-black text-sm">Room Not Released Yet</div>
+                          <div className="text-orange-300/70 text-xs mt-0.5">
+                            Releasing Soon — stay on this page. Room ID &amp; Password will appear here automatically.
+                          </div>
+                        </div>
+                      </div>
+                    ) : !isJoined ? (
+                      <div className="mt-2 text-center text-[#a0a0b0] text-sm py-2 bg-[#1a1a24] rounded-lg">
+                        Join the tournament to view room credentials.
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 mt-2 text-[#a0a0b0] text-sm">
                         <Lock className="w-4 h-4" />
-                        Room details available to joined players.
+                        Room details will appear here once released.
                       </div>
                     )}
                   </div>
@@ -658,34 +698,36 @@ export default function TournamentDetailPage() {
               </div>
             )}
 
-            {/* Upcoming Matches */}
+            {/* ── STAGE 2: UPCOMING / ROOM OPENING MATCHES ── */}
             {upcomingMatches.length > 0 && (
-              <div className={`rounded-xl border p-5 ${roomOpen ? "bg-[#ff6b00]/5 border-[#ff6b00]/30" : "bg-[#12121a] border-[#ff6b00]/20"}`}>
-                <h3 className="text-white font-bold uppercase text-sm mb-3 tracking-wider flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#ff6b00]" /> Scheduled Matches
+              <div className={`rounded-xl border p-5 ${roomOpen ? "bg-orange-600/5 border-orange-500/30" : "bg-[#12121a] border-[#ff6b00]/20"}`}>
+                <h3 className={`font-bold uppercase text-sm mb-3 tracking-wider flex items-center gap-2 ${roomOpen ? "text-orange-400" : "text-white"}`}>
+                  <Calendar className="w-4 h-4 text-[#ff6b00]" />
+                  {roomOpen ? "🔑 Room Opening" : "Scheduled Matches"}
                   {roomOpen && (
-                    <span className="ml-auto text-[10px] font-black text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse inline-block" /> Room Released
+                    <span className="ml-auto text-[10px] font-black text-orange-400 bg-orange-500/10 border border-orange-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse inline-block" /> Room ID Releasing
                     </span>
                   )}
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {upcomingMatches.map(match => {
-                    // parseBDDate: treat naive timestamps as UTC+6 so release/hide
-                    // windows are correct regardless of server or browser timezone.
                     const scheduledMs = parseBDDate(match.scheduledAt).getTime();
+                    // Use 5-min default (consistent with backend Phase 2 boundary)
                     const releaseMs = match.roomReleaseAt
                       ? parseBDDate(match.roomReleaseAt).getTime()
-                      : scheduledMs - 10 * 60 * 1000;
+                      : scheduledMs - 5 * 60 * 1000;
+                    // Use 2-hour default (consistent with backend hide window)
                     const hideMs = match.roomHideAt
                       ? parseBDDate(match.roomHideAt).getTime()
-                      : scheduledMs + 60 * 60 * 1000;
-                    const nowMs = Date.now();
-                    const minsToRelease = Math.ceil((releaseMs - nowMs) / 60000);
-                    const roomClosed = nowMs >= hideMs;
-                    const roomSoon = !roomClosed && minsToRelease <= 60 && minsToRelease > 0;
+                      : scheduledMs + 2 * 60 * 60 * 1000;
+                    const nowLocal = Date.now();
+                    const roomClosed = nowLocal >= hideMs;
+                    const inWindow = nowLocal >= releaseMs && !roomClosed;
+
                     return (
-                      <div key={match.id} className="border-b border-[#1a1a24] last:border-0 pb-3 last:pb-0">
+                      <div key={match.id} className="border-b border-[#1a1a24] last:border-0 pb-4 last:pb-0">
+                        {/* Match header row */}
                         <div className="flex items-center justify-between py-1">
                           <div className="flex items-center gap-3">
                             <span className="text-[#a0a0b0] text-xs uppercase bg-[#1a1a24] px-2 py-0.5 rounded font-bold">#{match.matchNumber}</span>
@@ -698,18 +740,23 @@ export default function TournamentDetailPage() {
                             <div className="text-white text-sm font-bold">{formatBDTime(match.scheduledAt)}</div>
                             <div className="text-[#a0a0b0] text-xs">{formatBDDate(match.scheduledAt)}</div>
                             {match.roomVisible ? (
-                              <div className="text-[#ff6b00] text-[10px] font-black mt-0.5 flex items-center justify-end gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse inline-block" /> Room Released
+                              <div className="text-orange-400 text-[10px] font-black mt-0.5 flex items-center justify-end gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse inline-block" /> Room Released
+                              </div>
+                            ) : inWindow ? (
+                              <div className="text-orange-400 text-[10px] font-black mt-0.5 flex items-center justify-end gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse inline-block" /> Room Opening…
                               </div>
                             ) : roomClosed ? (
-                              <div className="text-[#a0a0b0] text-[10px] font-bold mt-0.5">🔴 Room closed</div>
+                              <div className="text-[#a0a0b0] text-[10px] font-bold mt-0.5">🔴 Closed</div>
                             ) : (
                               <div className="text-blue-400 text-[10px] font-bold mt-0.5">⏳ Coming Soon</div>
                             )}
                           </div>
                         </div>
-                        {/* Per-match countdown to room release — only when room not yet visible and release time is in the future */}
-                        {!match.roomVisible && !roomClosed && match.roomReleaseAt && releaseMs > nowMs && (
+
+                        {/* Per-match countdown to room release (Phase 1 → Phase 2) */}
+                        {!inWindow && !roomClosed && match.roomReleaseAt && releaseMs > nowLocal && (
                           <div className="mt-2 flex items-center gap-2 bg-blue-500/5 border border-blue-500/20 rounded-lg px-3 py-2">
                             <Lock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
                             <span className="text-blue-400 text-xs font-bold uppercase">Room releases in:</span>
@@ -720,31 +767,63 @@ export default function TournamentDetailPage() {
                             />
                           </div>
                         )}
-                        {/* Show credentials when room is released, to joined players only */}
-                        {match.roomVisible && isJoined && Date.now() >= (match.roomReleaseAt ? parseBDDate(match.roomReleaseAt).getTime() : parseBDDate(match.scheduledAt).getTime()) && (
+
+                        {/* Stage 2: Room window open, credentials set → show them */}
+                        {match.roomVisible && match.roomId && isJoined && (
                           <div className="grid grid-cols-2 gap-3 mt-2">
-                            <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-[#ff6b00]/20">
+                            <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-orange-500/30">
                               <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
                                 <Key className="w-3 h-3" /> Room ID
                               </div>
-                              <div className="text-white font-mono font-black text-lg">{match.roomId}</div>
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="text-white font-mono font-black text-lg">{match.roomId}</div>
+                                <button
+                                  onClick={() => copyToClipboard(match.roomId!, "Room ID")}
+                                  className="shrink-0 text-xs font-bold text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 px-2 py-1 rounded-lg transition-colors"
+                                >
+                                  Copy
+                                </button>
+                              </div>
                             </div>
-                            <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-[#ff6b00]/20">
+                            <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-orange-500/30">
                               <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
                                 <Lock className="w-3 h-3" /> Password
                               </div>
                               <div className="flex items-center gap-2">
-                                <div className="text-white font-mono font-black text-lg">
+                                <div className="text-white font-mono font-black text-lg flex-1">
                                   {showRoomPass ? match.roomPassword : "••••••"}
                                 </div>
-                                <button onClick={() => setShowRoomPass(!showRoomPass)} className="text-[#a0a0b0] hover:text-white">
+                                <button onClick={() => setShowRoomPass(!showRoomPass)} className="text-[#a0a0b0] hover:text-white shrink-0">
                                   {showRoomPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                 </button>
+                                {showRoomPass && match.roomPassword && (
+                                  <button
+                                    onClick={() => copyToClipboard(match.roomPassword!, "Password")}
+                                    className="shrink-0 text-xs font-bold text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 px-2 py-1 rounded-lg transition-colors"
+                                  >
+                                    Copy
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
                         )}
-                        {match.roomVisible && !isJoined && Date.now() >= (match.roomReleaseAt ? parseBDDate(match.roomReleaseAt).getTime() : parseBDDate(match.scheduledAt).getTime()) && (
+
+                        {/* Stage 2: Window open but admin hasn't submitted credentials yet */}
+                        {(match.roomWindowOpen || inWindow) && !match.roomSet && isJoined && (
+                          <div className="mt-2 flex items-start gap-3 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3">
+                            <span className="text-xl shrink-0">⏳</span>
+                            <div>
+                              <div className="text-orange-400 font-black text-sm">Room Not Released Yet</div>
+                              <div className="text-orange-300/70 text-xs mt-0.5">
+                                Releasing Soon — stay on this page. Room ID &amp; Password will appear here automatically.
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Window open but user not joined */}
+                        {match.roomVisible && !isJoined && (
                           <div className="mt-2 text-center text-[#a0a0b0] text-xs py-2 bg-[#1a1a24] rounded-lg">
                             Join the tournament to view room credentials.
                           </div>
@@ -753,6 +832,34 @@ export default function TournamentDetailPage() {
                     );
                   })}
                 </div>
+              </div>
+            )}
+
+            {/* ── STAGE 4: COMPLETED MATCHES (no results yet) ── */}
+            {completedMatches.filter(m => !m.results || m.results.length === 0).length > 0 && (
+              <div className="space-y-3">
+                {completedMatches.filter(m => !m.results || m.results.length === 0).map(match => (
+                  <div key={match.id} className="bg-[#1a1a24] border border-[#2a2a36] rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black px-2.5 py-1 rounded-full bg-[#2a2a36] text-[#a0a0b0] border border-[#3a3a46] uppercase">
+                          Completed
+                        </span>
+                        <span className="text-white font-bold">Match #{match.matchNumber}</span>
+                        {match.mapName && <span className="text-[#a0a0b0] text-xs">{match.mapName}</span>}
+                      </div>
+                      <div className="text-[#a0a0b0] text-xs">{formatBDDate(match.scheduledAt)}</div>
+                    </div>
+                    {/* Stage 4 message: credentials hidden, awaiting results */}
+                    <div className="flex items-center gap-3 bg-gray-500/10 border border-gray-500/20 rounded-lg px-4 py-3">
+                      <CheckCircle className="w-4 h-4 text-gray-400 shrink-0" />
+                      <div>
+                        <div className="text-gray-300 font-bold text-sm">Match Ended</div>
+                        <div className="text-[#a0a0b0] text-xs mt-0.5">Waiting for Results — scores will be published shortly.</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
