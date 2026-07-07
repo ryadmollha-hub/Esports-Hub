@@ -1,28 +1,46 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { hypeBoardTable, registrationsTable, usersTable } from "@workspace/db";
+import { hypeBoardTable, registrationsTable, usersTable, tournamentsTable } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../middlewares/requireAdmin";
+import { computeBadges } from "../lib/badges";
 
 const router: IRouter = Router();
 
-// GET /api/tournaments/:id/hype — anyone can read
+// GET /api/tournaments/:id/hype — anyone can read; includes earned badges
 router.get("/tournaments/:id/hype", async (req, res) => {
   try {
     const tournamentId = parseInt(req.params.id);
     const rows = await db
-      .select()
+      .select({
+        id: hypeBoardTable.id,
+        tournamentId: hypeBoardTable.tournamentId,
+        userId: hypeBoardTable.userId,
+        playerName: hypeBoardTable.playerName,
+        message: hypeBoardTable.message,
+        createdAt: hypeBoardTable.createdAt,
+        totalKills: usersTable.totalKills,
+        totalWins: usersTable.totalWins,
+        tournamentsPlayed: usersTable.tournamentsPlayed,
+      })
       .from(hypeBoardTable)
+      .leftJoin(usersTable, eq(hypeBoardTable.userId, usersTable.clerkId))
       .where(eq(hypeBoardTable.tournamentId, tournamentId))
       .orderBy(desc(hypeBoardTable.createdAt))
       .limit(100);
-    res.json(rows);
+
+    const messages = rows.map(({ totalKills, totalWins, tournamentsPlayed, ...msg }) => ({
+      ...msg,
+      badges: computeBadges({ totalKills, totalWins, tournamentsPlayed }),
+    }));
+
+    res.json(messages);
   } catch {
     res.status(500).json({ error: "Failed to fetch hype messages." });
   }
 });
 
-// POST /api/tournaments/:id/hype — approved registered players only
+// POST /api/tournaments/:id/hype — approved registered players only, 1-min cooldown
 router.post("/tournaments/:id/hype", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
@@ -38,10 +56,45 @@ router.post("/tournaments/:id/hype", async (req, res) => {
       return res.status(400).json({ error: "Message too long (max 120 characters)." });
     }
 
-    // Any logged-in user can post hype (no registration required)
+    // ── Server-side board lock: deny posting when tournament is live/ended ──
+    const [tournament] = await db
+      .select({ status: tournamentsTable.status })
+      .from(tournamentsTable)
+      .where(eq(tournamentsTable.id, tournamentId))
+      .limit(1);
 
-    // Rate limit: 1 message per 2 minutes per user per tournament
-    const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found." });
+    }
+
+    const lockedStatuses = ["live", "ongoing", "ended", "completed", "cancelled"];
+    if (lockedStatuses.includes(tournament.status)) {
+      return res.status(403).json({
+        error: "Hype Board is locked because the match is live or has ended.",
+      });
+    }
+
+    // ── Access control: only approved registered players may post ──
+    const [reg] = await db
+      .select({ id: registrationsTable.id })
+      .from(registrationsTable)
+      .where(
+        and(
+          eq(registrationsTable.tournamentId, tournamentId),
+          eq(registrationsTable.userId, userId),
+          eq(registrationsTable.status, "approved"),
+        ),
+      )
+      .limit(1);
+
+    if (!reg) {
+      return res.status(403).json({
+        error: "Only players who have joined this tournament can post on the Hype Board.",
+      });
+    }
+
+    // ── Rate limit: 1 message per 60 seconds per user per tournament ──
+    const oneMinAgo = new Date(Date.now() - 60 * 1000);
     const [recent] = await db
       .select({ id: hypeBoardTable.id, createdAt: hypeBoardTable.createdAt })
       .from(hypeBoardTable)
@@ -54,12 +107,17 @@ router.post("/tournaments/:id/hype", async (req, res) => {
       .orderBy(desc(hypeBoardTable.createdAt))
       .limit(1);
 
-    if (recent && new Date(recent.createdAt) > twoMinsAgo) {
-      const wait = Math.ceil((new Date(recent.createdAt).getTime() + 2 * 60 * 1000 - Date.now()) / 60000);
-      return res.status(429).json({ error: `আরও ${wait} মিনিট অপেক্ষা করুন।` });
+    if (recent && new Date(recent.createdAt) > oneMinAgo) {
+      const waitMs = new Date(recent.createdAt).getTime() + 60 * 1000 - Date.now();
+      const waitSeconds = Math.ceil(waitMs / 1000);
+      const waitMins = Math.ceil(waitMs / 60000);
+      return res.status(429).json({
+        error: `আরও ${waitMins} মিনিট অপেক্ষা করুন।`,
+        waitSeconds,
+      });
     }
 
-    // Get player name
+    // ── Get player name ──
     const [userRow] = await db
       .select({ displayName: usersTable.displayName, username: usersTable.username })
       .from(usersTable)

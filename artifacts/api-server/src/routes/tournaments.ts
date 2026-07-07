@@ -17,6 +17,7 @@ import {
 } from "@workspace/api-zod";
 import { requireAdmin, requireAuth } from "../middlewares/requireAdmin";
 import { getUserBalance } from "./wallet";
+import { computeBadges } from "../lib/badges";
 
 const router: IRouter = Router();
 
@@ -88,13 +89,18 @@ router.get("/tournaments/:id/participants", async (req, res) => {
         userId: registrationsTable.userId,
         freefireUid: registrationsTable.freefireUid,
         playerName: registrationsTable.playerName,
+        teamMembers: registrationsTable.teamMembers,
         status: registrationsTable.status,
         kills: registrationsTable.kills,
         earnedAmount: registrationsTable.earnedAmount,
         resultRank: registrationsTable.resultRank,
         createdAt: registrationsTable.createdAt,
+        totalKills: usersTable.totalKills,
+        totalWins: usersTable.totalWins,
+        tournamentsPlayed: usersTable.tournamentsPlayed,
       })
       .from(registrationsTable)
+      .leftJoin(usersTable, eq(registrationsTable.userId, usersTable.clerkId))
       .where(
         and(
           eq(registrationsTable.tournamentId, id),
@@ -102,7 +108,13 @@ router.get("/tournaments/:id/participants", async (req, res) => {
         )
       )
       .orderBy(registrationsTable.createdAt);
-    res.json(rows);
+
+    const participants = rows.map(({ totalKills, totalWins, tournamentsPlayed, ...reg }) => ({
+      ...reg,
+      badges: computeBadges({ totalKills, totalWins, tournamentsPlayed }),
+    }));
+
+    res.json(participants);
   } catch {
     res.status(500).json({ error: "Failed to load participants." });
   }
