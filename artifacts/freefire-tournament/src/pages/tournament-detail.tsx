@@ -815,30 +815,12 @@ export default function TournamentDetailPage() {
                               <div className="text-orange-400 text-[10px] font-black mt-0.5 flex items-center justify-end gap-1">
                                 <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse inline-block" /> Room Released
                               </div>
-                            ) : inWindow ? (
-                              <div className="text-orange-400 text-[10px] font-black mt-0.5 flex items-center justify-end gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse inline-block" /> Room Opening…
-                              </div>
-                            ) : roomClosed ? (
-                              <div className="text-[#a0a0b0] text-[10px] font-bold mt-0.5">🔴 Closed</div>
                             ) : (
                               <div className="text-blue-400 text-[10px] font-bold mt-0.5">⏳ Coming Soon</div>
                             )}
                           </div>
                         </div>
 
-                        {/* Per-match countdown to room release (Phase 1 → Phase 2) */}
-                        {!inWindow && !roomClosed && match.roomReleaseAt && releaseMs > nowLocal && (
-                          <div className="mt-2 flex items-center gap-2 bg-blue-500/5 border border-blue-500/20 rounded-lg px-3 py-2">
-                            <Lock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                            <span className="text-blue-400 text-xs font-bold uppercase">Room releases in:</span>
-                            <CountdownTimer
-                              targetDate={match.roomReleaseAt as string}
-                              className="text-sm gap-1"
-                              onExpire={loadMatches}
-                            />
-                          </div>
-                        )}
 
                         {/* Stage 2: Room window open, credentials set → show them */}
                         {match.roomVisible && match.roomId && isJoined && (
@@ -881,25 +863,7 @@ export default function TournamentDetailPage() {
                           </div>
                         )}
 
-                        {/* Stage 2: Window open but admin hasn't submitted credentials yet */}
-                        {(match.roomWindowOpen || inWindow) && !match.roomSet && isJoined && (
-                          <div className="mt-2 flex items-start gap-3 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3">
-                            <span className="text-xl shrink-0">⏳</span>
-                            <div>
-                              <div className="text-orange-400 font-black text-sm">Room Not Released Yet</div>
-                              <div className="text-orange-300/70 text-xs mt-0.5">
-                                Releasing Soon — stay on this page. Room ID &amp; Password will appear here automatically.
-                              </div>
-                            </div>
-                          </div>
-                        )}
 
-                        {/* Window open but user not joined */}
-                        {match.roomVisible && !isJoined && (
-                          <div className="mt-2 text-center text-[#a0a0b0] text-xs py-2 bg-[#1a1a24] rounded-lg">
-                            Join the tournament to view room credentials.
-                          </div>
-                        )}
                       </div>
                     );
                   })}
