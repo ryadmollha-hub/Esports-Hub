@@ -1,0 +1,32 @@
+ULTIMATE MASTER FIX: Synchronize Full Tournament Flow, Backend Join Logic, and Timers (Strictly No Bugs)
+
+The project is currently out of sync. Upcoming matches show "Registration is closed. Match is already live." when users try to join, and ended matches are still showing countdown timers and "MATCH IS LIVE" banners. You must do a thorough, clean, and professional synchronized fix across the entire backend and frontend. 
+
+Follow these absolute rules across all relevant files ('api-server/src/routes/matches.ts', 'tournament-detail.tsx', and 'CountdownTimer.tsx'):
+
+1. TIMEZONE & BACKEND JOIN ROUTE FIX:
+   - Ensure all server and client-side time comparisons strictly use Bangladesh Time (Asia/Dhaka).
+   - In the match registration/join route, DO NOT block users unless the current time has actually passed the match registration window. A match is ONLY "live or closed" if (currentTime >= startTime). 
+   - Fix the false error "Registration is closed. Match is already live." for all upcoming matches.
+
+2. FRONTEND UPCOMING STATE (currentTime < startTime):
+   - Match status badge must say "UPCOMING".
+   - Show the live countdown timer accurately.
+   - The "JOIN" button must be fully active and functional for unregistered players.
+   - Credentials (Room ID / Password) must be hidden.
+
+3. FRONTEND ROOM ID RELEASING WINDOW (startTime - 5 mins <= currentTime < startTime):
+   - Change the countdown timer label/badge to "🔑 Room Opening".
+   - If the admin has uploaded credentials, show Room ID & Password with a copy button to registered users.
+   - If not uploaded yet, show registered users this exact text: "⏳ Room Not Released Yet — Releasing Soon — stay on this page. Room ID & Password will appear here automatically."
+
+4. FRONTEND LIVE STATE (startTime <= currentTime AND currentTime <= startTime + 2 hours):
+   - Change match status badge/UI text to "LIVE" or "MATCH IS LIVE".
+   - Keep Room ID & Password visible to registered users so they can rejoin if disconnected.
+
+5. FRONTEND ENDED/COMPLETED STATE (match.status === 'completed' OR 'ended'):
+   - If a match is completed or ended, completely DESTROY/HIDE the countdown timer numbers and "MATCH IS LIVE" text.
+   - The UI must cleanly render "MATCH COMPLETED - Results will be published soon." or show the final Leaderboard if results are uploaded.
+
+CRITICAL INSTRUCTION:
+Check your conditional operators (`&&`, `||`, `? :`) in the UI components and your timestamp comparisons in the backend controller. Make sure fixing one state does not break another. Keep auth and DB integrity untouched. Perform this full-scale cleanup now.

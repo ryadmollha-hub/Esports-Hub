@@ -158,30 +158,42 @@ router.post("/tournaments/:id/join", async (req, res) => {
       .where(eq(tournamentsTable.id, id));
 
     if (!tournament) return res.status(404).json({ error: "Tournament not found." });
-    if (tournament.status === "live" || tournament.status === "ongoing") {
-      return res.status(400).json({ error: "Registration is closed. Match is already live.", registrationClosed: true });
-    }
+
+    // Tournament-level terminal states
     if (tournament.status === "ended" || tournament.status === "completed" || tournament.status === "cancelled") {
       return res.status(400).json({ error: "This tournament is no longer accepting players.", registrationClosed: true });
     }
 
-    // Guard: block join if any match has been explicitly set live or completed by admin.
-    // This prevents API-bypass joining when tournament-level status hasn't been updated yet.
-    const activeMatches = await db
-      .select({ id: matchesTable.id, status: matchesTable.status })
+    // Guard: block join based on TIME, not stored DB status.
+    // The DB status ("live", "room_released") can be auto-written by GET /matches routes
+    // whenever someone loads the page — so using DB status as the gate causes false positives
+    // (e.g. a match is in the 5-min "room_released" window but DB already says "live").
+    // Rule: registration closes only when now >= scheduledAt (actual match start time).
+    // The Phase-2 "room_released" window (now < scheduledAt) MUST keep registration OPEN.
+    const allMatchesForTournament = await db
+      .select({ id: matchesTable.id, status: matchesTable.status, scheduledAt: matchesTable.scheduledAt })
       .from(matchesTable)
-      .where(and(
-        eq(matchesTable.tournamentId, id),
-        or(
-          eq(matchesTable.status, "live"),
-          eq(matchesTable.status, "completed"),
-        ),
-      ));
-    if (activeMatches.some(m => m.status === "live")) {
+      .where(eq(matchesTable.tournamentId, id));
+
+    const now = new Date();
+    // A match is "effectively live" only when the actual clock has passed its start time
+    // and it hasn't been marked completed (completed matches are handled separately below).
+    const hasActuallyStarted = allMatchesForTournament.some(
+      m => m.status !== "completed" && now >= new Date(m.scheduledAt),
+    );
+    const hasCompleted = allMatchesForTournament.some(m => m.status === "completed");
+
+    if (hasActuallyStarted) {
       return res.status(400).json({ error: "Registration is closed. Match is already live.", registrationClosed: true });
     }
-    if (activeMatches.some(m => m.status === "completed")) {
+    if (hasCompleted) {
       return res.status(400).json({ error: "This tournament is no longer accepting players.", registrationClosed: true });
+    }
+
+    // Also honour the tournament-level "live" flag in case admin set it manually
+    // and there are no individual match records to compare against.
+    if (allMatchesForTournament.length === 0 && (tournament.status === "live" || tournament.status === "ongoing")) {
+      return res.status(400).json({ error: "Registration is closed. Match is already live.", registrationClosed: true });
     }
 
     if (tournament.filledSlots >= tournament.maxSlots) {

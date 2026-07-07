@@ -576,10 +576,12 @@ export default function TournamentDetailPage() {
               </div>
             )}
 
-            {/* Countdown — visible for upcoming AND when room is released (timer keeps ticking).
+            {/* Countdown — only visible when the match hasn't started yet.
+                Guards: !isLive prevents showing "MATCH IS LIVE" for a running match,
+                        !isEnded prevents showing the timer for completed/ended matches.
                 Priority: count down to the earliest upcoming room release time first;
                 once the room is released, count down to match start instead. */}
-            {(t.status === "upcoming" || roomOpen) && (() => {
+            {(t.status === "upcoming" || roomOpen) && !isLive && !isEnded && (() => {
               // Find the earliest match that still has a future room release pending
               const nextRelease = matches
                 .filter(m => !m.roomVisible && m.roomReleaseAt && parseBDDate(m.roomReleaseAt as string).getTime() > nowMs)
