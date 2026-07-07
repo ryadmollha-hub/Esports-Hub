@@ -9,36 +9,61 @@ import { bulkCreateNotifications } from "../lib/notificationHelper";
 
 const router: IRouter = Router();
 
-// Helper: compute effective match status and whether room should be visible
+// Helper: compute effective match status and whether room should be visible.
+//
+// Status flow:
+//   scheduled (Coming Soon) → scheduled+roomVisible (Room Released) → live (Match Live) → completed (Match Completed)
+//
+// Timestamps:
+//   roomReleaseAt  — when room credentials become visible (Phase 2 start)
+//   scheduledAt    — actual match start time             (Phase 3 start)
+//   roomHideAt     — when room hides / match ends        (Phase 4 start)
+//                    defaults to scheduledAt + 2 h when not explicitly set.
+//                    (Previously defaulted to scheduledAt itself, which hid the
+//                    room at match start and prevented the "live" flip — that was the bug.)
 function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
   const now = new Date();
-  const isCompleted = match.status === "completed";
   const startTime = new Date(match.scheduledAt);
-  // Room hides at roomHideAt when set; otherwise auto-hides at scheduledAt
-  const hideAt = match.roomHideAt ? new Date(match.roomHideAt) : startTime;
+
+  // Default hide time: 2 hours after match start when admin hasn't set an explicit end time.
+  // IMPORTANT: the old default was `startTime` which caused the room to disappear the instant
+  // the match began and prevented the effectiveStatus from ever reaching "live".
+  const hideAt = match.roomHideAt
+    ? new Date(match.roomHideAt)
+    : new Date(startTime.getTime() + 2 * 60 * 60 * 1000);
+
+  // If already manually marked completed, honour it immediately.
+  if (match.status === "completed") {
+    return { roomVisible: false, effectiveStatus: "completed" as string };
+  }
 
   let roomVisible = false;
-  let effectiveStatus = match.status;
+  let effectiveStatus: string = match.status;
 
-  if (!isCompleted && match.roomId) {
-    if (now < hideAt) {
-      if (match.roomReleaseAt) {
-        // Timing explicitly set — respect it strictly
-        if (now >= new Date(match.roomReleaseAt)) {
-          roomVisible = true;
-          // Only flip to "live" when actual match start time is also reached.
-          // Room opening (credentials released early) does NOT make the match live.
-          if (effectiveStatus === "scheduled" && now >= startTime) {
-            effectiveStatus = "live";
-          }
+  if (match.roomId) {
+    if (now >= hideAt) {
+      // Phase 4: past the hide/end time → auto-complete, hide room
+      effectiveStatus = "completed";
+      roomVisible = false;
+    } else if (match.roomReleaseAt) {
+      const releaseAt = new Date(match.roomReleaseAt);
+      if (now >= releaseAt) {
+        // Phase 2 / 3: room credentials are released
+        roomVisible = true;
+        // Only advance to "live" when the actual match start time has been reached.
+        // Room release alone does NOT make the match live.
+        if (effectiveStatus === "scheduled" && now >= startTime) {
+          effectiveStatus = "live"; // Phase 3
         }
-        // now < roomReleaseAt → keep hidden; or room open but start not reached → stay "scheduled"
-      } else if (match.status === "live" && now >= startTime) {
-        // No timing configured + admin manually marked live + match start time reached → show room
+        // now < startTime → Phase 2 (Room Released, not yet live)
+      }
+      // else: now < releaseAt → Phase 1 (Coming Soon), room hidden
+    } else {
+      // No release time configured: room visible only when admin manually set status to "live"
+      if (match.status === "live" && now >= startTime) {
         roomVisible = true;
       }
     }
-    // now >= hideAt: room is auto-hidden
   }
 
   return { roomVisible, effectiveStatus };
@@ -65,10 +90,11 @@ router.get("/tournaments/:id/matches", async (req, res) => {
 
         const { roomVisible, effectiveStatus } = computeMatchVisibility(m);
 
-        // Auto-update status to live in DB if needed
-        if (effectiveStatus !== m.status && effectiveStatus === "live") {
+        // Auto-update status in DB when a time-based transition occurs
+        // (scheduled→live at scheduledAt, or scheduled/live→completed at roomHideAt)
+        if (effectiveStatus !== m.status && (effectiveStatus === "live" || effectiveStatus === "completed")) {
           await db.update(matchesTable)
-            .set({ status: "live" })
+            .set({ status: effectiveStatus })
             .where(eq(matchesTable.id, m.id));
         }
 

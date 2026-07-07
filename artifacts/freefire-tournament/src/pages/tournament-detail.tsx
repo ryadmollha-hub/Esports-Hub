@@ -37,13 +37,14 @@ function getPlayerCount(mode: string): number {
 }
 
 const statusConfig: Record<string, { color: string; label: string; dot: string }> = {
-  upcoming:  { color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",    label: "Upcoming",       dot: "bg-yellow-400" },
-  live:      { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",        dot: "bg-emerald-400 animate-pulse" },
-  ongoing:   { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",        dot: "bg-emerald-400 animate-pulse" },
-  room_open: { color: "bg-orange-600/20 text-orange-400 border border-orange-500",       label: "🔑 Room Open",   dot: "bg-orange-400 animate-pulse" },
-  ended:     { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Ended",          dot: "bg-red-400" },
-  completed: { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Completed",      dot: "bg-red-400" },
-  cancelled: { color: "bg-red-700/20 text-red-500 border border-red-700/40",             label: "Cancelled",      dot: "bg-red-500" },
+  upcoming:     { color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",    label: "Upcoming",          dot: "bg-yellow-400" },
+  coming_soon:  { color: "bg-blue-500/20 text-blue-400 border border-blue-500/40",          label: "Coming Soon",       dot: "bg-blue-400" },
+  live:         { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",           dot: "bg-emerald-400 animate-pulse" },
+  ongoing:      { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",           dot: "bg-emerald-400 animate-pulse" },
+  room_open:    { color: "bg-orange-600/20 text-orange-400 border border-orange-500",       label: "🔑 Room Released",  dot: "bg-orange-400 animate-pulse" },
+  ended:        { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Ended",             dot: "bg-red-400" },
+  completed:    { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Completed",         dot: "bg-red-400" },
+  cancelled:    { color: "bg-red-700/20 text-red-500 border border-red-700/40",             label: "Cancelled",         dot: "bg-red-500" },
 };
 
 const podiumConfig = [
@@ -238,7 +239,9 @@ export default function TournamentDetailPage() {
   }, [loadParticipants, loadRules, loadMatches, loadHype, t?.resultsPublished]);
 
   useEffect(() => {
-    const id = setInterval(() => loadMatches(), 60000);
+    // Poll every 30 s so time-based status transitions (Coming Soon → Room Released →
+    // Match Live → Match Completed) are reflected quickly without a manual refresh.
+    const id = setInterval(() => loadMatches(), 30000);
     return () => clearInterval(id);
   }, [loadMatches]);
 
@@ -560,18 +563,39 @@ export default function TournamentDetailPage() {
               </div>
             )}
 
-            {/* Countdown — visible for upcoming AND when room is open (timer keeps ticking) */}
-            {(t.status === "upcoming" || roomOpen) && (t.countdownTo ?? t.startDate) && (
-              <div className={`rounded-xl border p-5 ${roomOpen ? "bg-orange-600/5 border-orange-500/30" : "bg-[#12121a] border-[#ff6b00]/20"}`}>
-                <h3 className={`font-bold uppercase text-sm mb-3 tracking-wider ${roomOpen ? "text-orange-400" : "text-white"}`}>
-                  {roomOpen ? "🔑 Match Starts In" : "Starts In"}
-                </h3>
-                <CountdownTimer targetDate={(t.countdownTo ?? t.startDate)!} className="text-3xl gap-4" />
-                {roomOpen && (
-                  <p className="mt-3 text-orange-300/70 text-xs">Room credentials are now available. Check your join details.</p>
-                )}
-              </div>
-            )}
+            {/* Countdown — visible for upcoming AND when room is released (timer keeps ticking).
+                Priority: count down to the earliest upcoming room release time first;
+                once the room is released, count down to match start instead. */}
+            {(t.status === "upcoming" || roomOpen) && (() => {
+              // Find the earliest match that still has a future room release pending
+              const nextRelease = matches
+                .filter(m => !m.roomVisible && m.roomReleaseAt && parseBDDate(m.roomReleaseAt as string).getTime() > nowMs)
+                .map(m => m.roomReleaseAt as string)
+                .sort((a, b) => parseBDDate(a).getTime() - parseBDDate(b).getTime())[0];
+
+              const countdownTarget = nextRelease ?? (t.countdownTo ?? t.startDate);
+              if (!countdownTarget) return null;
+
+              const isReleaseCountdown = !!nextRelease;
+              return (
+                <div className={`rounded-xl border p-5 ${roomOpen ? "bg-orange-600/5 border-orange-500/30" : isReleaseCountdown ? "bg-blue-600/5 border-blue-500/20" : "bg-[#12121a] border-[#ff6b00]/20"}`}>
+                  <h3 className={`font-bold uppercase text-sm mb-3 tracking-wider ${roomOpen ? "text-orange-400" : isReleaseCountdown ? "text-blue-400" : "text-white"}`}>
+                    {roomOpen ? "🔑 Match Starts In" : isReleaseCountdown ? "🔒 Room Released In" : "Starts In"}
+                  </h3>
+                  <CountdownTimer
+                    targetDate={countdownTarget}
+                    className="text-3xl gap-4"
+                    onExpire={loadMatches}
+                  />
+                  {roomOpen && (
+                    <p className="mt-3 text-orange-300/70 text-xs">Room credentials are now available. Check your join details.</p>
+                  )}
+                  {isReleaseCountdown && !roomOpen && (
+                    <p className="mt-3 text-blue-300/70 text-xs">Room ID and Password will be revealed automatically when this timer reaches zero.</p>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* ── LIVE MATCHES SECTION ── */}
             {liveMatches.length > 0 && (
@@ -639,7 +663,7 @@ export default function TournamentDetailPage() {
                   <Calendar className="w-4 h-4 text-[#ff6b00]" /> Scheduled Matches
                   {roomOpen && (
                     <span className="ml-auto text-[10px] font-black text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse inline-block" /> Room Open
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse inline-block" /> Room Released
                     </span>
                   )}
                 </h3>
@@ -673,16 +697,28 @@ export default function TournamentDetailPage() {
                             <div className="text-[#a0a0b0] text-xs">{formatBDDate(match.scheduledAt)}</div>
                             {match.roomVisible ? (
                               <div className="text-[#ff6b00] text-[10px] font-black mt-0.5 flex items-center justify-end gap-1">
-                                <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse inline-block" /> Room Open
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse inline-block" /> Room Released
                               </div>
                             ) : roomClosed ? (
                               <div className="text-[#a0a0b0] text-[10px] font-bold mt-0.5">🔴 Room closed</div>
-                            ) : roomSoon ? (
-                              <div className="text-yellow-400 text-[10px] font-bold mt-0.5 animate-pulse">⏳ Room in {minsToRelease}m</div>
-                            ) : null}
+                            ) : (
+                              <div className="text-blue-400 text-[10px] font-bold mt-0.5">⏳ Coming Soon</div>
+                            )}
                           </div>
                         </div>
-                        {/* Show credentials when room is open, to joined players only */}
+                        {/* Per-match countdown to room release — only when room not yet visible and release time is in the future */}
+                        {!match.roomVisible && !roomClosed && match.roomReleaseAt && releaseMs > nowMs && (
+                          <div className="mt-2 flex items-center gap-2 bg-blue-500/5 border border-blue-500/20 rounded-lg px-3 py-2">
+                            <Lock className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            <span className="text-blue-400 text-xs font-bold uppercase">Room releases in:</span>
+                            <CountdownTimer
+                              targetDate={match.roomReleaseAt as string}
+                              className="text-sm gap-1"
+                              onExpire={loadMatches}
+                            />
+                          </div>
+                        )}
+                        {/* Show credentials when room is released, to joined players only */}
                         {match.roomVisible && isJoined && Date.now() >= (match.roomReleaseAt ? parseBDDate(match.roomReleaseAt).getTime() : parseBDDate(match.scheduledAt).getTime()) && (
                           <div className="grid grid-cols-2 gap-3 mt-2">
                             <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-[#ff6b00]/20">
