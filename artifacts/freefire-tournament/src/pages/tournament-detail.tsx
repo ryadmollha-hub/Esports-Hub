@@ -246,6 +246,13 @@ export default function TournamentDetailPage() {
   }, [loadMatches]);
 
   useEffect(() => {
+    // Poll hype board every 30 s so new messages appear automatically
+    // without requiring a manual refresh.
+    const id = setInterval(() => loadHype(), 30000);
+    return () => clearInterval(id);
+  }, [loadHype]);
+
+  useEffect(() => {
     if (user) loadBalance();
   }, [user, loadBalance]);
 
@@ -273,7 +280,7 @@ export default function TournamentDetailPage() {
   // BUG FIX 1: do NOT gate liveMatches on scheduledAt — if the admin explicitly
   // set a match to "live", registration must close immediately regardless of start time.
   const liveMatches        = matches.filter(m => m.status === "live");
-  const upcomingMatches    = matches.filter(m => m.status === "scheduled");
+  const upcomingMatches    = matches.filter(m => m.status === "scheduled" || m.status === "room_released");
   const completedMatches   = matches.filter(m => m.status === "completed");
   const matchesWithResults = matches.filter(m => m.results && m.results.length > 0);
 
@@ -287,14 +294,9 @@ export default function TournamentDetailPage() {
     completedMatches.length > 0
   );
 
-  // Room is "open" when credentials are visible but the scheduled start hasn't passed.
-  // parseBDDate: treat timezone-naive scheduledAt strings as UTC+6 (Bangladesh).
-  const roomOpen = matches.some(m =>
-    m.roomVisible && (
-      m.status === "scheduled" ||
-      (m.status === "live" && parseBDDate(m.scheduledAt).getTime() > nowMs)
-    )
-  );
+  // Room is "open" (Phase 2: Room Released) when the API returns status "room_released".
+  // This is the distinct phase between room credentials being visible and match start.
+  const roomOpen = matches.some(m => m.status === "room_released");
 
   // Tournament is "live" when the tournament-level status is live/ongoing,
   // OR when the admin has manually set any match to "live" status.

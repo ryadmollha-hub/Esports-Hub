@@ -11,6 +11,7 @@ export type MatchStatus = typeof MatchStatus[keyof typeof MatchStatus];
 
 export const MatchStatus = {
   scheduled: 'scheduled',
+  room_released: 'room_released',
   live: 'live',
   completed: 'completed',
 } as const;

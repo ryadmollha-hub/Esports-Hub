@@ -1803,7 +1803,7 @@ export default function AdminPage() {
                                             </span>
                                           );
                                         })()}
-                                        {m.status === "scheduled" && (
+                                        {(m.status === "scheduled" || m.status === "room_released") && (
                                           <button
                                             onClick={() => updateMatchStatus(m.id, "live")}
                                             disabled={updatingMatchStatus[m.id]}

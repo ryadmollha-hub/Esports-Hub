@@ -711,7 +711,7 @@ export const GetTournamentMatchesResponseItem = zod.object({
   "tournamentId": zod.number(),
   "matchNumber": zod.number(),
   "scheduledAt": zod.string(),
-  "status": zod.enum(['scheduled', 'live', 'completed']),
+  "status": zod.enum(['scheduled', 'room_released', 'live', 'completed']),
   "mapName": zod.string().nullish(),
   "createdAt": zod.string().optional(),
   "results": zod.array(zod.object({
@@ -784,7 +784,7 @@ export const UpdateMatchResultsResponse = zod.object({
   "tournamentId": zod.number(),
   "matchNumber": zod.number(),
   "scheduledAt": zod.string(),
-  "status": zod.enum(['scheduled', 'live', 'completed']),
+  "status": zod.enum(['scheduled', 'room_released', 'live', 'completed']),
   "mapName": zod.string().nullish(),
   "createdAt": zod.string().optional(),
   "results": zod.array(zod.object({
@@ -826,7 +826,7 @@ export const GetMatchScheduleResponseItem = zod.object({
   "tournamentId": zod.number(),
   "matchNumber": zod.number(),
   "scheduledAt": zod.string(),
-  "status": zod.enum(['scheduled', 'live', 'completed']),
+  "status": zod.enum(['scheduled', 'room_released', 'live', 'completed']),
   "mapName": zod.string().nullish(),
   "createdAt": zod.string().optional(),
   "results": zod.array(zod.object({

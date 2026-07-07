@@ -53,9 +53,10 @@ function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
         // Only advance to "live" when the actual match start time has been reached.
         // Room release alone does NOT make the match live.
         if (effectiveStatus === "scheduled" && now >= startTime) {
-          effectiveStatus = "live"; // Phase 3
+          effectiveStatus = "live"; // Phase 3: Match Live
+        } else if (effectiveStatus === "scheduled") {
+          effectiveStatus = "room_released"; // Phase 2: Room Released, match not yet started
         }
-        // now < startTime → Phase 2 (Room Released, not yet live)
       }
       // else: now < releaseAt → Phase 1 (Coming Soon), room hidden
     } else {
@@ -144,7 +145,9 @@ router.get("/matches/live", async (_req, res) => {
       .innerJoin(tournamentsTable, eq(matchesTable.tournamentId, tournamentsTable.id))
       .orderBy(matchesTable.scheduledAt);
 
-    // Filter for live matches and attach visibility info
+    // Filter for live matches and attach visibility info.
+    // Includes both "live" (Phase 3) and "room_released" (Phase 2) so players
+    // can see the Room Released → Match Live transition without a page change.
     const liveMatches = matches
       .map((m) => {
         const { roomVisible, effectiveStatus } = computeMatchVisibility(m as any);
@@ -156,7 +159,7 @@ router.get("/matches/live", async (_req, res) => {
           roomVisible,
         };
       })
-      .filter((m) => m.status === "live");
+      .filter((m) => m.status === "live" || m.status === "room_released");
 
     res.json(liveMatches);
   } catch {

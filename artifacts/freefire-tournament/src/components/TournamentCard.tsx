@@ -76,12 +76,9 @@ function useRoomOpen(tournamentId: number, clientStatus: StatusKey): { roomOpen:
       if (!res.ok) return;
       const data: Array<{ id: number; matchNumber: number; status: string; roomVisible?: boolean; scheduledAt?: string }> = await res.json();
       const now = Date.now();
-      const open = data.some(m =>
-        m.roomVisible && (
-          m.status === "scheduled" ||
-          (m.status === "live" && m.scheduledAt && parseBDDate(m.scheduledAt).getTime() > now)
-        )
-      );
+      // Phase 2 (Room Released): API returns status "room_released" when room
+      // credentials are visible but the match hasn't started yet.
+      const open = data.some(m => m.status === "room_released");
       setRoomOpen(open);
       const nums = data.map(m => m.matchNumber).filter(Boolean);
       setActiveMatchNumbers(nums);

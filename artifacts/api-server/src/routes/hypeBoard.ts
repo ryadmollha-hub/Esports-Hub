@@ -40,8 +40,8 @@ router.post("/tournaments/:id/hype", async (req, res) => {
 
     // Any logged-in user can post hype (no registration required)
 
-    // Rate limit: 1 message per 10 minutes per user per tournament
-    const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
+    // Rate limit: 1 message per 2 minutes per user per tournament
+    const twoMinsAgo = new Date(Date.now() - 2 * 60 * 1000);
     const [recent] = await db
       .select({ id: hypeBoardTable.id, createdAt: hypeBoardTable.createdAt })
       .from(hypeBoardTable)
@@ -54,8 +54,8 @@ router.post("/tournaments/:id/hype", async (req, res) => {
       .orderBy(desc(hypeBoardTable.createdAt))
       .limit(1);
 
-    if (recent && new Date(recent.createdAt) > tenMinsAgo) {
-      const wait = Math.ceil((new Date(recent.createdAt).getTime() + 10 * 60 * 1000 - Date.now()) / 60000);
+    if (recent && new Date(recent.createdAt) > twoMinsAgo) {
+      const wait = Math.ceil((new Date(recent.createdAt).getTime() + 2 * 60 * 1000 - Date.now()) / 60000);
       return res.status(429).json({ error: `আরও ${wait} মিনিট অপেক্ষা করুন।` });
     }
 

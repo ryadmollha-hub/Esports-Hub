@@ -6,9 +6,10 @@ import { useGetMatchSchedule, getGetMatchScheduleQueryKey } from "@workspace/api
 import { formatBDTime, formatBDDate } from "@/lib/bdTime";
 
 const statusConfig: Record<string, { label: string; color: string; dot: string }> = {
-  scheduled: { label: "Scheduled", color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10", dot: "bg-yellow-400" },
-  live:       { label: "🔴 LIVE",  color: "text-green-400 border-green-400/30 bg-green-400/10",    dot: "bg-green-400 animate-pulse" },
-  completed:  { label: "Completed", color: "text-gray-400 border-gray-400/30 bg-gray-400/10",      dot: "bg-gray-400" },
+  scheduled:     { label: "Coming Soon",    color: "text-yellow-400 border-yellow-400/30 bg-yellow-400/10",  dot: "bg-yellow-400" },
+  room_released: { label: "🔑 Room Released", color: "text-orange-400 border-orange-400/30 bg-orange-400/10", dot: "bg-orange-400 animate-pulse" },
+  live:          { label: "🔴 Match Live",  color: "text-green-400 border-green-400/30 bg-green-400/10",    dot: "bg-green-400 animate-pulse" },
+  completed:     { label: "Match Completed", color: "text-gray-400 border-gray-400/30 bg-gray-400/10",      dot: "bg-gray-400" },
 };
 
 const rankEmoji = (rank: number) => rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : null;
@@ -20,7 +21,7 @@ export default function SchedulePage() {
 
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
 
-  const upcoming = (matches as any[]).filter((m) => m.status === "scheduled" || m.status === "live");
+  const upcoming = (matches as any[]).filter((m) => m.status === "scheduled" || m.status === "room_released" || m.status === "live");
   const past = (matches as any[]).filter((m) => m.status === "completed");
 
   return (
