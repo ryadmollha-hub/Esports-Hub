@@ -40,7 +40,7 @@ router.get("/tournaments/:id/hype", async (req, res) => {
   }
 });
 
-// POST /api/tournaments/:id/hype — approved registered players only, 1-min cooldown
+// POST /api/tournaments/:id/hype — any logged-in user, 2-min cooldown
 router.post("/tournaments/:id/hype", async (req, res) => {
   const userId = await requireAuth(req, res);
   if (!userId) return;
@@ -74,27 +74,8 @@ router.post("/tournaments/:id/hype", async (req, res) => {
       });
     }
 
-    // ── Access control: only approved registered players may post ──
-    const [reg] = await db
-      .select({ id: registrationsTable.id })
-      .from(registrationsTable)
-      .where(
-        and(
-          eq(registrationsTable.tournamentId, tournamentId),
-          eq(registrationsTable.userId, userId),
-          eq(registrationsTable.status, "approved"),
-        ),
-      )
-      .limit(1);
-
-    if (!reg) {
-      return res.status(403).json({
-        error: "Only players who have joined this tournament can post on the Hype Board.",
-      });
-    }
-
-    // ── Rate limit: 1 message per 60 seconds per user per tournament ──
-    const oneMinAgo = new Date(Date.now() - 60 * 1000);
+    // ── Rate limit: 1 message per 2 minutes per user per tournament ──
+    const twoMinsAgo = new Date(Date.now() - 120 * 1000);
     const [recent] = await db
       .select({ id: hypeBoardTable.id, createdAt: hypeBoardTable.createdAt })
       .from(hypeBoardTable)
@@ -107,8 +88,8 @@ router.post("/tournaments/:id/hype", async (req, res) => {
       .orderBy(desc(hypeBoardTable.createdAt))
       .limit(1);
 
-    if (recent && new Date(recent.createdAt) > oneMinAgo) {
-      const waitMs = new Date(recent.createdAt).getTime() + 60 * 1000 - Date.now();
+    if (recent && new Date(recent.createdAt) > twoMinsAgo) {
+      const waitMs = new Date(recent.createdAt).getTime() + 120 * 1000 - Date.now();
       const waitSeconds = Math.ceil(waitMs / 1000);
       const waitMins = Math.ceil(waitMs / 60000);
       return res.status(429).json({

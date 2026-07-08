@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRoute, Link, useLocation, useSearch } from "wouter";
 import { parseBDDate, formatBDTime, formatBDDate } from "@/lib/bdTime";
 import {
@@ -12,6 +12,8 @@ import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import LeaderboardModal from "@/components/LeaderboardModal";
 import PlayerIdentity from "@/components/PlayerIdentity";
+import RankBadge, { getTierInfo } from "@/components/RankBadge";
+import { usePlayerRatingMap } from "@/lib/usePlayerRatings";
 import { useGetTournament, getGetTournamentQueryKey } from "@workspace/api-client-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -254,6 +256,8 @@ export default function TournamentDetailPage() {
   const [hypeLoading, setHypeLoading] = useState(false);
   const [hypeCooldownUntil, setHypeCooldownUntil] = useState(0); // epoch ms until posting allowed
   const [hypeCooldownSecs, setHypeCooldownSecs] = useState(0);   // live countdown display
+  const [hypePlayerCard, setHypePlayerCard] = useState<string | null>(null); // userId of open player card
+  const hypeRatingMap = usePlayerRatingMap();
 
   // Registration form state
   const [regForm, setRegForm] = useState({
@@ -352,8 +356,8 @@ export default function TournamentDetailPage() {
       }
       if (!res.ok) { toast({ title: data.error ?? "Failed", variant: "destructive" }); return; }
       setHypeText("");
-      // Optimistically start a 60-second cooldown on successful post
-      setHypeCooldownUntil(Date.now() + 60 * 1000);
+      // Optimistically start a 2-minute cooldown on successful post
+      setHypeCooldownUntil(Date.now() + 120 * 1000);
       loadHype();
     } catch { toast({ title: "Network error", variant: "destructive" }); }
     finally { setHypePosting(false); }
@@ -498,8 +502,8 @@ export default function TournamentDetailPage() {
   // ── Hype Board access / lock rules ──────────────────────────────────────────
   // 1. The board is completely locked (read-only) if the match is live or ended.
   const hypeBoardLocked = isLive || isEnded || t?.status === "cancelled";
-  // 2. Only approved/joined players may post; unregistered users see a disabled field.
-  const hypeCanPost = !!user && isJoined && !hypeBoardLocked && hypeCooldownSecs <= 0;
+  // 2. Any logged-in user may post while the board is open.
+  const hypeCanPost = !!user && !hypeBoardLocked && hypeCooldownSecs <= 0;
 
   const doJoin = async () => {
     if (!user) { setLocation("/sign-in"); return; }
@@ -1310,6 +1314,64 @@ export default function TournamentDetailPage() {
               </div>
             )}
 
+            {/* ── HYPE BOARD PLAYER CARD MODAL ── */}
+            {hypePlayerCard && (() => {
+              const d = hypeRatingMap.get(hypePlayerCard);
+              if (!d) return null;
+              const tier = getTierInfo(d.rating);
+              return (
+                <div
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                  onClick={() => setHypePlayerCard(null)}
+                >
+                  <div
+                    className="bg-[#12121a] border border-[#ff6b00]/30 rounded-2xl p-6 w-64 shadow-2xl relative"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {/* Close */}
+                    <button
+                      onClick={() => setHypePlayerCard(null)}
+                      className="absolute top-3 right-3 text-[#505060] hover:text-white transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+
+                    <div className="flex flex-col items-center gap-3 text-center">
+                      {/* Avatar */}
+                      <div
+                        className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-black border-2"
+                        style={{ background: `${tier.color}20`, borderColor: `${tier.color}50`, color: tier.color }}
+                      >
+                        {d.playerName.charAt(0).toUpperCase()}
+                      </div>
+
+                      {/* Name + tier */}
+                      <div className="space-y-1.5">
+                        <div className="text-white font-black text-base leading-tight">{d.playerName}</div>
+                        <RankBadge rating={d.rating} size="sm" showRating />
+                      </div>
+
+                      {/* Stats grid */}
+                      <div className="grid grid-cols-3 gap-2 w-full mt-1">
+                        <div className="bg-[#1a1a24] rounded-lg p-2.5">
+                          <div className="text-white font-black text-sm">{d.rating.toLocaleString()}</div>
+                          <div className="text-[#505060] text-[10px] mt-0.5">RP</div>
+                        </div>
+                        <div className="bg-[#1a1a24] rounded-lg p-2.5">
+                          <div className="text-white font-black text-sm">{d.totalWins}</div>
+                          <div className="text-[#505060] text-[10px] mt-0.5">Wins</div>
+                        </div>
+                        <div className="bg-[#1a1a24] rounded-lg p-2.5">
+                          <div className="text-white font-black text-sm">{d.totalMatches}</div>
+                          <div className="text-[#505060] text-[10px] mt-0.5">Played</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── HYPE BOARD ── */}
             {(t?.status === "upcoming" || t?.status === "live" || t?.status === "ongoing" || hypeMessages.length > 0) && (
               <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 overflow-hidden">
@@ -1337,12 +1399,6 @@ export default function TournamentDetailPage() {
                         <span className="text-xs text-[#505060]">
                           Hype Board is locked because the match is {isLive ? "live" : "ended"}.
                         </span>
-                      </div>
-                    ) : !isJoined ? (
-                      /* ── Not-a-participant lock ── */
-                      <div className="flex items-center gap-2 py-1.5 px-3 bg-[#1a1a24] rounded-lg border border-[#2a2a36]">
-                        <Lock className="w-3.5 h-3.5 text-[#505060] shrink-0" />
-                        <span className="text-xs text-[#505060]">Only joined players can chat.</span>
                       </div>
                     ) : (
                       /* ── Active input ── */
@@ -1412,12 +1468,24 @@ export default function TournamentDetailPage() {
                             {msg.playerName.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                              <span className={`text-xs font-black ${isMe ? "text-[#ff6b00]" : "text-[#c0c0d0]"}`}>
-                                <PlayerIdentity playerName={msg.playerName} userId={msg.userId} /> {isMe && <span className="text-[9px] font-bold bg-[#ff6b00]/20 text-[#ff6b00] px-1.5 py-0.5 rounded-full ml-1">You</span>}
-                              </span>
+                            <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                              {/* Clickable username — opens Player Card */}
+                              <button
+                                onClick={() => setHypePlayerCard(msg.userId)}
+                                className={`text-xs font-black leading-none ${isMe ? "text-[#ff6b00]" : "text-[#c0c0d0]"} hover:underline cursor-pointer`}
+                              >
+                                <PlayerIdentity playerName={msg.playerName} userId={msg.userId} />
+                              </button>
+                              {isMe && (
+                                <span className="text-[9px] font-bold bg-[#ff6b00]/20 text-[#ff6b00] px-1.5 py-0.5 rounded-full shrink-0">You</span>
+                              )}
+                              {/* Tier badge — shown when rating data is available */}
+                              {(() => {
+                                const d = hypeRatingMap.get(msg.userId);
+                                return d ? <RankBadge rating={d.rating} size="xs" /> : null;
+                              })()}
                               <BadgeChips badges={msg.badges} />
-                              <span className="text-[10px] text-[#404055]">{timeAgo}</span>
+                              <span className="text-[10px] text-[#404055] ml-auto shrink-0">{timeAgo}</span>
                             </div>
                             <p className="text-sm text-white leading-relaxed break-words">{msg.message}</p>
                           </div>
