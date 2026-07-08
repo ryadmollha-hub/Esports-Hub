@@ -48,7 +48,7 @@ export default function PwaInstallBanner() {
 
   return (
     <div className="fixed bottom-20 left-4 right-4 z-40 max-w-sm mx-auto">
-      <div className="bg-[#12121a] border border-[#ff6b00]/40 rounded-2xl p-4 shadow-2xl flex items-center gap-3">
+      <div className="bg-[#12121a] border border-[#ff6b00]/40 rounded-2xl p-3 shadow-2xl flex items-center gap-2.5">
         <div className="w-10 h-10 rounded-xl bg-[#ff6b00] flex items-center justify-center shrink-0">
           <Flame className="w-5 h-5 text-white" />
         </div>
@@ -59,7 +59,7 @@ export default function PwaInstallBanner() {
         <button
           onClick={handleInstall}
           disabled={installing}
-          className="px-3 py-1.5 bg-[#ff6b00] text-white text-xs font-black uppercase rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50 shrink-0"
+          className="px-2.5 py-1 bg-[#ff6b00] text-white text-xs font-black uppercase rounded-lg hover:bg-[#e66000] transition-colors disabled:opacity-50 shrink-0"
         >
           {installing ? "..." : <Download className="w-4 h-4" />}
         </button>

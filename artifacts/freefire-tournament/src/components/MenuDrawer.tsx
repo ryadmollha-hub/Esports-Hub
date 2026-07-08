@@ -51,14 +51,14 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
     <>
       <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm" onClick={onClose} />
       <div className={`fixed bottom-0 left-0 right-0 z-[70] bg-[#0d0d16] border-t border-[#ff6b00]/20 rounded-t-3xl transition-transform duration-300 ${open ? "translate-y-0" : "translate-y-full"}`} style={{ maxHeight: "90vh", overflowY: "auto" }}>
-        <div className="w-12 h-1 bg-[#2a2a36] rounded-full mx-auto mt-3 mb-2" />
-        <div className="px-4 pb-4">
-          <div className="flex items-center justify-between py-3 border-b border-[#ff6b00]/10 mb-3">
-            <div className="flex items-center gap-2">
+        <div className="w-12 h-1 bg-[#2a2a36] rounded-full mx-auto mt-2.5 mb-1.5" />
+        <div className="px-3 pb-3">
+          <div className="flex items-center justify-between py-2.5 border-b border-[#ff6b00]/10 mb-2.5">
+            <div className="flex items-center gap-1.5">
               <Flame className="w-5 h-5 text-[#ff6b00]" />
               <span className="font-black uppercase text-white tracking-wider">FF <span className="text-[#ff6b00]">Arena</span></span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button onClick={toggleTheme} className="w-8 h-8 rounded-full bg-[#1a1a24] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors">
                 {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
@@ -69,7 +69,7 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
           </div>
 
           {user && (
-            <div className="flex items-center gap-3 p-3 bg-[#12121a] rounded-2xl mb-4 border border-[#ff6b00]/10">
+            <div className="flex items-center gap-2.5 p-2.5 bg-[#12121a] rounded-2xl mb-3 border border-[#ff6b00]/10">
               <div className="w-12 h-12 rounded-full bg-[#ff6b00]/20 border-2 border-[#ff6b00]/50 flex items-center justify-center shrink-0">
                 <User className="w-6 h-6 text-[#ff6b00]" />
               </div>
@@ -77,7 +77,7 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
                 <div className="font-black text-white truncate">{user.displayName ?? user.username ?? "Player"}</div>
                 <div className="text-[#a0a0b0] text-xs truncate">{user.email}</div>
                 {user.isAdmin && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#ff6b00] bg-[#ff6b00]/10 px-2 py-0.5 rounded-full mt-0.5">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#ff6b00] bg-[#ff6b00]/10 px-1.5 py-0.5 rounded-full mt-0.5">
                     <Shield className="w-2.5 h-2.5" /> Admin
                   </span>
                 )}
@@ -86,15 +86,15 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
           )}
 
           {!user && !isAdminSession && (
-            <div className="flex gap-3 mb-4">
-              <Link href="/sign-in" onClick={onClose} className="flex-1 text-center py-3 rounded-2xl border border-[#2a2a36] text-white font-bold text-sm uppercase">{t("menu_sign_in")}</Link>
-              <Link href="/sign-up" onClick={onClose} className="flex-1 text-center py-3 rounded-2xl bg-[#ff6b00] text-white font-bold text-sm uppercase">{t("nav_register")}</Link>
+            <div className="flex gap-2.5 mb-3">
+              <Link href="/sign-in" onClick={onClose} className="flex-1 text-center py-2.5 rounded-2xl border border-[#2a2a36] text-white font-bold text-sm uppercase">{t("menu_sign_in")}</Link>
+              <Link href="/sign-up" onClick={onClose} className="flex-1 text-center py-2.5 rounded-2xl bg-[#ff6b00] text-white font-bold text-sm uppercase">{t("nav_register")}</Link>
             </div>
           )}
 
           <div className="space-y-1">
             {menuItems.map((item) => (
-              <Link key={item.href} href={item.href} onClick={onClose} className="flex items-center gap-3 p-3.5 rounded-2xl hover:bg-[#1a1a24] transition-colors group">
+              <Link key={item.href} href={item.href} onClick={onClose} className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-[#1a1a24] transition-colors group">
                 <div className="w-10 h-10 rounded-xl bg-[#12121a] border border-[#2a2a36] flex items-center justify-center group-hover:border-[#ff6b00]/30 transition-colors shrink-0">
                   <item.icon className="w-5 h-5 text-[#ff6b00]" />
                 </div>
@@ -107,7 +107,7 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
             ))}
 
             {isAdminSession && (
-              <Link href="/admin" onClick={onClose} className="flex items-center gap-3 p-3.5 rounded-2xl hover:bg-[#ff6b00]/5 transition-colors group border border-[#ff6b00]/10">
+              <Link href="/admin" onClick={onClose} className="flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-[#ff6b00]/5 transition-colors group border border-[#ff6b00]/10">
                 <div className="w-10 h-10 rounded-xl bg-[#ff6b00]/10 flex items-center justify-center shrink-0">
                   <Shield className="w-5 h-5 text-[#ff6b00]" />
                 </div>
@@ -121,7 +121,7 @@ export default function MenuDrawer({ open, onClose }: MenuDrawerProps) {
           </div>
 
           {(user || isAdminSession) && (
-            <button onClick={handleLogout} className="w-full mt-4 flex items-center justify-center gap-2 py-3.5 rounded-2xl border border-[#ff2244]/20 text-[#ff2244] font-bold text-sm uppercase hover:bg-[#ff2244]/5 transition-colors">
+            <button onClick={handleLogout} className="w-full mt-3 flex items-center justify-center gap-1.5 py-2.5 rounded-2xl border border-[#ff2244]/20 text-[#ff2244] font-bold text-sm uppercase hover:bg-[#ff2244]/5 transition-colors">
               <LogOut className="w-4 h-4" /> {t("menu_sign_out")}
             </button>
           )}

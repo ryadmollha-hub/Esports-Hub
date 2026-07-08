@@ -112,28 +112,28 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
   return (
     <div className="bg-[#12121a] rounded-2xl border border-[#2a2a36] hover:border-[#ff6b00]/20 transition-colors">
       {/* Header */}
-      <div className="p-4">
-        <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-2.5 mb-2.5">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
+            <div className="flex items-center gap-1.5 flex-wrap mb-1">
               <span className="font-black text-white text-sm truncate max-w-[200px]">
                 {match.matchName || `${match.matchType} Match`}
               </span>
-              <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${statusInfo.className}`}>
+              <span className={`inline-flex items-center gap-1 text-[10px] font-black uppercase px-1.5 py-0.5 rounded-full border ${statusInfo.className}`}>
                 {isActive && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse inline-block mr-0.5" />}
                 {statusInfo.label}
               </span>
               {match.isPrivate ? (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
                   <Lock className="w-2.5 h-2.5" /> Private
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/30">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/30">
                   <Globe className="w-2.5 h-2.5" /> Public
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-3 text-xs text-[#606070]">
+            <div className="flex items-center gap-2.5 text-xs text-[#606070]">
               <span className="flex items-center gap-1"><Swords className="w-3 h-3" /> {match.matchType}</span>
               <span className="flex items-center gap-1"><Trophy className="w-3 h-3 text-[#ffd700]" /> ৳{Number(match.prizePool).toLocaleString()}</span>
               <span className="flex items-center gap-1"><Users className="w-3 h-3" />
@@ -143,7 +143,7 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
               </span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {match.pendingRequests > 0 && (
               <span className="w-5 h-5 rounded-full bg-[#ff6b00] text-white text-[10px] font-black flex items-center justify-center">
                 {match.pendingRequests}
@@ -158,22 +158,22 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
 
         {/* Pending approval banner */}
         {effStatus === "pending_approval" && (
-          <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl px-3 py-2 text-xs text-yellow-400 font-bold flex items-center gap-1.5">
+          <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl px-2.5 py-1.5 text-xs text-yellow-400 font-bold flex items-center gap-1">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             Awaiting admin approval — your match will go live once reviewed
           </div>
         )}
         {/* Timer display */}
         {isTimerRunning && startsAt && (
-          <div className="bg-[#0a0a0f] rounded-xl px-3 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs text-[#a0a0b0]">
+          <div className="bg-[#0a0a0f] rounded-xl px-2.5 py-1.5 flex items-center justify-between">
+            <div className="flex items-center gap-1 text-xs text-[#a0a0b0]">
               <Timer className="w-3.5 h-3.5 text-[#ff6b00]" /> Match starts in:
             </div>
             <CountdownTimer targetDate={startsAt} className="text-xs" />
           </div>
         )}
         {isActive && (
-          <div className="bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-xl px-3 py-2 text-xs text-[#00ff88] font-bold flex items-center gap-1.5">
+          <div className="bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-xl px-2.5 py-1.5 text-xs text-[#00ff88] font-bold flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse" />
             Match is LIVE — Room details visible to accepted players
           </div>
@@ -182,17 +182,17 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
 
       {/* Expanded Controls */}
       {expanded && (
-        <div className="border-t border-[#2a2a36] p-4 space-y-4">
+        <div className="border-t border-[#2a2a36] p-3 space-y-3">
 
 
           {/* Admin Room Credentials (set by admin, read-only for creator) */}
           {(match.adminRoomId || match.adminRoomPassword) && (
-            <div className="bg-[#0a0a0f] border border-[#ff6b00]/20 rounded-xl p-3 space-y-2">
-              <div className="flex items-center gap-1.5 mb-1">
+            <div className="bg-[#0a0a0f] border border-[#ff6b00]/20 rounded-xl p-2.5 space-y-1.5">
+              <div className="flex items-center gap-1 mb-1">
                 <span className="text-[10px] font-black uppercase text-[#ff6b00] tracking-wider">Admin Room Credentials</span>
               </div>
               {match.adminRoomId && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span className="text-[#a0a0b0] text-xs w-20 shrink-0">Room ID</span>
                   <code className="flex-1 text-[#00ff88] font-mono text-sm font-bold truncate">{match.adminRoomId}</code>
                   <button onClick={() => copyToClipboard(match.adminRoomId, toast)}
@@ -202,7 +202,7 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
                 </div>
               )}
               {match.adminRoomPassword && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <span className="text-[#a0a0b0] text-xs w-20 shrink-0">Password</span>
                   <code className="flex-1 text-yellow-400 font-mono text-sm font-bold truncate">{match.adminRoomPassword}</code>
                   <button onClick={() => copyToClipboard(match.adminRoomPassword, toast)}
@@ -218,7 +218,7 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
 
           {/* Join Requests */}
           <div>
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1.5">
               <label className="text-[#a0a0b0] text-xs uppercase tracking-wider font-bold flex items-center gap-1">
                 <Users className="w-3 h-3" /> Join Requests
                 {pendingReqs.length > 0 && (
@@ -233,13 +233,13 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
             </div>
 
             {loadingRequests ? (
-              <div className="text-center py-3 text-[#606070] text-xs">Loading...</div>
+              <div className="text-center py-2.5 text-[#606070] text-xs">Loading...</div>
             ) : requests.length === 0 ? (
               <p className="text-[#4a4a5a] text-xs">No requests yet.</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {requests.map((r) => (
-                  <div key={r.id} className="bg-[#0a0a0f] rounded-xl p-3 flex items-center justify-between gap-2">
+                  <div key={r.id} className="bg-[#0a0a0f] rounded-xl p-2.5 flex items-center justify-between gap-1.5">
                     <div className="flex-1 min-w-0">
                       <div className="text-white text-xs font-bold truncate">{r.username || "Unknown"}</div>
                       {r.teamPlayers ? (
@@ -259,8 +259,8 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
                         <div className="text-[#606070] text-[10px]">IGN: {r.inGameName} · UID: {r.gameUid}</div>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${REQUEST_STATUS[r.status]?.className ?? ""}`}>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${REQUEST_STATUS[r.status]?.className ?? ""}`}>
                         {REQUEST_STATUS[r.status]?.label ?? r.status}
                       </span>
                       {r.status === "pending" && (
@@ -285,12 +285,12 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
           {/* Accepted participants */}
           {acceptedReqs.length > 0 && (
             <div>
-              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold">
+              <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">
                 Participants ({acceptedReqs.length})
               </label>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 {acceptedReqs.map((r) => (
-                  <div key={r.id} className="bg-[#0a0a0f] rounded-lg px-3 py-2 flex items-center justify-between">
+                  <div key={r.id} className="bg-[#0a0a0f] rounded-lg px-2.5 py-1.5 flex items-center justify-between">
                     <div className="text-white text-xs font-bold">{r.username || "Unknown"}</div>
                     <div className="text-[#606070] text-[10px]">{r.inGameName}</div>
                   </div>
@@ -302,7 +302,7 @@ function MyMatchCard({ match, onRefresh }: { match: any; onRefresh: () => void }
           {/* Cancel */}
           {effStatus !== "ended" && effStatus !== "cancelled" && (
             <button onClick={handleDelete} disabled={deleting}
-              className="w-full py-2 border border-[#ff2244]/20 text-[#ff2244] text-xs font-black uppercase rounded-xl hover:bg-[#ff2244]/5 disabled:opacity-50 transition-colors flex items-center justify-center gap-1.5">
+              className="w-full py-1.5 border border-[#ff2244]/20 text-[#ff2244] text-xs font-black uppercase rounded-xl hover:bg-[#ff2244]/5 disabled:opacity-50 transition-colors flex items-center justify-center gap-1">
               <Trash2 className="w-3.5 h-3.5" />
               {deleting ? "Cancelling..." : "Cancel & Delete Match"}
             </button>
@@ -326,28 +326,28 @@ function MyRequestCard({ req }: { req: any }) {
   const startsAt = getStartsAt(req);
 
   return (
-    <div className="bg-[#12121a] rounded-2xl border border-[#2a2a36] p-4">
-      <div className="flex items-start justify-between gap-3 mb-3">
+    <div className="bg-[#12121a] rounded-2xl border border-[#2a2a36] p-3">
+      <div className="flex items-start justify-between gap-2.5 mb-2.5">
         <div className="flex-1 min-w-0">
           <div className="font-black text-white text-sm truncate mb-1">{req.matchName}</div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[#606070] text-xs">by {req.creatorName}</span>
             <span className="text-[#2a2a36]">·</span>
             <span className="text-xs text-[#a0a0b0]">{req.matchType}</span>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1.5 shrink-0">
-          <span className={`inline-flex items-center text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${reqStatus.className}`}>
+        <div className="flex flex-col items-end gap-1 shrink-0">
+          <span className={`inline-flex items-center text-[10px] font-black uppercase px-1.5 py-0.5 rounded-full border ${reqStatus.className}`}>
             {reqStatus.label}
           </span>
-          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${matchStatusInfo.className}`}>
+          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${matchStatusInfo.className}`}>
             {isActive && <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse inline-block" />}
             {matchStatusInfo.label}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-xs text-[#606070] mb-3">
+      <div className="flex items-center gap-3 text-xs text-[#606070] mb-2.5">
         <span className="flex items-center gap-1"><Trophy className="w-3 h-3 text-[#ffd700]" /> ৳{Number(req.prizePool).toLocaleString()}</span>
         <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {req.filledSlots}/{req.maxSlots}</span>
         {req.entryFee && Number(req.entryFee) > 0 && (
@@ -357,7 +357,7 @@ function MyRequestCard({ req }: { req: any }) {
 
       {/* Timer countdown */}
       {req.timerStartedAt && !isActive && startsAt && (
-        <div className="bg-[#0a0a0f] rounded-xl px-3 py-2 flex items-center justify-between mb-3 text-xs">
+        <div className="bg-[#0a0a0f] rounded-xl px-2.5 py-1.5 flex items-center justify-between mb-2.5 text-xs">
           <span className="text-[#a0a0b0] flex items-center gap-1"><Timer className="w-3 h-3 text-[#ff6b00]" /> Starts in:</span>
           <CountdownTimer targetDate={startsAt} className="text-xs" />
         </div>
@@ -365,7 +365,7 @@ function MyRequestCard({ req }: { req: any }) {
 
       {/* Request pending info */}
       {req.status === "pending" && (
-        <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl px-3 py-2 text-xs text-yellow-400 flex items-center gap-1.5">
+        <div className="bg-yellow-500/5 border border-yellow-500/20 rounded-xl px-2.5 py-1.5 text-xs text-yellow-400 flex items-center gap-1">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
           Waiting for the match creator to approve your request.
         </div>
@@ -373,7 +373,7 @@ function MyRequestCard({ req }: { req: any }) {
 
       {/* Rejected info */}
       {req.status === "rejected" && (
-        <div className="bg-[#ff2244]/5 border border-[#ff2244]/20 rounded-xl px-3 py-2 text-xs text-[#ff2244] flex items-center gap-1.5">
+        <div className="bg-[#ff2244]/5 border border-[#ff2244]/20 rounded-xl px-2.5 py-1.5 text-xs text-[#ff2244] flex items-center gap-1">
           <XCircle className="w-3.5 h-3.5 shrink-0" />
           Your request was rejected by the creator.
         </div>
@@ -390,7 +390,7 @@ function MyRequestCard({ req }: { req: any }) {
 
         if (!req.adminRoomId) {
           return (
-            <div className="bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-xl px-3 py-2 text-xs text-[#00ff88] flex items-center gap-1.5">
+            <div className="bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-xl px-2.5 py-1.5 text-xs text-[#00ff88] flex items-center gap-1">
               <CheckCircle className="w-3.5 h-3.5 shrink-0" />
               You're in! Room details will appear here once the admin sets the Room ID.
             </div>
@@ -399,8 +399,8 @@ function MyRequestCard({ req }: { req: any }) {
 
         if (!shouldReveal) {
           return (
-            <div className="bg-[#0a0a0f] border border-[#2a2a36] rounded-xl p-3">
-              <div className="flex items-center gap-1.5 mb-1.5">
+            <div className="bg-[#0a0a0f] border border-[#2a2a36] rounded-xl p-2.5">
+              <div className="flex items-center gap-1 mb-1">
                 <Lock className="w-3.5 h-3.5 text-[#ff6b00] shrink-0" />
                 <span className="text-xs font-black text-[#ff6b00] uppercase">Room ID Locked</span>
               </div>
@@ -415,14 +415,14 @@ function MyRequestCard({ req }: { req: any }) {
         }
 
         return (
-          <div className="mt-3">
-            <div className="bg-[#0a0a0f] border border-[#00ff88]/30 rounded-xl p-3 space-y-2">
-              <div className="text-xs font-bold text-[#00ff88] uppercase flex items-center gap-1.5">
+          <div className="mt-2.5">
+            <div className="bg-[#0a0a0f] border border-[#00ff88]/30 rounded-xl p-2.5 space-y-1.5">
+              <div className="text-xs font-bold text-[#00ff88] uppercase flex items-center gap-1">
                 <Shield className="w-3.5 h-3.5" /> Room Details — You're Registered &amp; Paid
               </div>
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-2.5">
                 <span className="text-[#a0a0b0] text-xs shrink-0">Room ID</span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <code className="text-[#00ff88] font-mono text-sm font-bold">{req.adminRoomId}</code>
                   <button onClick={() => copyToClipboard(req.adminRoomId, toast)}
                     className="text-[#606070] hover:text-[#00ff88] transition-colors">
@@ -431,9 +431,9 @@ function MyRequestCard({ req }: { req: any }) {
                 </div>
               </div>
               {req.adminRoomPassword && (
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center justify-between gap-2.5">
                   <span className="text-[#a0a0b0] text-xs shrink-0">Password</span>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <code className="text-yellow-400 font-mono text-sm font-bold">{req.adminRoomPassword}</code>
                     <button onClick={() => copyToClipboard(req.adminRoomPassword, toast)}
                       className="text-[#606070] hover:text-yellow-400 transition-colors">
@@ -449,7 +449,7 @@ function MyRequestCard({ req }: { req: any }) {
 
       {/* Not accepted — hide room details */}
       {req.status !== "accepted" && req.status !== "rejected" && (
-        <div className="mt-2 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2 text-xs text-[#606070] flex items-center gap-1.5">
+        <div className="mt-1.5 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-2.5 py-1.5 text-xs text-[#606070] flex items-center gap-1">
           <Lock className="w-3 h-3 shrink-0" />
           Room details will be visible once your request is accepted.
         </div>
@@ -493,11 +493,11 @@ export default function MyMatchesPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0f] text-white">
         <Navbar />
-        <div className="max-w-2xl mx-auto px-4 pt-28 pb-24 text-center">
-          <Swords className="w-12 h-12 text-[#ff6b00]/30 mx-auto mb-4" />
-          <h1 className="text-2xl font-black text-white mb-2">My Matches</h1>
-          <p className="text-[#a0a0b0] mb-6">Sign in to view and manage your matches.</p>
-          <Link href="/sign-in" className="inline-block px-6 py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
+        <div className="max-w-2xl mx-auto px-3 pt-28 pb-24 text-center">
+          <Swords className="w-12 h-12 text-[#ff6b00]/30 mx-auto mb-3" />
+          <h1 className="text-2xl font-black text-white mb-1.5">My Matches</h1>
+          <p className="text-[#a0a0b0] mb-4">Sign in to view and manage your matches.</p>
+          <Link href="/sign-in" className="inline-block px-4 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
             Sign In
           </Link>
         </div>
@@ -509,9 +509,9 @@ export default function MyMatchesPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-2xl mx-auto px-4 pt-16 pb-28">
+      <div className="max-w-2xl mx-auto px-3 pt-16 pb-28">
         {/* Header */}
-        <div className="flex items-center justify-between gap-3 mb-5 mt-4">
+        <div className="flex items-center justify-between gap-2.5 mb-3.5 mt-3">
           <div>
             <h1 className="text-2xl font-black uppercase">
               My <span className="text-[#ff6b00]">Matches</span>
@@ -519,15 +519,15 @@ export default function MyMatchesPage() {
             <p className="text-[#a0a0b0] text-sm">Manage your matches and join requests</p>
           </div>
           <button onClick={openCreateMatch}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-all shadow-[0_0_16px_rgba(255,107,0,0.3)]">
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-all shadow-[0_0_16px_rgba(255,107,0,0.3)]">
             <Plus className="w-4 h-4" /> Create
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-[#12121a] rounded-2xl p-1 mb-5 border border-[#2a2a36]">
+        <div className="flex gap-1 bg-[#12121a] rounded-2xl p-1 mb-3.5 border border-[#2a2a36]">
           <button onClick={() => setTab("mine")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black uppercase transition-all ${tab === "mine" ? "bg-[#ff6b00] text-white" : "text-[#606070] hover:text-[#a0a0b0]"}`}>
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-black uppercase transition-all ${tab === "mine" ? "bg-[#ff6b00] text-white" : "text-[#606070] hover:text-[#a0a0b0]"}`}>
             <Swords className="w-4 h-4" />
             My Matches
             {myMatches.length > 0 && (
@@ -537,7 +537,7 @@ export default function MyMatchesPage() {
             )}
           </button>
           <button onClick={() => setTab("requests")}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black uppercase transition-all ${tab === "requests" ? "bg-[#ff6b00] text-white" : "text-[#606070] hover:text-[#a0a0b0]"}`}>
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-black uppercase transition-all ${tab === "requests" ? "bg-[#ff6b00] text-white" : "text-[#606070] hover:text-[#a0a0b0]"}`}>
             <Users className="w-4 h-4" />
             My Requests
             {myRequests.filter((r) => r.status === "pending").length > 0 && (
@@ -551,28 +551,28 @@ export default function MyMatchesPage() {
         {/* Tab: My Created Matches */}
         {tab === "mine" && (
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2.5">
               <p className="text-[#a0a0b0] text-xs">Matches you created — manage join requests</p>
               <button onClick={loadMine} disabled={loadingMine} className="text-[#606070] hover:text-[#a0a0b0] transition-colors">
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingMine ? "animate-spin" : ""}`} />
               </button>
             </div>
             {loadingMine ? (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {[1, 2].map((i) => <div key={i} className="h-24 bg-[#12121a] rounded-2xl animate-pulse" />)}
               </div>
             ) : myMatches.length === 0 ? (
-              <div className="bg-[#12121a] border border-[#ff6b00]/10 rounded-2xl p-10 text-center">
-                <Swords className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/20" />
+              <div className="bg-[#12121a] border border-[#ff6b00]/10 rounded-2xl p-7 text-center">
+                <Swords className="w-10 h-10 mx-auto mb-2.5 text-[#ff6b00]/20" />
                 <h3 className="font-bold text-white mb-1">No matches yet</h3>
-                <p className="text-[#a0a0b0] text-sm mb-4">Create your first match to get started.</p>
+                <p className="text-[#a0a0b0] text-sm mb-3">Create your first match to get started.</p>
                 <button onClick={openCreateMatch}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
                   <Plus className="w-4 h-4" /> Create Match
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {myMatches.map((m) => (
                   <MyMatchCard key={m.id} match={m} onRefresh={loadMine} />
                 ))}
@@ -584,28 +584,28 @@ export default function MyMatchesPage() {
         {/* Tab: My Join Requests */}
         {tab === "requests" && (
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2.5">
               <p className="text-[#a0a0b0] text-xs">Matches you requested to join — track your request status</p>
               <button onClick={loadRequests} disabled={loadingRequests} className="text-[#606070] hover:text-[#a0a0b0] transition-colors">
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingRequests ? "animate-spin" : ""}`} />
               </button>
             </div>
             {loadingRequests ? (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {[1, 2].map((i) => <div key={i} className="h-28 bg-[#12121a] rounded-2xl animate-pulse" />)}
               </div>
             ) : myRequests.length === 0 ? (
-              <div className="bg-[#12121a] border border-[#ff6b00]/10 rounded-2xl p-10 text-center">
-                <Users className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/20" />
+              <div className="bg-[#12121a] border border-[#ff6b00]/10 rounded-2xl p-7 text-center">
+                <Users className="w-10 h-10 mx-auto mb-2.5 text-[#ff6b00]/20" />
                 <h3 className="font-bold text-white mb-1">No requests yet</h3>
-                <p className="text-[#a0a0b0] text-sm mb-4">Join private matches to see your requests here.</p>
+                <p className="text-[#a0a0b0] text-sm mb-3">Join private matches to see your requests here.</p>
                 <Link href="/tournaments"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
                   Browse Matches
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {myRequests.map((r) => (
                   <MyRequestCard key={r.joinId} req={r} />
                 ))}

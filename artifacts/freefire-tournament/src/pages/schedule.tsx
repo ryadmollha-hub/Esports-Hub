@@ -28,8 +28,8 @@ export default function SchedulePage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-16 pb-20">
-        <div className="mb-8">
+      <div className="max-w-4xl mx-auto px-3 pt-16 pb-20">
+        <div className="mb-5">
           <h1 className="text-2xl sm:text-4xl font-black uppercase mb-1" data-testid="heading-schedule">
             Match <span className="text-[#ff6b00]">Schedule</span>
           </h1>
@@ -37,24 +37,24 @@ export default function SchedulePage() {
         </div>
 
         {isLoading ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {[1,2,3].map((i) => <div key={i} className="h-20 bg-[#12121a] rounded-xl animate-pulse" />)}
           </div>
         ) : (matches as any[]).length === 0 ? (
           <div className="text-center py-20">
-            <Calendar className="w-16 h-16 mx-auto mb-4 text-[#ff6b00]/20" />
-            <h3 className="text-xl font-black mb-2">No Matches Yet</h3>
+            <Calendar className="w-16 h-16 mx-auto mb-3 text-[#ff6b00]/20" />
+            <h3 className="text-xl font-black mb-1.5">No Matches Yet</h3>
             <p className="text-[#a0a0b0] text-sm">Matches will appear here once tournaments begin</p>
           </div>
         ) : (
-          <div className="space-y-10">
+          <div className="space-y-7">
             {upcoming.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-1.5 mb-3">
                   <div className="w-2 h-2 bg-[#ff6b00] rounded-full animate-pulse" />
                   <h2 className="text-sm font-black uppercase tracking-widest text-[#ff6b00]">Upcoming & Live</h2>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {upcoming.map((match: any) => (
                     <MatchRow key={match.id} match={match} expanded={expanded[match.id]} onToggle={() => setExpanded((p) => ({ ...p, [match.id]: !p[match.id] }))} />
                   ))}
@@ -63,11 +63,11 @@ export default function SchedulePage() {
             )}
             {past.length > 0 && (
               <div>
-                <div className="flex items-center gap-2 mb-4">
+                <div className="flex items-center gap-1.5 mb-3">
                   <div className="w-2 h-2 bg-[#a0a0b0] rounded-full" />
                   <h2 className="text-sm font-black uppercase tracking-widest text-[#a0a0b0]">Completed</h2>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {past.map((match: any) => (
                     <MatchRow key={match.id} match={match} expanded={expanded[match.id]} onToggle={() => setExpanded((p) => ({ ...p, [match.id]: !p[match.id] }))} />
                   ))}
@@ -88,10 +88,10 @@ function MatchRow({ match, expanded, onToggle }: { match: any; expanded: boolean
 
   return (
     <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 hover:border-[#ff6b00]/25 transition-colors overflow-hidden" data-testid={`row-match-${match.id}`}>
-      <div className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+      <div className="p-3 flex flex-col sm:flex-row items-start sm:items-center gap-2.5">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-            <span className={`text-[10px] font-black px-2 py-0.5 rounded border flex items-center gap-1.5 uppercase ${sc.color}`}>
+          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+            <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border flex items-center gap-1 uppercase ${sc.color}`}>
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`} />
               {sc.label}
             </span>
@@ -106,7 +106,7 @@ function MatchRow({ match, expanded, onToggle }: { match: any; expanded: boolean
             </div>
           )}
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           <div className="text-right">
             <div className="flex items-center gap-1 text-[#a0a0b0] text-sm justify-end" data-testid={`text-match-time-${match.id}`}>
               <Clock className="w-3.5 h-3.5" />
@@ -119,7 +119,7 @@ function MatchRow({ match, expanded, onToggle }: { match: any; expanded: boolean
           {hasResults && (
             <button
               onClick={onToggle}
-              className="flex items-center gap-1 px-3 py-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-lg text-[#ff6b00] text-xs font-bold hover:bg-[#ff6b00]/20 transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-lg text-[#ff6b00] text-xs font-bold hover:bg-[#ff6b00]/20 transition-colors"
             >
               Results {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </button>
@@ -129,14 +129,14 @@ function MatchRow({ match, expanded, onToggle }: { match: any; expanded: boolean
 
       {/* Results expansion */}
       {hasResults && expanded && (
-        <div className="border-t border-[#ff6b00]/10 bg-[#0d0d16] p-4">
-          <div className="flex items-center gap-2 mb-3">
+        <div className="border-t border-[#ff6b00]/10 bg-[#0d0d16] p-3">
+          <div className="flex items-center gap-1.5 mb-2.5">
             <Trophy className="w-4 h-4 text-[#ffd700]" />
             <span className="text-white font-black text-sm uppercase tracking-wide">Final Results</span>
           </div>
 
           {/* Top 3 Podium */}
-          <div className="space-y-2 mb-3">
+          <div className="space-y-1.5 mb-2.5">
             {match.results.slice(0, 3).map((r: any) => {
               const emoji = rankEmoji(r.rank);
               const podiumColors = [
@@ -146,12 +146,12 @@ function MatchRow({ match, expanded, onToggle }: { match: any; expanded: boolean
               ];
               const colClass = podiumColors[r.rank - 1] ?? "from-[#1a1a24] to-transparent border-[#2a2a36] text-[#a0a0b0]";
               return (
-                <div key={r.id ?? r.rank} className={`bg-gradient-to-r ${colClass} border rounded-xl p-3 flex items-center gap-3`}>
+                <div key={r.id ?? r.rank} className={`bg-gradient-to-r ${colClass} border rounded-xl p-2.5 flex items-center gap-2.5`}>
                   <span className="text-2xl shrink-0">{emoji ?? `#${r.rank}`}</span>
                   <div className="flex-1 min-w-0">
                     <div className="font-black text-white truncate"><PlayerIdentity playerName={r.playerName} /></div>
                   </div>
-                  <div className="flex gap-3 shrink-0 text-xs">
+                  <div className="flex gap-2.5 shrink-0 text-xs">
                     <div className="text-center">
                       <div className="flex items-center gap-1 text-[#ff6b00] font-black">
                         <Target className="w-3 h-3" /> {r.kills}
@@ -176,19 +176,19 @@ function MatchRow({ match, expanded, onToggle }: { match: any; expanded: boolean
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-[#606070] uppercase border-b border-[#2a2a36]">
-                    <th className="text-left py-1.5 pr-2">#</th>
-                    <th className="text-left py-1.5 pr-2">Player</th>
-                    <th className="text-right py-1.5 pr-2">Kills</th>
-                    <th className="text-right py-1.5">Points</th>
+                    <th className="text-left py-1 pr-1.5">#</th>
+                    <th className="text-left py-1 pr-1.5">Player</th>
+                    <th className="text-right py-1 pr-1.5">Kills</th>
+                    <th className="text-right py-1">Points</th>
                   </tr>
                 </thead>
                 <tbody>
                   {match.results.slice(3).map((r: any) => (
                     <tr key={r.id ?? r.rank} className="border-b border-[#1a1a24] last:border-0 hover:bg-[#ff6b00]/3">
-                      <td className="py-1.5 pr-2 text-[#a0a0b0] font-bold">#{r.rank}</td>
-                      <td className="py-1.5 pr-2 text-white font-medium"><PlayerIdentity playerName={r.playerName} /></td>
-                      <td className="py-1.5 pr-2 text-right text-[#ff6b00] font-bold">{r.kills}</td>
-                      <td className="py-1.5 text-right text-white font-bold">{r.points}</td>
+                      <td className="py-1 pr-1.5 text-[#a0a0b0] font-bold">#{r.rank}</td>
+                      <td className="py-1 pr-1.5 text-white font-medium"><PlayerIdentity playerName={r.playerName} /></td>
+                      <td className="py-1 pr-1.5 text-right text-[#ff6b00] font-bold">{r.kills}</td>
+                      <td className="py-1 text-right text-white font-bold">{r.points}</td>
                     </tr>
                   ))}
                 </tbody>

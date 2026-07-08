@@ -48,7 +48,7 @@ const fadeUp = {
   show: (i = 0) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.55, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] },
+    transition: { duration: 0.55, delay: i * 0.1, ease: [0.22, 1, 0.36, 1] as const },
   }),
 };
 
@@ -103,7 +103,7 @@ export default function Home() {
       <Navbar />
 
       {/* ── HERO ── */}
-      <section className="relative min-h-[75dvh] flex flex-col items-center justify-center text-center px-4 overflow-hidden pt-12">
+      <section className="relative min-h-[75dvh] flex flex-col items-center justify-center text-center px-3 overflow-hidden pt-8">
         {/* BG image */}
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-[0.06]" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#080c14]/70 via-[#080c14]/20 to-[#080c14]" />
@@ -117,10 +117,10 @@ export default function Home() {
         <FloatingOrb x="55%" y="65%" size={100} color="rgba(0,180,255,0.05)" delay={2.5} />
         <FloatingOrb x="3%" y="70%" size={120} color="rgba(120,60,255,0.05)" delay={1} />
 
-        <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center gap-3.5">
+        <div className="relative z-10 max-w-3xl mx-auto flex flex-col items-center gap-2.5">
           {/* Badge */}
           <motion.div variants={fadeUp} initial="hidden" animate="show" custom={0}
-            className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#ff4500]/10 border border-[#ff4500]/25 rounded-full text-[#ff4500] text-[10px] font-black uppercase tracking-[0.2em]">
+            className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#ff4500]/10 border border-[#ff4500]/25 rounded-full text-[#ff4500] text-[10px] font-black uppercase tracking-[0.2em]">
             <motion.div animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 1.5, repeat: Infinity }}>
               <Flame className="w-2.5 h-2.5" />
             </motion.div>
@@ -144,9 +144,9 @@ export default function Home() {
           </motion.p>
 
           {/* Countdown + Stats row */}
-          <motion.div variants={fadeUp} initial="hidden" animate="show" custom={3} className="w-full max-w-lg flex flex-col sm:flex-row gap-2.5">
+          <motion.div variants={fadeUp} initial="hidden" animate="show" custom={3} className="w-full max-w-lg flex flex-col sm:flex-row gap-2">
             {nextTournament && (
-              <div className="relative flex-1 rounded-xl overflow-hidden border border-[#ff4500]/20 bg-[#0d1120]/90 backdrop-blur-xl p-3">
+              <div className="relative flex-1 rounded-xl overflow-hidden border border-[#ff4500]/20 bg-[#0d1120]/90 backdrop-blur-xl p-2.5">
                 <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff4500]/60 to-transparent" />
                 <p className="text-[#ff4500] text-[9px] font-black uppercase tracking-[0.22em] mb-1">{t("home_next_tournament")}</p>
                 <CountdownTimer targetDate={nextTournament.countdownTo ?? nextTournament.startDate} className="text-lg justify-center font-black" />
@@ -157,7 +157,7 @@ export default function Home() {
             {/* Stats */}
             <div className="relative flex-1 rounded-xl overflow-hidden border border-white/[0.06] bg-[#0d1120]/80 backdrop-blur-2xl">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#ff4500]/40 to-transparent" />
-              <div className="flex items-center gap-1.5 px-3 py-1.5 border-b border-white/[0.04]">
+              <div className="flex items-center gap-1 px-2.5 py-1 border-b border-white/[0.04]">
                 <span className="relative flex">
                   <span className="animate-ping absolute inline-flex h-1.5 w-1.5 rounded-full bg-[#00ff88] opacity-75" />
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[#00ff88]" />
@@ -170,7 +170,7 @@ export default function Home() {
                   { icon: <Users className="w-3 h-3 text-[#00ff88]" />, color: "#00ff88", value: "১৪২০+", label: "Players" },
                   { icon: <Swords className="w-3 h-3 text-[#ff4500]" />, color: "#ff4500", value: "৪৫০+", label: "Matches" },
                 ].map((s, i) => (
-                  <div key={i} className="flex flex-col items-center gap-0.5 px-2 py-2.5">
+                  <div key={i} className="flex flex-col items-center gap-0.5 px-1.5 py-2">
                     <div className="mb-0.5">{s.icon}</div>
                     <div className="font-black text-sm leading-none" style={{ color: s.color }}>{s.value}</div>
                     <div className="text-[#8890a8] text-[8px] font-bold uppercase tracking-wide">{s.label}</div>
@@ -182,16 +182,16 @@ export default function Home() {
 
           {/* CTA Buttons */}
           <motion.div variants={fadeUp} initial="hidden" animate="show" custom={4}
-            className="flex flex-col sm:flex-row gap-2 justify-center">
+            className="flex flex-col sm:flex-row gap-1.5 justify-center">
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
               <Link href="/tournaments"
-                className="px-5 py-2.5 bg-[#ff4500] text-white font-black uppercase text-xs rounded-xl hover:bg-[#e03d00] transition-all shadow-[0_0_20px_rgba(255,69,0,0.4)] hover:shadow-[0_0_36px_rgba(255,69,0,0.6)] flex items-center justify-center gap-2">
+                className="px-3.5 py-2 bg-[#ff4500] text-white font-black uppercase text-xs rounded-xl hover:bg-[#e03d00] transition-all shadow-[0_0_20px_rgba(255,69,0,0.4)] hover:shadow-[0_0_36px_rgba(255,69,0,0.6)] flex items-center justify-center gap-1.5">
                 <Trophy className="w-3.5 h-3.5" /> {t("home_find_tournaments")}
               </Link>
             </motion.div>
             <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
               <Link href="/leaderboard"
-                className="px-5 py-2.5 bg-transparent text-white font-black uppercase text-xs rounded-xl border border-[#ff4500]/35 hover:border-[#ff4500] hover:bg-[#ff4500]/8 transition-all flex items-center justify-center gap-2">
+                className="px-3.5 py-2 bg-transparent text-white font-black uppercase text-xs rounded-xl border border-[#ff4500]/35 hover:border-[#ff4500] hover:bg-[#ff4500]/8 transition-all flex items-center justify-center gap-1.5">
                 <Zap className="w-3.5 h-3.5" /> {t("home_view_leaderboard")}
               </Link>
             </motion.div>
@@ -209,7 +209,7 @@ export default function Home() {
       {/* ── HOW IT WORKS ── */}
       <SectionWrapper>
         <SectionHeader left={t("home_how_it")} right={t("home_works")} />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {[
             { step: "01", icon: <Shield className="w-3.5 h-3.5" />, title: t("home_step1_title"), desc: t("home_step1_desc") },
             { step: "02", icon: <Trophy className="w-3.5 h-3.5" />, title: t("home_step2_title"), desc: t("home_step2_desc") },
@@ -218,9 +218,9 @@ export default function Home() {
           ].map((item, i) => (
             <motion.div key={item.step} variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i}
               whileHover={{ y: -2, borderColor: "rgba(255,69,0,0.4)" }}
-              className="bg-[#0d1120] border border-[#ff4500]/10 rounded-xl p-3 text-center transition-colors group cursor-default">
+              className="bg-[#0d1120] border border-[#ff4500]/10 rounded-xl p-2.5 text-center transition-colors group cursor-default">
               <div className="text-[#ff4500]/12 font-black text-2xl leading-none mb-1 group-hover:text-[#ff4500]/22 transition-colors">{item.step}</div>
-              <div className="w-6 h-6 rounded-lg bg-[#ff4500]/10 border border-[#ff4500]/20 flex items-center justify-center text-[#ff4500] mx-auto mb-1.5">
+              <div className="w-6 h-6 rounded-lg bg-[#ff4500]/10 border border-[#ff4500]/20 flex items-center justify-center text-[#ff4500] mx-auto mb-1">
                 {item.icon}
               </div>
               <h3 className="font-black uppercase text-white text-[10px] mb-0.5">{item.title}</h3>
@@ -234,13 +234,13 @@ export default function Home() {
       <SectionWrapper>
         <SectionHeader left={t("home_featured")} right={t("home_tournaments")} link={{ href: "/tournaments", label: t("home_view_all") }} />
         {loadingFeatured ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
             {[1,2,3].map((i) => <div key={i} className="h-36 bg-[#0d1120] rounded-xl animate-pulse" />)}
           </div>
         ) : featured.length === 0 ? (
           <EmptyState icon={<Trophy className="w-9 h-9 opacity-20" />} title={t("home_no_tournaments")} desc={t("home_no_tournaments_desc")} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {featured.map((item, i) => (
               <motion.div key={item.id} variants={fadeIn} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i}>
                 <TournamentCard t={item as any} featured />
@@ -254,20 +254,20 @@ export default function Home() {
       <SectionWrapper>
         <SectionHeader left={t("home_community")} right={t("home_matches")} link={{ href: "/matches", label: t("home_view_all") }} />
         {loadingCommunity ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {[1,2,3].map((i) => <div key={i} className="h-24 bg-[#0d1120] rounded-xl animate-pulse" />)}
           </div>
         ) : communityMatches.length === 0 ? (
-          <div className="text-center py-7 text-[#8890a8] bg-[#0d1120] rounded-xl border border-[#ff4500]/10">
-            <Swords className="w-8 h-8 mx-auto mb-2 opacity-20" />
+          <div className="text-center py-5 text-[#8890a8] bg-[#0d1120] rounded-xl border border-[#ff4500]/10">
+            <Swords className="w-8 h-8 mx-auto mb-1.5 opacity-20" />
             <p className="text-sm font-bold text-white/30">{t("home_no_community")}</p>
             <p className="text-xs mt-1">{t("home_no_community_desc")}</p>
-            <Link href="/matches" className="inline-block mt-3 px-4 py-1.5 bg-[#ff4500] text-white font-bold text-xs rounded-lg hover:bg-[#e03d00] transition-colors">
+            <Link href="/matches" className="inline-block mt-2.5 px-3 py-1 bg-[#ff4500] text-white font-bold text-xs rounded-lg hover:bg-[#e03d00] transition-colors">
               {t("home_host_match")}
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {communityMatches.slice(0, 6).map((m: any, i: number) => {
               const isFree = !m.entryFee || parseFloat(m.entryFee) === 0;
               const prize = m.prizePool ? parseFloat(m.prizePool) : 0;
@@ -276,9 +276,9 @@ export default function Home() {
                 <motion.div key={m.id} variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i}>
                   <Link href="/matches">
                     <motion.div whileHover={{ y: -2, borderColor: "rgba(255,69,0,0.3)" }}
-                      className="bg-[#0d1120] border border-[#ff4500]/10 rounded-xl p-3 transition-all cursor-pointer group">
-                      <div className="flex items-start justify-between gap-2 mb-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
+                      className="bg-[#0d1120] border border-[#ff4500]/10 rounded-xl p-2.5 transition-all cursor-pointer group">
+                      <div className="flex items-start justify-between gap-1.5 mb-1">
+                        <div className="flex items-center gap-1 min-w-0">
                           {m.serialNumber && (
                             <span className="shrink-0 text-[#ff4500] font-mono text-[10px] bg-[#ff4500]/10 border border-[#ff4500]/20 px-1 py-0.5 rounded">{m.serialNumber}</span>
                           )}
@@ -289,10 +289,10 @@ export default function Home() {
                           <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-[#ff4500]/10 text-[#ff4500] uppercase">{m.matchMode ?? m.matchType}</span>
                         </div>
                       </div>
-                      <p className="text-[#8890a8] text-[10px] mb-1.5">
+                      <p className="text-[#8890a8] text-[10px] mb-1">
                         {t("by")} <span className="text-white font-semibold">{m.creatorName}</span>
                       </p>
-                      <div className="flex items-center gap-2.5 text-[10px]">
+                      <div className="flex items-center gap-2 text-[10px]">
                         <span className={isFree ? "text-[#00ff88] font-bold" : "text-white font-bold"}>
                           {isFree ? t("free") : `৳${m.entryFee}`}
                         </span>
@@ -321,31 +321,31 @@ export default function Home() {
         <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }}
           className="bg-[#0d1120] rounded-xl border border-[#ff4500]/12 overflow-hidden">
           {loadingLb ? (
-            <div className="p-4 text-center text-[#8890a8] text-sm">{t("home_loading_rankings")}</div>
+            <div className="p-3 text-center text-[#8890a8] text-sm">{t("home_loading_rankings")}</div>
           ) : leaderboard.length === 0 ? (
             <EmptyState icon={<Users className="w-8 h-8 opacity-20" />} title={t("home_no_rankings")} desc={t("home_no_rankings_desc")} />
           ) : (
             <table className="w-full">
               <thead>
                 <tr className="border-b border-[#ff4500]/8">
-                  <th className="text-left text-[#8890a8] text-[10px] uppercase py-2 px-3">{t("th_rank")}</th>
-                  <th className="text-left text-[#8890a8] text-[10px] uppercase py-2 px-3">{t("th_player")}</th>
-                  <th className="text-right text-[#8890a8] text-[10px] uppercase py-2 px-3">{t("th_kills")}</th>
-                  <th className="text-right text-[#8890a8] text-[10px] uppercase py-2 px-3">{t("th_points")}</th>
+                  <th className="text-left text-[#8890a8] text-[10px] uppercase py-1.5 px-2.5">{t("th_rank")}</th>
+                  <th className="text-left text-[#8890a8] text-[10px] uppercase py-1.5 px-2.5">{t("th_player")}</th>
+                  <th className="text-right text-[#8890a8] text-[10px] uppercase py-1.5 px-2.5">{t("th_kills")}</th>
+                  <th className="text-right text-[#8890a8] text-[10px] uppercase py-1.5 px-2.5">{t("th_points")}</th>
                 </tr>
               </thead>
               <tbody>
                 {leaderboard.slice(0, 5).map((entry: any, i: number) => (
                   <motion.tr key={entry.rank} variants={fadeIn} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i}
                     className="border-b border-[#ff4500]/5 hover:bg-[#ff4500]/4 transition-colors">
-                    <td className="py-1.5 px-3">
+                    <td className="py-1 px-2.5">
                       <span className={`font-black text-xs ${rankColors[entry.rank - 1] ?? "text-white"}`}>
                         {entry.rank <= 3 ? ["🥇","🥈","🥉"][entry.rank - 1] : `#${entry.rank}`}
                       </span>
                     </td>
-                    <td className="py-1.5 px-3 font-medium text-white text-xs"><PlayerIdentity playerName={entry.playerName} /></td>
-                    <td className="py-1.5 px-3 text-right text-[#ff4500] font-bold text-xs">{entry.kills}</td>
-                    <td className="py-1.5 px-3 text-right text-white font-bold text-xs">{entry.points}</td>
+                    <td className="py-1 px-2.5 font-medium text-white text-xs"><PlayerIdentity playerName={entry.playerName} /></td>
+                    <td className="py-1 px-2.5 text-right text-[#ff4500] font-bold text-xs">{entry.kills}</td>
+                    <td className="py-1 px-2.5 text-right text-white font-bold text-xs">{entry.points}</td>
                   </motion.tr>
                 ))}
               </tbody>
@@ -358,13 +358,13 @@ export default function Home() {
       {(loadingAnn || announcements.length > 0) && (
         <SectionWrapper>
           <SectionHeader left={t("home_latest")} right={t("home_announcements")} />
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {loadingAnn
               ? [1,2].map((i) => <div key={i} className="h-12 bg-[#0d1120] rounded-xl animate-pulse" />)
               : announcements.slice(0, 5).map((a: any, i: number) => (
                 <motion.div key={a.id} variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} custom={i}
-                  className={`rounded-xl border-l-4 px-3 py-2.5 bg-[#0d1120] ${announcementTypeColors[a.type] ?? announcementTypeColors.info}`}>
-                  <div className="flex items-start justify-between gap-3">
+                  className={`rounded-xl border-l-4 px-2.5 py-2 bg-[#0d1120] ${announcementTypeColors[a.type] ?? announcementTypeColors.info}`}>
+                  <div className="flex items-start justify-between gap-2.5">
                     <div>
                       <h4 className="font-bold text-white text-xs">{a.title}</h4>
                       <p className="text-[#8890a8] text-[10px] mt-0.5 line-clamp-2">{a.content}</p>
@@ -386,17 +386,17 @@ export default function Home() {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function SectionWrapper({ children }: { children: React.ReactNode }) {
-  return <section className="max-w-6xl mx-auto px-4 py-5">{children}</section>;
+  return <section className="max-w-6xl mx-auto px-3 py-3.5">{children}</section>;
 }
 
 function SectionHeader({ left, right, link }: { left: string; right: string; link?: { href: string; label: string } }) {
   return (
-    <div className="flex items-center justify-between mb-3">
+    <div className="flex items-center justify-between mb-2.5">
       <h2 className="text-sm md:text-base font-black uppercase">
         {left} <span className="text-[#ff4500]">{right}</span>
       </h2>
       {link && (
-        <Link href={link.href} className="flex items-center gap-0.5 text-[#ff4500] text-[10px] font-bold hover:gap-1.5 transition-all">
+        <Link href={link.href} className="flex items-center gap-0.5 text-[#ff4500] text-[10px] font-bold hover:gap-1 transition-all">
           {link.label} <ChevronRight className="w-3 h-3" />
         </Link>
       )}
@@ -406,8 +406,8 @@ function SectionHeader({ left, right, link }: { left: string; right: string; lin
 
 function EmptyState({ icon, title, desc }: { icon: React.ReactNode; title: string; desc: string }) {
   return (
-    <div className="text-center py-10 text-[#a0a0b0]">
-      <div className="flex justify-center mb-2">{icon}</div>
+    <div className="text-center py-7 text-[#a0a0b0]">
+      <div className="flex justify-center mb-1.5">{icon}</div>
       <p className="text-sm font-bold text-white/30">{title}</p>
       <p className="text-xs mt-1">{desc}</p>
     </div>

@@ -21,10 +21,10 @@ export default function Footer() {
 
   return (
     <footer className="bg-[#0a0a0f] border-t border-[#ff6b00]/20 mt-20">
-      <div className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-3 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-1.5 mb-3">
               <Flame className="w-6 h-6 text-[#ff6b00]" />
               <span className="text-lg font-bold uppercase text-white">
                 FF <span className="text-[#ff6b00]">Arena</span>
@@ -33,14 +33,14 @@ export default function Footer() {
             <p className="text-[#a0a0b0] text-sm leading-relaxed max-w-xs">
               The premier Free Fire tournament platform. Compete, climb the ranks, and claim your prize.
             </p>
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-2.5 mt-4">
               <a
                 href={whatsappHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 data-testid="link-footer-whatsapp"
                 title={`WhatsApp: ${settings.whatsapp_number}`}
-                className="flex items-center gap-2 px-3 py-2 bg-[#00ff88]/10 border border-[#00ff88]/20 rounded-lg text-[#00ff88] hover:bg-[#00ff88]/20 hover:border-[#00ff88]/50 transition-all text-xs font-bold"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#00ff88]/10 border border-[#00ff88]/20 rounded-lg text-[#00ff88] hover:bg-[#00ff88]/20 hover:border-[#00ff88]/50 transition-all text-xs font-bold"
               >
                 <MessageCircle className="w-4 h-4" />
                 WhatsApp
@@ -51,7 +51,7 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 data-testid="link-footer-telegram"
                 title="Telegram Support"
-                className="flex items-center gap-2 px-3 py-2 bg-[#229ED9]/10 border border-[#229ED9]/20 rounded-lg text-[#229ED9] hover:bg-[#229ED9]/20 hover:border-[#229ED9]/50 transition-all text-xs font-bold"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-[#229ED9]/10 border border-[#229ED9]/20 rounded-lg text-[#229ED9] hover:bg-[#229ED9]/20 hover:border-[#229ED9]/50 transition-all text-xs font-bold"
               >
                 <Send className="w-4 h-4" />
                 Telegram
@@ -69,8 +69,8 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-white font-bold uppercase text-sm mb-4 tracking-wider">Platform</h4>
-            <div className="flex flex-col gap-2">
+            <h4 className="text-white font-bold uppercase text-sm mb-3 tracking-wider">Platform</h4>
+            <div className="flex flex-col gap-1.5">
               {[
                 ["Tournaments", "/tournaments"],
                 ["Leaderboard", "/leaderboard"],
@@ -86,8 +86,8 @@ export default function Footer() {
           </div>
 
           <div>
-            <h4 className="text-white font-bold uppercase text-sm mb-4 tracking-wider">Support</h4>
-            <div className="flex flex-col gap-2">
+            <h4 className="text-white font-bold uppercase text-sm mb-3 tracking-wider">Support</h4>
+            <div className="flex flex-col gap-1.5">
               {[
                 ["Support Center", "/support"],
                 ["My Tickets", "/my-tickets"],
@@ -103,7 +103,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-[#ff6b00]/10 mt-8 pt-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="border-t border-[#ff6b00]/10 mt-5 pt-4 flex flex-col md:flex-row items-center justify-between gap-3">
           <p className="text-[#a0a0b0] text-xs">
             &copy; {new Date().getFullYear()} FF Arena. All rights reserved.
           </p>

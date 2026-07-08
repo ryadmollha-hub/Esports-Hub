@@ -40,8 +40,8 @@ const itemVariants = cva(
         muted: "bg-muted/50",
       },
       size: {
-        default: "gap-4 p-4 ",
-        sm: "gap-2.5 px-4 py-3",
+        default: "gap-3 p-3 ",
+        sm: "gap-2 px-3 py-2.5",
       },
     },
     defaultVariants: {
@@ -72,7 +72,7 @@ function Item({
 }
 
 const itemMediaVariants = cva(
-  "flex shrink-0 items-center justify-center gap-2 group-has-[[data-slot=item-description]]/item:translate-y-0.5 group-has-[[data-slot=item-description]]/item:self-start [&_svg]:pointer-events-none",
+  "flex shrink-0 items-center justify-center gap-1.5 group-has-[[data-slot=item-description]]/item:translate-y-0.5 group-has-[[data-slot=item-description]]/item:self-start [&_svg]:pointer-events-none",
   {
     variants: {
       variant: {
@@ -121,7 +121,7 @@ function ItemTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-title"
       className={cn(
-        "flex w-fit items-center gap-2 text-sm font-medium leading-snug",
+        "flex w-fit items-center gap-1.5 text-sm font-medium leading-snug",
         className
       )}
       {...props}
@@ -147,7 +147,7 @@ function ItemActions({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="item-actions"
-      className={cn("flex items-center gap-2", className)}
+      className={cn("flex items-center gap-1.5", className)}
       {...props}
     />
   )
@@ -158,7 +158,7 @@ function ItemHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-header"
       className={cn(
-        "flex basis-full items-center justify-between gap-2",
+        "flex basis-full items-center justify-between gap-1.5",
         className
       )}
       {...props}
@@ -171,7 +171,7 @@ function ItemFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="item-footer"
       className={cn(
-        "flex basis-full items-center justify-between gap-2",
+        "flex basis-full items-center justify-between gap-1.5",
         className
       )}
       {...props}

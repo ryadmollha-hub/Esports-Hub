@@ -76,7 +76,7 @@ function BadgeChips({ badges }: { badges?: string[] }) {
           <span
             key={b}
             title={b}
-            className={`inline-flex items-center gap-0.5 text-[9px] font-black border px-1.5 py-0.5 rounded-full shrink-0 ${s.cls}`}
+            className={`inline-flex items-center gap-0.5 text-[9px] font-black border px-1 py-0.5 rounded-full shrink-0 ${s.cls}`}
           >
             {s.icon} {b}
           </span>
@@ -184,7 +184,7 @@ function MatchReleaseTimer({ roomReleaseAt, onExpire }: { roomReleaseAt: string;
   const secs = Math.floor((msLeft % 60000) / 1000);
 
   return (
-    <div className="mt-2 flex items-center gap-1.5 text-orange-400 text-xs font-bold">
+    <div className="mt-1.5 flex items-center gap-1 text-orange-400 text-xs font-bold">
       <Clock className="w-3 h-3 shrink-0" />
       Room ID releasing in: {pad(mins)}:{pad(secs)}
     </div>
@@ -212,7 +212,7 @@ function MatchHideTimer({ roomHideAt, children }: { roomHideAt?: string | null; 
 
   if (isClosed) {
     return (
-      <div className="mt-3 flex items-center gap-3 bg-gray-500/10 border border-gray-500/20 rounded-lg px-4 py-3">
+      <div className="mt-2.5 flex items-center gap-2.5 bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2.5">
         <Lock className="w-4 h-4 text-gray-400 shrink-0" />
         <div>
           <div className="text-gray-300 font-bold text-sm">Room details are now closed.</div>
@@ -618,7 +618,7 @@ export default function TournamentDetailPage() {
     return (
       <button
         onClick={handleBack}
-        className="inline-flex items-center gap-2 text-[#a0a0b0] hover:text-white mb-6 transition-colors"
+        className="inline-flex items-center gap-1.5 text-[#a0a0b0] hover:text-white mb-4 transition-colors"
       >
         <ChevronLeft className="w-4 h-4" /> Back to Tournaments
       </button>
@@ -629,9 +629,9 @@ export default function TournamentDetailPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0f]">
         <Navbar />
-        <div className="max-w-5xl mx-auto px-4 pt-16">
-          <div className="h-64 bg-[#12121a] rounded-xl animate-pulse mb-6" />
-          <div className="h-8 bg-[#12121a] rounded animate-pulse w-1/2 mb-4" />
+        <div className="max-w-5xl mx-auto px-3 pt-16">
+          <div className="h-64 bg-[#12121a] rounded-xl animate-pulse mb-4" />
+          <div className="h-8 bg-[#12121a] rounded animate-pulse w-1/2 mb-3" />
           <div className="h-4 bg-[#12121a] rounded animate-pulse w-3/4" />
         </div>
       </div>
@@ -643,7 +643,7 @@ export default function TournamentDetailPage() {
       <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
         <Navbar />
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-white mb-2">Tournament Not Found</h2>
+          <h2 className="text-2xl font-bold text-white mb-1.5">Tournament Not Found</h2>
           <Link href="/tournaments" className="text-[#ff6b00]">Back to Tournaments</Link>
         </div>
       </div>
@@ -673,14 +673,14 @@ export default function TournamentDetailPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-5xl mx-auto px-4 pt-16 pb-20">
+      <div className="max-w-5xl mx-auto px-3 pt-16 pb-20">
         <BackButton />
 
         {/* ── Winner Banner ── */}
         {hasWinner && !t.resultsPublished && (
-          <div className="mb-6 relative bg-gradient-to-r from-[#ffd700]/15 via-[#ff6b00]/10 to-[#ffd700]/15 border border-[#ffd700]/40 rounded-2xl p-5 overflow-hidden">
+          <div className="mb-4 relative bg-gradient-to-r from-[#ffd700]/15 via-[#ff6b00]/10 to-[#ffd700]/15 border border-[#ffd700]/40 rounded-2xl p-3.5 overflow-hidden">
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,215,0,0.08),transparent_70%)]" />
-            <div className="relative flex items-center gap-4">
+            <div className="relative flex items-center gap-3">
               <div className="w-14 h-14 rounded-full bg-[#ffd700]/20 border-2 border-[#ffd700]/60 flex items-center justify-center shrink-0">
                 <Crown className="w-7 h-7 text-[#ffd700]" />
               </div>
@@ -695,7 +695,7 @@ export default function TournamentDetailPage() {
         )}
 
         {/* ── Banner ── */}
-        <div className="relative h-56 md:h-72 rounded-2xl overflow-hidden mb-8 bg-gradient-to-br from-[#1a1a24] to-[#0a0a0f]">
+        <div className="relative h-56 md:h-72 rounded-2xl overflow-hidden mb-5 bg-gradient-to-br from-[#1a1a24] to-[#0a0a0f]">
           {t.bannerUrl ? (
             <img src={t.bannerUrl} alt={t.name} className="w-full h-full object-cover opacity-60" />
           ) : (
@@ -705,14 +705,14 @@ export default function TournamentDetailPage() {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f] via-[#0a0a0f]/30 to-transparent" />
           <div className="absolute bottom-5 left-5 right-5">
-            <div className="flex flex-wrap gap-2 mb-2">
-              <span className={`text-xs font-bold px-3 py-1 rounded-full border uppercase ${modeColors[t.mode]}`}>{t.mode}</span>
-              <span className={`text-xs font-bold px-3 py-1 rounded-full border uppercase flex items-center gap-1.5 ${statusCfg.color}`}>
+            <div className="flex flex-wrap gap-1.5 mb-1.5">
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase ${modeColors[t.mode]}`}>{t.mode}</span>
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-full border uppercase flex items-center gap-1 ${statusCfg.color}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${statusCfg.dot}`} />
                 {statusCfg.label}
               </span>
               {t.resultsPublished && (
-                <span className="text-xs font-bold px-3 py-1 rounded-full border uppercase bg-purple-500/20 text-purple-400 border-purple-500/30">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full border uppercase bg-purple-500/20 text-purple-400 border-purple-500/30">
                   Results Published
                 </span>
               )}
@@ -721,14 +721,14 @@ export default function TournamentDetailPage() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-4">
 
           {/* ── Left Column ── */}
-          <div className="md:col-span-2 space-y-5">
+          <div className="md:col-span-2 space-y-3.5">
 
             {/* Status Alert Banners */}
             {t.resultsPublished && (
-              <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-4 flex items-center gap-3">
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-xl p-3 flex items-center gap-2.5">
                 <Trophy className="w-5 h-5 text-purple-400 shrink-0" />
                 <div>
                   <div className="text-purple-400 font-black uppercase text-sm">Results Published</div>
@@ -737,7 +737,7 @@ export default function TournamentDetailPage() {
               </div>
             )}
             {isLive && !t.resultsPublished && (
-              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 flex items-center gap-3 animate-pulse">
+              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-3 flex items-center gap-2.5 animate-pulse">
                 <Radio className="w-5 h-5 text-green-400 shrink-0" />
                 <div>
                   <div className="text-green-400 font-black uppercase text-sm">🔴 Match is Live!</div>
@@ -746,7 +746,7 @@ export default function TournamentDetailPage() {
               </div>
             )}
             {isEnded && !t.resultsPublished && (
-              <div className="bg-gray-500/10 border border-gray-500/30 rounded-xl p-4 flex items-center gap-3">
+              <div className="bg-gray-500/10 border border-gray-500/30 rounded-xl p-3 flex items-center gap-2.5">
                 <CheckCircle className="w-5 h-5 text-gray-400 shrink-0" />
                 <div>
                   <div className="text-gray-400 font-black uppercase text-sm">Match Completed</div>
@@ -756,8 +756,8 @@ export default function TournamentDetailPage() {
             )}
 
             {t.description && (
-              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
-                <h3 className="text-white font-bold uppercase text-sm mb-2 tracking-wider">About</h3>
+              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-3.5">
+                <h3 className="text-white font-bold uppercase text-sm mb-1.5 tracking-wider">About</h3>
                 <p className="text-[#a0a0b0] leading-relaxed text-sm">{t.description}</p>
               </div>
             )}
@@ -769,13 +769,13 @@ export default function TournamentDetailPage() {
               const countdownTarget = t.countdownTo ?? t.startDate;
               if (!countdownTarget) return null;
               return (
-                <div className="rounded-xl border p-5 bg-[#12121a] border-[#ff6b00]/20">
-                  <h3 className="font-bold uppercase text-sm mb-3 tracking-wider text-white">
+                <div className="rounded-xl border p-3.5 bg-[#12121a] border-[#ff6b00]/20">
+                  <h3 className="font-bold uppercase text-sm mb-2.5 tracking-wider text-white">
                     🔥 Match Starts In
                   </h3>
                   <CountdownTimer
                     targetDate={countdownTarget}
-                    className="text-3xl gap-4"
+                    className="text-3xl gap-3"
                     onExpire={loadMatches}
                     expiredText="MATCH IS STARTED"
                   />
@@ -785,22 +785,22 @@ export default function TournamentDetailPage() {
 
             {/* ── STAGE 3: LIVE MATCHES SECTION ── */}
             {liveMatches.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="text-green-400 font-black uppercase text-sm tracking-wider flex items-center gap-2">
+              <div className="space-y-2.5">
+                <h3 className="text-green-400 font-black uppercase text-sm tracking-wider flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                   Live Matches
                 </h3>
                 {liveMatches.map(match => (
-                  <div key={match.id} className="bg-green-500/10 border border-green-500/30 rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black px-2.5 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 uppercase flex items-center gap-1.5">
+                  <div key={match.id} className="bg-green-500/10 border border-green-500/30 rounded-xl p-3.5">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black px-2 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 uppercase flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> Live
                         </span>
                         <span className="text-white font-bold">Match #{match.matchNumber}</span>
                         {match.mapName && <span className="text-[#a0a0b0] text-xs">{match.mapName}</span>}
                       </div>
-                      <div className="flex items-center gap-1.5 text-[#a0a0b0] text-xs">
+                      <div className="flex items-center gap-1 text-[#a0a0b0] text-xs">
                         <Clock className="w-3.5 h-3.5" />
                         {formatBDTime(match.scheduledAt)}
                       </div>
@@ -811,26 +811,26 @@ export default function TournamentDetailPage() {
                         when roomHideAt is reached, without waiting for the 30 s poll. */}
                     <MatchHideTimer roomHideAt={match.roomHideAt}>
                       {match.roomVisible && match.roomId && isJoined ? (
-                        <div className="grid grid-cols-2 gap-3 mt-3">
-                          <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-green-500/20">
+                        <div className="grid grid-cols-2 gap-2.5 mt-2.5">
+                          <div className="bg-[#0a0a0f]/60 rounded-lg p-2.5 border border-green-500/20">
                             <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
                               <Key className="w-3 h-3" /> Room ID
                             </div>
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center justify-between gap-1.5">
                               <div className="text-white font-mono font-black text-lg">{match.roomId}</div>
                               <button
                                 onClick={() => copyToClipboard(match.roomId!, "Room ID")}
-                                className="shrink-0 text-xs font-bold text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-2 py-1 rounded-lg transition-colors"
+                                className="shrink-0 text-xs font-bold text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-1.5 py-1 rounded-lg transition-colors"
                               >
                                 Copy
                               </button>
                             </div>
                           </div>
-                          <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-green-500/20">
+                          <div className="bg-[#0a0a0f]/60 rounded-lg p-2.5 border border-green-500/20">
                             <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
                               <Lock className="w-3 h-3" /> Password
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <div className="text-white font-mono font-black text-lg flex-1">
                                 {showRoomPass ? match.roomPassword : "••••••"}
                               </div>
@@ -840,7 +840,7 @@ export default function TournamentDetailPage() {
                               {showRoomPass && match.roomPassword && (
                                 <button
                                   onClick={() => copyToClipboard(match.roomPassword!, "Password")}
-                                  className="shrink-0 text-xs font-bold text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-2 py-1 rounded-lg transition-colors"
+                                  className="shrink-0 text-xs font-bold text-green-400 hover:text-green-300 bg-green-500/10 hover:bg-green-500/20 border border-green-500/30 px-1.5 py-1 rounded-lg transition-colors"
                                 >
                                   Copy
                                 </button>
@@ -850,7 +850,7 @@ export default function TournamentDetailPage() {
                         </div>
                       ) : match.roomWindowOpen && !match.roomSet && isJoined ? (
                         /* Stage 2→3 transition: window open but admin hasn't submitted creds yet */
-                        <div className="mt-3 flex items-start gap-3 bg-orange-500/10 border border-orange-500/30 rounded-xl px-4 py-3">
+                        <div className="mt-2.5 flex items-start gap-2.5 bg-orange-500/10 border border-orange-500/30 rounded-xl px-3 py-2.5">
                           <span className="text-xl shrink-0">⏳</span>
                           <div>
                             <div className="text-orange-400 font-black text-sm">Room Not Released Yet</div>
@@ -860,11 +860,11 @@ export default function TournamentDetailPage() {
                           </div>
                         </div>
                       ) : !isJoined ? (
-                        <div className="mt-2 text-center text-[#a0a0b0] text-sm py-2 bg-[#1a1a24] rounded-lg">
+                        <div className="mt-1.5 text-center text-[#a0a0b0] text-sm py-1.5 bg-[#1a1a24] rounded-lg">
                           Join the tournament to view room credentials.
                         </div>
                       ) : (
-                        <div className="flex items-center gap-2 mt-2 text-[#a0a0b0] text-sm">
+                        <div className="flex items-center gap-1.5 mt-1.5 text-[#a0a0b0] text-sm">
                           <Lock className="w-4 h-4" />
                           Room details will appear here once released.
                         </div>
@@ -877,18 +877,18 @@ export default function TournamentDetailPage() {
 
             {/* ── STAGE 2: SCHEDULED MATCHES — permanently static structure ── */}
             {upcomingMatches.length > 0 && (
-              <div className="rounded-xl border p-5 bg-[#12121a] border-[#ff6b00]/20">
-                <h3 className="font-bold uppercase text-sm mb-3 tracking-wider flex items-center gap-2 text-white">
+              <div className="rounded-xl border p-3.5 bg-[#12121a] border-[#ff6b00]/20">
+                <h3 className="font-bold uppercase text-sm mb-2.5 tracking-wider flex items-center gap-1.5 text-white">
                   <Calendar className="w-4 h-4 text-[#ff6b00]" />
                   Scheduled Matches
                 </h3>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {upcomingMatches.map(match => (
-                    <div key={match.id} className="border-b border-[#1a1a24] last:border-0 pb-4 last:pb-0">
+                    <div key={match.id} className="border-b border-[#1a1a24] last:border-0 pb-3 last:pb-0">
                       {/* Match header row — static, never changes structure */}
                       <div className="flex items-center justify-between py-1">
-                        <div className="flex items-center gap-3">
-                          <span className="text-[#a0a0b0] text-xs uppercase bg-[#1a1a24] px-2 py-0.5 rounded font-bold">#{match.matchNumber}</span>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-[#a0a0b0] text-xs uppercase bg-[#1a1a24] px-1.5 py-0.5 rounded font-bold">#{match.matchNumber}</span>
                           <div>
                             <div className="text-white text-sm font-bold">Match #{match.matchNumber}</div>
                             {match.mapName && <div className="text-[#a0a0b0] text-xs">{match.mapName}</div>}
@@ -914,26 +914,26 @@ export default function TournamentDetailPage() {
                       {/* Room credentials section — permanently present below every match.
                           Locked state before release; opens in place without layout shift. */}
                       {match.roomVisible && match.roomId && isJoined ? (
-                        <div className="grid grid-cols-2 gap-3 mt-3">
-                          <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-orange-500/30">
+                        <div className="grid grid-cols-2 gap-2.5 mt-2.5">
+                          <div className="bg-[#0a0a0f]/60 rounded-lg p-2.5 border border-orange-500/30">
                             <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
                               <Key className="w-3 h-3" /> Room ID
                             </div>
-                            <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center justify-between gap-1.5">
                               <div className="text-white font-mono font-black text-lg">{match.roomId}</div>
                               <button
                                 onClick={() => copyToClipboard(match.roomId!, "Room ID")}
-                                className="shrink-0 text-xs font-bold text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 px-2 py-1 rounded-lg transition-colors"
+                                className="shrink-0 text-xs font-bold text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 px-1.5 py-1 rounded-lg transition-colors"
                               >
                                 Copy
                               </button>
                             </div>
                           </div>
-                          <div className="bg-[#0a0a0f]/60 rounded-lg p-3 border border-orange-500/30">
+                          <div className="bg-[#0a0a0f]/60 rounded-lg p-2.5 border border-orange-500/30">
                             <div className="text-[#a0a0b0] text-xs uppercase mb-1 flex items-center gap-1">
                               <Lock className="w-3 h-3" /> Password
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <div className="text-white font-mono font-black text-lg flex-1">
                                 {showRoomPass ? match.roomPassword : "••••••"}
                               </div>
@@ -943,7 +943,7 @@ export default function TournamentDetailPage() {
                               {showRoomPass && match.roomPassword && (
                                 <button
                                   onClick={() => copyToClipboard(match.roomPassword!, "Password")}
-                                  className="shrink-0 text-xs font-bold text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 px-2 py-1 rounded-lg transition-colors"
+                                  className="shrink-0 text-xs font-bold text-orange-400 hover:text-orange-300 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/30 px-1.5 py-1 rounded-lg transition-colors"
                                 >
                                   Copy
                                 </button>
@@ -953,8 +953,8 @@ export default function TournamentDetailPage() {
                         </div>
                       ) : (
                         /* Locked state — always visible before credentials are released */
-                        <div className="mt-3">
-                          <div className="flex items-center gap-3 bg-[#0a0a0f]/40 border border-[#2a2a36] rounded-lg px-4 py-3">
+                        <div className="mt-2.5">
+                          <div className="flex items-center gap-2.5 bg-[#0a0a0f]/40 border border-[#2a2a36] rounded-lg px-3 py-2.5">
                             <span className="text-base shrink-0">🔒</span>
                             <div className="text-[#a0a0b0] text-xs leading-relaxed">
                               {isJoined
@@ -979,12 +979,12 @@ export default function TournamentDetailPage() {
 
             {/* ── STAGE 4: COMPLETED MATCHES (no results yet) ── */}
             {completedMatches.filter(m => !m.results || m.results.length === 0).length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {completedMatches.filter(m => !m.results || m.results.length === 0).map(match => (
-                  <div key={match.id} className="bg-[#1a1a24] border border-[#2a2a36] rounded-xl p-5">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black px-2.5 py-1 rounded-full bg-[#2a2a36] text-[#a0a0b0] border border-[#3a3a46] uppercase">
+                  <div key={match.id} className="bg-[#1a1a24] border border-[#2a2a36] rounded-xl p-3.5">
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black px-2 py-1 rounded-full bg-[#2a2a36] text-[#a0a0b0] border border-[#3a3a46] uppercase">
                           Completed
                         </span>
                         <span className="text-white font-bold">Match #{match.matchNumber}</span>
@@ -996,7 +996,7 @@ export default function TournamentDetailPage() {
                         passed; otherwise the generic "Match Ended" waiting state. */}
                     {match.roomHideAt && Date.now() >= new Date(match.roomHideAt).getTime()
                       && (Date.now() - new Date(match.roomHideAt).getTime()) < 4 * 60 * 60 * 1000 ? (
-                      <div className="flex items-center gap-3 bg-gray-500/10 border border-gray-500/20 rounded-lg px-4 py-3">
+                      <div className="flex items-center gap-2.5 bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2.5">
                         <Lock className="w-4 h-4 text-gray-400 shrink-0" />
                         <div>
                           <div className="text-gray-300 font-bold text-sm">Room details are now closed.</div>
@@ -1004,7 +1004,7 @@ export default function TournamentDetailPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-3 bg-gray-500/10 border border-gray-500/20 rounded-lg px-4 py-3">
+                      <div className="flex items-center gap-2.5 bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2.5">
                         <CheckCircle className="w-4 h-4 text-gray-400 shrink-0" />
                         <div>
                           <div className="text-gray-300 font-bold text-sm">Match Ended</div>
@@ -1019,11 +1019,11 @@ export default function TournamentDetailPage() {
 
             {/* Tournament Room Info (legacy - for tournaments without matches) */}
             {(isLive) && t.roomId && isJoined && matches.length === 0 && (
-              <div className="bg-[#ff6b00]/10 rounded-xl border border-[#ff6b00]/40 p-5">
-                <h3 className="text-[#ff6b00] font-bold uppercase text-sm mb-3 tracking-wider flex items-center gap-2">
+              <div className="bg-[#ff6b00]/10 rounded-xl border border-[#ff6b00]/40 p-3.5">
+                <h3 className="text-[#ff6b00] font-bold uppercase text-sm mb-2.5 tracking-wider flex items-center gap-1.5">
                   <Shield className="w-4 h-4" /> Room Details (Joined Players Only)
                 </h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <div className="text-[#a0a0b0] text-xs uppercase mb-1">Room ID</div>
                     <div className="text-white font-mono font-bold text-xl">{t.roomId}</div>
@@ -1040,12 +1040,12 @@ export default function TournamentDetailPage() {
 
             {/* ── RESULTS SECTION ── */}
             {(t.resultsPublished || matchesWithResults.length > 0) && (
-              <div id="results-section" className="space-y-4">
+              <div id="results-section" className="space-y-3">
 
                 {/* ── Per-match results (published via admin "Save Results" flow) ── */}
                 {matchesWithResults.map((m) => (
-                  <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
-                    <div className="flex items-center gap-2 mb-4">
+                  <div key={m.id} className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-3.5">
+                    <div className="flex items-center gap-1.5 mb-3">
                       <Trophy className="w-4 h-4 text-[#ffd700]" />
                       <h3 className="text-white font-black uppercase text-sm tracking-wider">
                         Match #{m.matchNumber} Results{m.mapName ? ` · ${m.mapName}` : ""}
@@ -1055,10 +1055,10 @@ export default function TournamentDetailPage() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="text-[#a0a0b0] text-xs uppercase border-b border-[#2a2a36]">
-                            <th className="text-left py-2 pr-3 w-12">Rank</th>
-                            <th className="text-left py-2 pr-3">Player</th>
-                            <th className="text-right py-2 pr-3">Kills</th>
-                            <th className="text-right py-2">Prize</th>
+                            <th className="text-left py-1.5 pr-2.5 w-12">Rank</th>
+                            <th className="text-left py-1.5 pr-2.5">Player</th>
+                            <th className="text-right py-1.5 pr-2.5">Kills</th>
+                            <th className="text-right py-1.5">Prize</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1066,16 +1066,16 @@ export default function TournamentDetailPage() {
                             const medal = r.rank === 1 ? "🥇" : r.rank === 2 ? "🥈" : r.rank === 3 ? "🥉" : null;
                             return (
                               <tr key={r.id ?? idx} className="border-b border-[#1a1a24] last:border-0">
-                                <td className="py-2.5 pr-3">
+                                <td className="py-2 pr-2.5">
                                   <span className="font-black text-[#a0a0b0]">{medal ?? `#${r.rank}`}</span>
                                 </td>
-                                <td className="py-2.5 pr-3">
+                                <td className="py-2 pr-2.5">
                                   <div className="font-bold text-white"><PlayerIdentity playerName={r.playerName} /></div>
                                 </td>
-                                <td className="py-2.5 pr-3 text-right">
+                                <td className="py-2 pr-2.5 text-right">
                                   <span className="text-white font-bold">{r.kills}</span>
                                 </td>
-                                <td className="py-2.5 text-right">
+                                <td className="py-2 text-right">
                                   <span className={`font-black ${r.points > 0 ? "text-[#00ff88]" : "text-[#a0a0b0]"}`}>
                                     {r.points > 0 ? `৳${r.points.toLocaleString()}` : "—"}
                                   </span>
@@ -1091,7 +1091,7 @@ export default function TournamentDetailPage() {
 
                 {/* ── Per-tournament registration results (published via "Publish Results" flow) ── */}
                 {t.resultsPublished && resultsLoading && (
-                  <div className="flex items-center justify-center py-10 gap-3">
+                  <div className="flex items-center justify-center py-7 gap-2.5">
                     <div className="w-5 h-5 border-2 border-[#ff6b00] border-t-transparent rounded-full animate-spin" />
                     <span className="text-[#a0a0b0] text-xs uppercase font-bold tracking-wider">Loading results…</span>
                   </div>
@@ -1100,24 +1100,24 @@ export default function TournamentDetailPage() {
                 {t.resultsPublished && !resultsLoading && results !== null && (
                   <>
                     {podiumResults.length > 0 && (
-                      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
-                        <div className="flex items-center gap-2 mb-5">
+                      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-3.5">
+                        <div className="flex items-center gap-1.5 mb-3.5">
                           <Trophy className="w-5 h-5 text-[#ffd700]" />
                           <h3 className="text-white font-black uppercase text-sm tracking-wider">Tournament Results</h3>
                         </div>
-                        <div className="space-y-3 mb-4">
+                        <div className="space-y-2.5 mb-3">
                           {podiumResults.map((player) => {
                             const cfg = podiumConfig.find((c) => c.rank === player.resultRank)!;
                             return (
-                              <div key={player.id} className={`relative bg-gradient-to-r ${cfg.bg} border ${cfg.border} rounded-xl p-4 overflow-hidden`}>
-                                <div className="flex items-center gap-4">
+                              <div key={player.id} className={`relative bg-gradient-to-r ${cfg.bg} border ${cfg.border} rounded-xl p-3 overflow-hidden`}>
+                                <div className="flex items-center gap-3">
                                   <div className="text-4xl shrink-0 leading-none">{cfg.emoji}</div>
                                   <div className="flex-1 min-w-0">
                                     <div className={`font-black text-lg ${cfg.text}`}><PlayerIdentity playerName={player.playerName} size="sm" /></div>
                                     <div className="text-[#a0a0b0] text-xs font-mono">UID: {player.freefireUid}</div>
                                   </div>
                                   <div className="text-right shrink-0">
-                                    <div className="flex items-center gap-1.5 justify-end mb-1">
+                                    <div className="flex items-center gap-1 justify-end mb-1">
                                       <Target className="w-3.5 h-3.5 text-[#ff6b00]" />
                                       <span className="text-white font-black">{player.kills} kills</span>
                                     </div>
@@ -1134,19 +1134,19 @@ export default function TournamentDetailPage() {
                     )}
 
                     {(podiumResults.length > 0 || otherResults.length > 0) && (
-                      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
-                        <h3 className="text-white font-bold uppercase text-sm mb-4 tracking-wider flex items-center gap-2">
+                      <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-3.5">
+                        <h3 className="text-white font-bold uppercase text-sm mb-3 tracking-wider flex items-center gap-1.5">
                           <Medal className="w-4 h-4 text-[#ff6b00]" /> Full Leaderboard
                         </h3>
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="text-[#a0a0b0] text-xs uppercase border-b border-[#2a2a36]">
-                                <th className="text-left py-2 pr-3">Rank</th>
-                                <th className="text-left py-2 pr-3">Player</th>
-                                <th className="text-left py-2 pr-3 hidden sm:table-cell">UID</th>
-                                <th className="text-right py-2 pr-3">Kills</th>
-                                <th className="text-right py-2">Earned</th>
+                                <th className="text-left py-1.5 pr-2.5">Rank</th>
+                                <th className="text-left py-1.5 pr-2.5">Player</th>
+                                <th className="text-left py-1.5 pr-2.5 hidden sm:table-cell">UID</th>
+                                <th className="text-right py-1.5 pr-2.5">Kills</th>
+                                <th className="text-right py-1.5">Earned</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1155,14 +1155,14 @@ export default function TournamentDetailPage() {
                                 const rowNum = i + 1;
                                 return (
                                   <tr key={player.id} className={`border-b border-[#1a1a24] last:border-0 ${player.userId === user?.userId ? "bg-[#ff6b00]/5" : ""}`}>
-                                    <td className="py-2.5 pr-3"><span className="font-black text-[#a0a0b0]">{emoji ?? `#${rowNum}`}</span></td>
-                                    <td className="py-2.5 pr-3">
+                                    <td className="py-2 pr-2.5"><span className="font-black text-[#a0a0b0]">{emoji ?? `#${rowNum}`}</span></td>
+                                    <td className="py-2 pr-2.5">
                                       <div className="font-bold text-white"><PlayerIdentity playerName={player.playerName} userId={player.userId} /></div>
                                       {player.userId === user?.userId && <span className="text-[10px] text-[#00ff88] font-bold">You</span>}
                                     </td>
-                                    <td className="py-2.5 pr-3 hidden sm:table-cell"><span className="text-[#a0a0b0] font-mono text-xs">{player.freefireUid}</span></td>
-                                    <td className="py-2.5 pr-3 text-right"><span className="text-white font-bold">{player.kills}</span></td>
-                                    <td className="py-2.5 text-right">
+                                    <td className="py-2 pr-2.5 hidden sm:table-cell"><span className="text-[#a0a0b0] font-mono text-xs">{player.freefireUid}</span></td>
+                                    <td className="py-2 pr-2.5 text-right"><span className="text-white font-bold">{player.kills}</span></td>
+                                    <td className="py-2 text-right">
                                       <span className={`font-black ${Number(player.earnedAmount) > 0 ? "text-[#00ff88]" : "text-[#a0a0b0]"}`}>
                                         {Number(player.earnedAmount) > 0 ? `৳${Number(player.earnedAmount).toLocaleString()}` : "—"}
                                       </span>
@@ -1182,9 +1182,9 @@ export default function TournamentDetailPage() {
 
             {/* Prizes */}
             {t.prizes && t.prizes.length > 0 && (
-              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
-                <h3 className="text-white font-bold uppercase text-sm mb-3 tracking-wider">Prize Distribution</h3>
-                <div className="space-y-2">
+              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-3.5">
+                <h3 className="text-white font-bold uppercase text-sm mb-2.5 tracking-wider">Prize Distribution</h3>
+                <div className="space-y-1.5">
                   {t.prizes.map((prize: any, i: number) => {
                     const rankColors = [
                       { trophy: "text-[#FFD700]", amount: "text-[#FFD700]", label: "text-[#FFD700]" },
@@ -1193,8 +1193,8 @@ export default function TournamentDetailPage() {
                     ];
                     const rc = rankColors[i] ?? { trophy: "text-[#a0a0b0]", amount: "text-white", label: "text-white" };
                     return (
-                      <div key={prize.id} className="flex items-center justify-between py-2 border-b border-[#ff6b00]/10 last:border-0">
-                        <div className="flex items-center gap-3">
+                      <div key={prize.id} className="flex items-center justify-between py-1.5 border-b border-[#ff6b00]/10 last:border-0">
+                        <div className="flex items-center gap-2.5">
                           <Trophy className={`w-5 h-5 ${rc.trophy}`} />
                           <div>
                             <div className={`font-bold text-sm ${i < 3 ? rc.label : "text-white"}`}>{prize.rank}</div>
@@ -1213,9 +1213,9 @@ export default function TournamentDetailPage() {
 
             {/* Participants List — only when results not published */}
             {!t.resultsPublished && (
-              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-3.5">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-[#ff6b00]" />
                     <h3 className="text-white font-bold uppercase text-sm tracking-wider">
                       Players ({participants.length}/{t.maxSlots})
@@ -1226,8 +1226,8 @@ export default function TournamentDetailPage() {
                   </button>
                 </div>
 
-                <div className="mb-4">
-                  <div className="flex justify-between text-xs text-[#a0a0b0] mb-1.5">
+                <div className="mb-3">
+                  <div className="flex justify-between text-xs text-[#a0a0b0] mb-1">
                     <span>{t.filledSlots} joined</span>
                     <span className={slotsLeft === 0 ? "text-[#ff2244] font-bold" : "text-[#00ff88]"}>
                       {slotsLeft === 0 ? "FULL" : `${slotsLeft} slots left`}
@@ -1246,16 +1246,16 @@ export default function TournamentDetailPage() {
                 </div>
 
                 {loadingPart ? (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {[1, 2, 3].map((i) => <div key={i} className="h-12 bg-[#1a1a24] rounded-xl animate-pulse" />)}
                   </div>
                 ) : participants.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Swords className="w-10 h-10 mx-auto mb-2 text-[#ff6b00]/20" />
+                  <div className="text-center py-5">
+                    <Swords className="w-10 h-10 mx-auto mb-1.5 text-[#ff6b00]/20" />
                     <p className="text-[#a0a0b0] text-sm">No players yet. Be the first to join!</p>
                   </div>
                 ) : (
-                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                  <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
                     {participants.map((p, i) => {
                       const members: TeamMember[] = p.teamMembers ? JSON.parse(p.teamMembers) : [];
                       const isWinner = p.userId === t.winnerId;
@@ -1265,7 +1265,7 @@ export default function TournamentDetailPage() {
                           isWinner ? "border-[#ffd700]/40" : "border-[#2a2a36]"
                         }`}>
                           {/* Team Leader Row */}
-                          <div className={`flex items-center gap-3 p-3 ${
+                          <div className={`flex items-center gap-2.5 p-2.5 ${
                             isWinner ? "bg-[#ffd700]/10" : "bg-[#1a1a24]"
                           }`}>
                             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
@@ -1274,16 +1274,16 @@ export default function TournamentDetailPage() {
                               {isWinner ? <Crown className="w-3.5 h-3.5" /> : i + 1}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-1.5 flex-wrap">
+                              <div className="flex items-center gap-1 flex-wrap">
                                 {/* Crown badge for team leader in duo/squad */}
                                 {isSquad && (
-                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-black text-[#ffd700] bg-[#ffd700]/10 border border-[#ffd700]/30 px-1.5 py-0.5 rounded-full">
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] font-black text-[#ffd700] bg-[#ffd700]/10 border border-[#ffd700]/30 px-1 py-0.5 rounded-full">
                                     👑 Leader
                                   </span>
                                 )}
                                 <span className="text-white font-bold text-sm"><PlayerIdentity playerName={p.playerName} userId={p.userId} /></span>
                                 {p.userId === user?.userId && (
-                                  <span className="text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 px-1.5 py-0.5 rounded-full">You</span>
+                                  <span className="text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 px-1 py-0.5 rounded-full">You</span>
                                 )}
                                 <BadgeChips badges={p.badges} />
                               </div>
@@ -1293,12 +1293,12 @@ export default function TournamentDetailPage() {
                           </div>
                           {/* Teammate Rows — indented squad block */}
                           {members.map((m, mi) => (
-                            <div key={mi} className="flex items-center gap-3 px-3 py-2 bg-[#141420] border-t border-[#222230]">
+                            <div key={mi} className="flex items-center gap-2.5 px-2.5 py-1.5 bg-[#141420] border-t border-[#222230]">
                               <div className="w-7 h-7 flex items-center justify-center shrink-0">
                                 <div className="w-1.5 h-1.5 rounded-full bg-[#404058]" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-1.5">
                                   <span className="text-[10px] font-black text-[#606070] uppercase">P{mi + 2}</span>
                                   <span className="text-[#c0c0d0] text-xs font-medium"><PlayerIdentity playerName={m.name} /></span>
                                 </div>
@@ -1325,7 +1325,7 @@ export default function TournamentDetailPage() {
                   onClick={() => setHypePlayerCard(null)}
                 >
                   <div
-                    className="bg-[#12121a] border border-[#ff6b00]/30 rounded-2xl p-6 w-64 shadow-2xl relative"
+                    className="bg-[#12121a] border border-[#ff6b00]/30 rounded-2xl p-4 w-64 shadow-2xl relative"
                     onClick={e => e.stopPropagation()}
                   >
                     {/* Close */}
@@ -1336,7 +1336,7 @@ export default function TournamentDetailPage() {
                       <X className="w-4 h-4" />
                     </button>
 
-                    <div className="flex flex-col items-center gap-3 text-center">
+                    <div className="flex flex-col items-center gap-2.5 text-center">
                       {/* Avatar */}
                       <div
                         className="w-14 h-14 rounded-full flex items-center justify-center text-2xl font-black border-2"
@@ -1346,22 +1346,22 @@ export default function TournamentDetailPage() {
                       </div>
 
                       {/* Name + tier */}
-                      <div className="space-y-1.5">
+                      <div className="space-y-1">
                         <div className="text-white font-black text-base leading-tight">{d.playerName}</div>
                         <RankBadge rating={d.rating} size="sm" showRating />
                       </div>
 
                       {/* Stats grid */}
-                      <div className="grid grid-cols-3 gap-2 w-full mt-1">
-                        <div className="bg-[#1a1a24] rounded-lg p-2.5">
+                      <div className="grid grid-cols-3 gap-1.5 w-full mt-1">
+                        <div className="bg-[#1a1a24] rounded-lg p-2">
                           <div className="text-white font-black text-sm">{d.rating.toLocaleString()}</div>
                           <div className="text-[#505060] text-[10px] mt-0.5">RP</div>
                         </div>
-                        <div className="bg-[#1a1a24] rounded-lg p-2.5">
+                        <div className="bg-[#1a1a24] rounded-lg p-2">
                           <div className="text-white font-black text-sm">{d.totalWins}</div>
                           <div className="text-[#505060] text-[10px] mt-0.5">Wins</div>
                         </div>
-                        <div className="bg-[#1a1a24] rounded-lg p-2.5">
+                        <div className="bg-[#1a1a24] rounded-lg p-2">
                           <div className="text-white font-black text-sm">{d.totalMatches}</div>
                           <div className="text-[#505060] text-[10px] mt-0.5">Played</div>
                         </div>
@@ -1376,11 +1376,11 @@ export default function TournamentDetailPage() {
             {(t?.status === "upcoming" || t?.status === "live" || t?.status === "ongoing" || hypeMessages.length > 0) && (
               <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 overflow-hidden">
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#1a1a24]">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-[#1a1a24]">
+                  <div className="flex items-center gap-1.5">
                     <span className="text-lg">🔥</span>
                     <h3 className="text-white font-black uppercase text-sm tracking-wider">Hype Board</h3>
-                    <span className="text-[10px] font-bold text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/20 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold text-[#ff6b00] bg-[#ff6b00]/10 border border-[#ff6b00]/20 px-1.5 py-0.5 rounded-full">
                       {hypeMessages.length} হাইপ
                     </span>
                   </div>
@@ -1391,10 +1391,10 @@ export default function TournamentDetailPage() {
 
                 {/* Input area — locked when match is live/ended, or user not joined */}
                 {user ? (
-                  <div className="px-5 py-3 border-b border-[#1a1a24] bg-[#0e0e18]">
+                  <div className="px-3.5 py-2.5 border-b border-[#1a1a24] bg-[#0e0e18]">
                     {hypeBoardLocked ? (
                       /* ── Live / ended lock ── */
-                      <div className="flex items-center gap-2 py-1.5 px-3 bg-[#1a1a24] rounded-lg border border-[#2a2a36]">
+                      <div className="flex items-center gap-1.5 py-1 px-2.5 bg-[#1a1a24] rounded-lg border border-[#2a2a36]">
                         <Lock className="w-3.5 h-3.5 text-[#505060] shrink-0" />
                         <span className="text-xs text-[#505060]">
                           Hype Board is locked because the match is {isLive ? "live" : "ended"}.
@@ -1402,8 +1402,8 @@ export default function TournamentDetailPage() {
                       </div>
                     ) : (
                       /* ── Active input ── */
-                      <div className="space-y-1.5">
-                        <div className="flex gap-2">
+                      <div className="space-y-1">
+                        <div className="flex gap-1.5">
                           <div className="flex-1 relative">
                             <input
                               value={hypeText}
@@ -1411,7 +1411,7 @@ export default function TournamentDetailPage() {
                               onKeyDown={e => e.key === "Enter" && hypeCanPost && postHype()}
                               disabled={!hypeCanPost}
                               placeholder={hypeCooldownSecs > 0 ? `অপেক্ষা করুন… (${hypeCooldownSecs}s)` : "তোমার হাইপ লেখো... 🔥"}
-                              className="w-full bg-[#1a1a24] border border-[#2a2a36] rounded-lg px-3 py-2 text-sm text-white placeholder:text-[#505060] focus:outline-none focus:border-[#ff6b00]/50 pr-12 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="w-full bg-[#1a1a24] border border-[#2a2a36] rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-[#505060] focus:outline-none focus:border-[#ff6b00]/50 pr-8 disabled:opacity-50 disabled:cursor-not-allowed"
                             />
                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#404055]">
                               {hypeText.length}/120
@@ -1420,7 +1420,7 @@ export default function TournamentDetailPage() {
                           <button
                             onClick={postHype}
                             disabled={!hypeCanPost || hypePosting || !hypeText.trim()}
-                            className="bg-[#ff6b00] hover:bg-[#e05f00] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs px-3 py-2 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1"
+                            className="bg-[#ff6b00] hover:bg-[#e05f00] disabled:opacity-40 disabled:cursor-not-allowed text-white font-black text-xs px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1"
                           >
                             {hypePosting
                               ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1441,13 +1441,13 @@ export default function TournamentDetailPage() {
                 {/* Messages */}
                 <div className="max-h-72 overflow-y-auto divide-y divide-[#1a1a24]">
                   {hypeLoading ? (
-                    <div className="flex items-center justify-center py-8 gap-2">
+                    <div className="flex items-center justify-center py-5 gap-1.5">
                       <div className="w-4 h-4 border-2 border-[#ff6b00] border-t-transparent rounded-full animate-spin" />
                       <span className="text-[#a0a0b0] text-xs">লোড হচ্ছে...</span>
                     </div>
                   ) : hypeMessages.length === 0 ? (
-                    <div className="text-center py-8">
-                      <div className="text-3xl mb-2">🤫</div>
+                    <div className="text-center py-5">
+                      <div className="text-3xl mb-1.5">🤫</div>
                       <p className="text-[#505060] text-sm">এখনো কেউ হাইপ করেনি — প্রথম হও!</p>
                     </div>
                   ) : (
@@ -1461,14 +1461,14 @@ export default function TournamentDetailPage() {
                         return `${h}h আগে`;
                       })();
                       return (
-                        <div key={msg.id} className={`flex items-start gap-3 px-4 py-3 ${isMe ? "bg-[#ff6b00]/5" : "hover:bg-[#1a1a24]/50"} transition-colors group`}>
+                        <div key={msg.id} className={`flex items-start gap-2.5 px-3 py-2.5 ${isMe ? "bg-[#ff6b00]/5" : "hover:bg-[#1a1a24]/50"} transition-colors group`}>
                           <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black shrink-0 mt-0.5 ${
                             isMe ? "bg-[#ff6b00]/20 text-[#ff6b00]" : "bg-[#2a2a36] text-[#a0a0b0]"
                           }`}>
                             {msg.playerName.charAt(0).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                            <div className="flex items-center gap-1 mb-0.5 flex-wrap">
                               {/* Clickable username — opens Player Card */}
                               <button
                                 onClick={() => setHypePlayerCard(msg.userId)}
@@ -1477,7 +1477,7 @@ export default function TournamentDetailPage() {
                                 <PlayerIdentity playerName={msg.playerName} userId={msg.userId} />
                               </button>
                               {isMe && (
-                                <span className="text-[9px] font-bold bg-[#ff6b00]/20 text-[#ff6b00] px-1.5 py-0.5 rounded-full shrink-0">You</span>
+                                <span className="text-[9px] font-bold bg-[#ff6b00]/20 text-[#ff6b00] px-1 py-0.5 rounded-full shrink-0">You</span>
                               )}
                               {/* Tier badge — shown when rating data is available */}
                               {(() => {
@@ -1508,8 +1508,8 @@ export default function TournamentDetailPage() {
           </div>
 
           {/* ── Sidebar ── */}
-          <div className="space-y-4">
-            <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-5 space-y-3">
+          <div className="space-y-3">
+            <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 p-3.5 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[#a0a0b0] text-sm">Prize Pool</span>
                 <span className="text-[#ffd700] font-black text-xl">৳{Number(t.prizePool).toLocaleString()}</span>
@@ -1533,7 +1533,7 @@ export default function TournamentDetailPage() {
               )}
               <div className="flex items-center justify-between">
                 <span className="text-[#a0a0b0] text-sm">Mode</span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded border uppercase ${modeColors[t.mode]}`}>{t.mode}</span>
+                <span className={`text-xs font-bold px-1.5 py-0.5 rounded border uppercase ${modeColors[t.mode]}`}>{t.mode}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[#a0a0b0] text-sm">Team Size</span>
@@ -1546,12 +1546,12 @@ export default function TournamentDetailPage() {
 
               {/* Wallet balance */}
               {user && walletBalance !== null && totalEntryFee > 0 && !isJoined && !isRegistrationClosed && (
-                <div className={`flex items-center justify-between py-2 px-3 rounded-lg border ${
+                <div className={`flex items-center justify-between py-1.5 px-2.5 rounded-lg border ${
                   walletBalance >= totalEntryFee
                     ? "bg-[#00ff88]/5 border-[#00ff88]/20"
                     : "bg-[#ff2244]/10 border-[#ff2244]/30"
                 }`}>
-                  <span className="flex items-center gap-1.5 text-sm text-[#a0a0b0]">
+                  <span className="flex items-center gap-1 text-sm text-[#a0a0b0]">
                     <Wallet className="w-3.5 h-3.5" /> Balance
                   </span>
                   <span className={`font-black text-sm ${walletBalance >= totalEntryFee ? "text-[#00ff88]" : "text-[#ff2244]"}`}>
@@ -1563,14 +1563,14 @@ export default function TournamentDetailPage() {
               {/* Game Rules Button — always visible */}
               <button
                 onClick={() => setShowRulesModal(true)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase text-sm rounded-xl hover:text-white hover:border-[#ff6b00]/30 transition-all"
+                className="w-full flex items-center justify-center gap-1.5 py-2 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase text-sm rounded-xl hover:text-white hover:border-[#ff6b00]/30 transition-all"
               >
                 <BookOpen className="w-4 h-4" /> Game Rules
               </button>
 
-              <div className="border-t border-[#2a2a36] pt-3">
+              <div className="border-t border-[#2a2a36] pt-2.5">
                 {!user && !authLoading && (
-                  <Link href="/sign-in" className="block w-full text-center px-6 py-3.5 bg-[#ff6b00]/20 border border-[#ff6b00]/40 text-[#ff6b00] font-black uppercase rounded-xl hover:bg-[#ff6b00]/30 transition-all text-sm">
+                  <Link href="/sign-in" className="block w-full text-center px-4 py-2.5 bg-[#ff6b00]/20 border border-[#ff6b00]/40 text-[#ff6b00] font-black uppercase rounded-xl hover:bg-[#ff6b00]/30 transition-all text-sm">
                     Sign In to Join
                   </Link>
                 )}
@@ -1578,7 +1578,7 @@ export default function TournamentDetailPage() {
                 {(isEnded || t.resultsPublished || matchesWithResults.length > 0) && (
                   <button
                     onClick={() => setShowLeaderboardModal(true)}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-[#ffd700]/15 to-[#ff6b00]/10 hover:from-[#ffd700]/25 hover:to-[#ff6b00]/20 border border-[#ffd700]/30 hover:border-[#ffd700]/60 text-[#ffd700] font-black uppercase rounded-xl transition-all text-sm shadow-[0_2px_14px_rgba(255,215,0,0.08)] hover:shadow-[0_2px_22px_rgba(255,215,0,0.18)]"
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-gradient-to-r from-[#ffd700]/15 to-[#ff6b00]/10 hover:from-[#ffd700]/25 hover:to-[#ff6b00]/20 border border-[#ffd700]/30 hover:border-[#ffd700]/60 text-[#ffd700] font-black uppercase rounded-xl transition-all text-sm shadow-[0_2px_14px_rgba(255,215,0,0.08)] hover:shadow-[0_2px_22px_rgba(255,215,0,0.18)]"
                   >
                     <Trophy className="w-4 h-4" />
                     🏆 ফলাফল দেখুন
@@ -1586,8 +1586,8 @@ export default function TournamentDetailPage() {
                 )}
 
                 {user && isJoined && !isEnded && !t.resultsPublished && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-center gap-2 py-2.5 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-xl">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-center gap-1.5 py-2 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded-xl">
                       <CheckCircle className="w-4 h-4 text-[#00ff88]" />
                       <span className="text-[#00ff88] font-black uppercase text-sm">You're In!</span>
                     </div>
@@ -1602,36 +1602,36 @@ export default function TournamentDetailPage() {
                     {(t.resultsPublished || matchesWithResults.length > 0) ? (
                       <button
                         onClick={() => setShowLeaderboardModal(true)}
-                        className="w-full text-center py-3.5 bg-gradient-to-r from-[#ffd700]/12 to-[#ff6b00]/8 hover:from-[#ffd700]/22 hover:to-[#ff6b00]/15 border border-[#ffd700]/25 hover:border-[#ffd700]/50 text-[#ffd700] font-black uppercase rounded-xl text-sm transition-all cursor-pointer flex items-center justify-center gap-2"
+                        className="w-full text-center py-2.5 bg-gradient-to-r from-[#ffd700]/12 to-[#ff6b00]/8 hover:from-[#ffd700]/22 hover:to-[#ff6b00]/15 border border-[#ffd700]/25 hover:border-[#ffd700]/50 text-[#ffd700] font-black uppercase rounded-xl text-sm transition-all cursor-pointer flex items-center justify-center gap-1.5"
                       >
                         <Trophy className="w-4 h-4" />
                         🏆 View Leaderboard
                       </button>
                     ) : (isLive || liveMatches.length > 0) ? (
-                      <div className="w-full text-center py-3.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-black uppercase rounded-xl text-sm flex items-center justify-center gap-2">
+                      <div className="w-full text-center py-2.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-black uppercase rounded-xl text-sm flex items-center justify-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-[#ff2244] animate-pulse inline-block" />
                         Match Live — Registration Closed
                       </div>
                     ) : roomOpen ? (
-                      <div className="w-full text-center py-3.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] font-black uppercase rounded-xl text-sm flex items-center justify-center gap-2">
+                      <div className="w-full text-center py-2.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] font-black uppercase rounded-xl text-sm flex items-center justify-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-[#ff6b00] animate-pulse inline-block" />
                         Room Open — Registration Closed
                       </div>
                     ) : isEnded ? (
-                      <div className="w-full text-center py-3.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase rounded-xl text-sm">
+                      <div className="w-full text-center py-2.5 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-bold uppercase rounded-xl text-sm">
                         Match Completed
                       </div>
                     ) : t.status === "cancelled" ? (
-                      <div className="w-full text-center py-3.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-bold uppercase rounded-xl text-sm">
+                      <div className="w-full text-center py-2.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-bold uppercase rounded-xl text-sm">
                         Tournament Cancelled
                       </div>
                     ) : isFull ? (
-                      <div className="w-full text-center py-3.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-black uppercase rounded-xl text-sm">
+                      <div className="w-full text-center py-2.5 bg-[#ff2244]/10 border border-[#ff2244]/30 text-[#ff2244] font-black uppercase rounded-xl text-sm">
                         Tournament Full
                       </div>
                     ) : (
                       <button onClick={handleJoinClick} disabled={joining}
-                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-all shadow-[0_0_20px_rgba(255,107,0,0.3)] disabled:opacity-50 text-sm">
+                        className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-all shadow-[0_0_20px_rgba(255,107,0,0.3)] disabled:opacity-50 text-sm">
                         <UserPlus className="w-4 h-4" />
                         {joining ? "Joining..." : totalEntryFee > 0 ? `Join (৳${totalEntryFee} fee)` : "Join Tournament"}
                       </button>
@@ -1643,7 +1643,7 @@ export default function TournamentDetailPage() {
 
             {/* Slot stats */}
             {!isEnded && (
-              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-4 grid grid-cols-3 gap-3 text-center">
+              <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/10 p-3 grid grid-cols-3 gap-2.5 text-center">
                 <div>
                   <div className="text-[#ff6b00] font-black text-lg">{t.maxSlots}</div>
                   <div className="text-[#a0a0b0] text-[10px] uppercase">Total</div>
@@ -1664,10 +1664,10 @@ export default function TournamentDetailPage() {
 
       {/* ── Registration Modal (Dynamic Solo/Duo/Squad) ── */}
       {showRegistrationModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black uppercase text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-3">
+          <div className="w-full max-w-md bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-black uppercase text-white flex items-center gap-1.5">
                 <UserPlus className="w-5 h-5 text-[#ff6b00]" /> Register
               </h3>
               <button onClick={() => setShowRegistrationModal(false)} className="text-[#a0a0b0] hover:text-white">
@@ -1692,15 +1692,15 @@ export default function TournamentDetailPage() {
                 allOptions;
               if (available.length === 0) return null;
               return (
-                <div className="mb-5">
-                  <div className="text-[#a0a0b0] text-[10px] uppercase tracking-widest font-bold mb-2">Game Mode</div>
-                  <div className="flex gap-2">
+                <div className="mb-3.5">
+                  <div className="text-[#a0a0b0] text-[10px] uppercase tracking-widest font-bold mb-1.5">Game Mode</div>
+                  <div className="flex gap-1.5">
                     {available.map(({ mode, label, count }) => (
                       <button
                         key={mode}
                         type="button"
                         onClick={() => handleModeChange(mode)}
-                        className={`flex-1 py-2.5 rounded-xl font-black text-xs uppercase border transition-all ${
+                        className={`flex-1 py-2 rounded-xl font-black text-xs uppercase border transition-all ${
                           selectedMode === mode
                             ? "bg-[#ff6b00] border-[#ff6b00] text-white shadow-[0_0_14px_rgba(255,107,0,0.35)]"
                             : "bg-[#1a1a24] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/50 hover:text-white"
@@ -1712,7 +1712,7 @@ export default function TournamentDetailPage() {
                     ))}
                   </div>
                   {entryFee > 0 && (
-                    <div className="mt-2 text-center text-xs text-[#a0a0b0]">
+                    <div className="mt-1.5 text-center text-xs text-[#a0a0b0]">
                       ৳{entryFee} × {getPlayerCount(selectedMode)} players ={" "}
                       <span className="text-[#ff6b00] font-black">৳{modalFee}</span>
                     </div>
@@ -1721,13 +1721,13 @@ export default function TournamentDetailPage() {
               );
             })()}
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Player 1 (the user) */}
-              <div className="bg-[#1a1a24] rounded-xl p-4 border border-[#ff6b00]/10">
-                <div className="text-[#ff6b00] text-xs font-black uppercase mb-3 flex items-center gap-1.5">
+              <div className="bg-[#1a1a24] rounded-xl p-3 border border-[#ff6b00]/10">
+                <div className="text-[#ff6b00] text-xs font-black uppercase mb-2.5 flex items-center gap-1">
                   <Star className="w-3 h-3" /> Player 1 (You)
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <div>
                     <label className="text-[#a0a0b0] text-xs uppercase mb-1 block">Free Fire UID *</label>
                     <input
@@ -1735,7 +1735,7 @@ export default function TournamentDetailPage() {
                       placeholder="Enter your UID"
                       value={regForm.uid}
                       onChange={(e) => setRegForm({ ...regForm, uid: e.target.value })}
-                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00] font-mono"
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-2.5 py-2 text-white text-sm focus:outline-none focus:border-[#ff6b00] font-mono"
                     />
                   </div>
                   <div>
@@ -1745,7 +1745,7 @@ export default function TournamentDetailPage() {
                       placeholder="Your in-game name"
                       value={regForm.name}
                       onChange={(e) => setRegForm({ ...regForm, name: e.target.value })}
-                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00]"
+                      className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-2.5 py-2 text-white text-sm focus:outline-none focus:border-[#ff6b00]"
                     />
                   </div>
                 </div>
@@ -1753,11 +1753,11 @@ export default function TournamentDetailPage() {
 
               {/* Additional players for duo/squad */}
               {regForm.members.map((member, idx) => (
-                <div key={idx} className="bg-[#1a1a24] rounded-xl p-4 border border-[#2a2a36]">
-                  <div className="text-[#a0a0b0] text-xs font-black uppercase mb-3">
+                <div key={idx} className="bg-[#1a1a24] rounded-xl p-3 border border-[#2a2a36]">
+                  <div className="text-[#a0a0b0] text-xs font-black uppercase mb-2.5">
                     Player {idx + 2}
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     <div>
                       <label className="text-[#a0a0b0] text-xs uppercase mb-1 block">Free Fire UID *</label>
                       <input
@@ -1769,7 +1769,7 @@ export default function TournamentDetailPage() {
                           updated[idx] = { ...updated[idx], uid: e.target.value };
                           setRegForm({ ...regForm, members: updated });
                         }}
-                        className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00] font-mono"
+                        className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-2.5 py-2 text-white text-sm focus:outline-none focus:border-[#ff6b00] font-mono"
                       />
                     </div>
                     <div>
@@ -1783,7 +1783,7 @@ export default function TournamentDetailPage() {
                           updated[idx] = { ...updated[idx], name: e.target.value };
                           setRegForm({ ...regForm, members: updated });
                         }}
-                        className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00]"
+                        className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-lg px-2.5 py-2 text-white text-sm focus:outline-none focus:border-[#ff6b00]"
                       />
                     </div>
                   </div>
@@ -1793,7 +1793,7 @@ export default function TournamentDetailPage() {
               <button
                 onClick={handleRegistrationSubmit}
                 disabled={joining}
-                className="w-full py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 text-sm"
+                className="w-full py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 text-sm"
               >
                 {joining ? "Joining..." : modalFee > 0 ? `Continue (৳${modalFee} fee)` : "Join Tournament"}
               </button>
@@ -1804,20 +1804,20 @@ export default function TournamentDetailPage() {
 
       {/* ── Entry Fee Confirmation Modal ── */}
       {showFeeModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-sm bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black uppercase text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-3">
+          <div className="w-full max-w-sm bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-black uppercase text-white flex items-center gap-1.5">
                 <Wallet className="w-5 h-5 text-[#ff6b00]" /> Entry Fee
               </h3>
               <button onClick={() => setShowFeeModal(false)} className="text-[#a0a0b0] hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="bg-[#1a1a24] rounded-xl p-4 mb-4 space-y-2">
+            <div className="bg-[#1a1a24] rounded-xl p-3 mb-3 space-y-1.5">
               <div className="flex justify-between text-sm">
                 <span className="text-[#a0a0b0]">Tournament</span>
-                <span className="text-white font-bold truncate ml-2 max-w-[55%] text-right">{t.name}</span>
+                <span className="text-white font-bold truncate ml-1.5 max-w-[55%] text-right">{t.name}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-[#a0a0b0]">Mode</span>
@@ -1829,7 +1829,7 @@ export default function TournamentDetailPage() {
                     <span className="text-[#a0a0b0]">Per Player</span>
                     <span className="text-white font-bold">৳{entryFee} × {getPlayerCount(selectedMode)}</span>
                   </div>
-                  <div className="flex justify-between text-sm border-t border-[#2a2a36] pt-2">
+                  <div className="flex justify-between text-sm border-t border-[#2a2a36] pt-1.5">
                     <span className="text-[#a0a0b0] font-bold">Total Fee</span>
                     <span className="text-[#ff6b00] font-black">৳{modalFee}</span>
                   </div>
@@ -1840,7 +1840,7 @@ export default function TournamentDetailPage() {
                   <span className="text-[#ff6b00] font-black">৳{modalFee}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm border-t border-[#2a2a36] pt-2">
+              <div className="flex justify-between text-sm border-t border-[#2a2a36] pt-1.5">
                 <span className="text-[#a0a0b0]">Your Balance</span>
                 <span className={`font-black ${walletBalance !== null && walletBalance >= modalFee ? "text-[#00ff88]" : "text-[#ff2244]"}`}>
                   ৳{walletBalance?.toFixed(2) ?? "..."}
@@ -1848,20 +1848,20 @@ export default function TournamentDetailPage() {
               </div>
             </div>
             {walletBalance !== null && walletBalance < modalFee ? (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <p className="text-[#ff2244] text-sm text-center font-bold">Insufficient balance to join.</p>
                 <Link href="/wallet" onClick={() => setShowFeeModal(false)}
-                  className="block w-full text-center px-6 py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors text-sm">
+                  className="block w-full text-center px-4 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors text-sm">
                   Add Funds to Wallet
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <p className="text-[#a0a0b0] text-sm text-center">
                   ৳{modalFee} will be deducted from your wallet instantly.
                 </p>
                 <button onClick={() => doJoin()} disabled={joining}
-                  className="w-full py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 text-sm">
+                  className="w-full py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors disabled:opacity-50 text-sm">
                   {joining ? "Joining..." : `Confirm & Pay ৳${modalFee}`}
                 </button>
               </div>
@@ -1877,10 +1877,10 @@ export default function TournamentDetailPage() {
 
       {/* ── Game Rules Modal ── */}
       {showRulesModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-6 max-h-[85vh] flex flex-col">
-            <div className="flex items-center justify-between mb-5 shrink-0">
-              <h3 className="font-black uppercase text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm px-3">
+          <div className="w-full max-w-lg bg-[#0d0d16] border border-[#ff6b00]/30 rounded-2xl p-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between mb-3.5 shrink-0">
+              <h3 className="font-black uppercase text-white flex items-center gap-1.5">
                 <BookOpen className="w-5 h-5 text-[#ff6b00]" /> Game Rules
               </h3>
               <button onClick={() => setShowRulesModal(false)} className="text-[#a0a0b0] hover:text-white">
@@ -1889,7 +1889,7 @@ export default function TournamentDetailPage() {
             </div>
             <div className="overflow-y-auto flex-1 pr-1">
               {!categoryRules || !categoryRules.rules ? (
-                <p className="text-[#a0a0b0] text-center py-8">No rules posted yet for this category.</p>
+                <p className="text-[#a0a0b0] text-center py-5">No rules posted yet for this category.</p>
               ) : (
                 <div className="text-[#a0a0b0] text-sm leading-relaxed whitespace-pre-line">{categoryRules.rules}</div>
               )}

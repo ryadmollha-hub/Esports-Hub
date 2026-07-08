@@ -51,21 +51,21 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-16 pb-16">
-        <h1 className="text-2xl sm:text-4xl font-black uppercase mb-2" data-testid="heading-contact">
+      <div className="max-w-4xl mx-auto px-3 pt-16 pb-16">
+        <h1 className="text-2xl sm:text-4xl font-black uppercase mb-1.5" data-testid="heading-contact">
           Contact <span className="text-[#ff6b00]">Us</span>
         </h1>
-        <p className="text-[#a0a0b0] mb-10">
+        <p className="text-[#a0a0b0] mb-7">
           Have questions? Need support? Reach us on any platform below.
         </p>
 
         {/* Quick Action Buttons */}
-        <div className="grid sm:grid-cols-2 gap-4 mb-8">
+        <div className="grid sm:grid-cols-2 gap-3 mb-5">
           <a
             href={whatsappHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-4 bg-[#00ff88] rounded-2xl p-5 transition-all hover:bg-[#00e87a] group"
+            className="flex items-center gap-3 bg-[#00ff88] rounded-2xl p-3.5 transition-all hover:bg-[#00e87a] group"
           >
             <div className="w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center shrink-0">
               <MessageCircle className="w-7 h-7 text-[#0a0a0f]" />
@@ -81,7 +81,7 @@ export default function ContactPage() {
             href={settings.telegram_link}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-4 bg-[#229ED9] rounded-2xl p-5 transition-all hover:bg-[#1a8ec9] group"
+            className="flex items-center gap-3 bg-[#229ED9] rounded-2xl p-3.5 transition-all hover:bg-[#1a8ec9] group"
           >
             <div className="w-12 h-12 bg-black/10 rounded-xl flex items-center justify-center shrink-0">
               <Send className="w-7 h-7 text-white" />
@@ -97,9 +97,9 @@ export default function ContactPage() {
         {/* Support Ticket CTA */}
         <Link
           href="/support"
-          className="block w-full bg-[#12121a] border border-[#ff6b00]/20 hover:border-[#ff6b00]/50 rounded-2xl p-5 mb-10 transition-all group"
+          className="block w-full bg-[#12121a] border border-[#ff6b00]/20 hover:border-[#ff6b00]/50 rounded-2xl p-3.5 mb-7 transition-all group"
         >
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-[#ff6b00]/10 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[#ff6b00]/20 transition-colors">
               <Mail className="w-6 h-6 text-[#ff6b00]" />
             </div>
@@ -111,7 +111,7 @@ export default function ContactPage() {
           </div>
         </Link>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
+        <div className="grid md:grid-cols-3 gap-4 mb-8">
           {socials.map((s) => (
             <a
               key={s.name}
@@ -119,21 +119,21 @@ export default function ContactPage() {
               target="_blank"
               rel="noopener noreferrer"
               data-testid={`link-contact-${s.name.toLowerCase()}`}
-              className={`block bg-[#12121a] border rounded-2xl p-6 transition-all ${s.color}`}
+              className={`block bg-[#12121a] border rounded-2xl p-4 transition-all ${s.color}`}
             >
-              <s.icon className="w-8 h-8 mb-4" />
-              <h3 className="font-black text-lg text-white mb-2">{s.name}</h3>
+              <s.icon className="w-8 h-8 mb-3" />
+              <h3 className="font-black text-lg text-white mb-1.5">{s.name}</h3>
               <p className="text-[#a0a0b0] text-sm leading-relaxed">{s.desc}</p>
-              <div className="mt-4 text-sm font-bold flex items-center gap-1">
+              <div className="mt-3 text-sm font-bold flex items-center gap-1">
                 {s.cta} →
               </div>
             </a>
           ))}
         </div>
 
-        <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/20 p-8">
-          <h2 className="text-xl font-black uppercase mb-6 text-[#ff6b00]">Frequently Asked Questions</h2>
-          <div className="space-y-6">
+        <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/20 p-5">
+          <h2 className="text-xl font-black uppercase mb-4 text-[#ff6b00]">Frequently Asked Questions</h2>
+          <div className="space-y-4">
             {[
               {
                 q: "How do I join a tournament?",
@@ -152,8 +152,8 @@ export default function ContactPage() {
                 a: "Yes! You can register for multiple tournaments as long as they don't overlap in schedule.",
               },
             ].map((faq, i) => (
-              <div key={i} className="border-b border-[#ff6b00]/10 pb-6 last:border-0 last:pb-0" data-testid={`faq-item-${i}`}>
-                <h4 className="font-bold text-white mb-2" data-testid={`text-faq-q-${i}`}>{faq.q}</h4>
+              <div key={i} className="border-b border-[#ff6b00]/10 pb-4 last:border-0 last:pb-0" data-testid={`faq-item-${i}`}>
+                <h4 className="font-bold text-white mb-1.5" data-testid={`text-faq-q-${i}`}>{faq.q}</h4>
                 <p className="text-[#a0a0b0] text-sm leading-relaxed">{faq.a}</p>
               </div>
             ))}

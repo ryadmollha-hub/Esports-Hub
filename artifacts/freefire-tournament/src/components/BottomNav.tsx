@@ -21,7 +21,7 @@ export default function BottomNav() {
   const NavLink = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
     const active = isActive(href);
     return (
-      <button onClick={() => setLocation(href)} className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all min-w-[44px] ${active ? "text-[#ff6b00]" : "text-[#606070] hover:text-[#a0a0b0]"}`}>
+      <button onClick={() => setLocation(href)} className={`flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-xl transition-all min-w-[44px] ${active ? "text-[#ff6b00]" : "text-[#606070] hover:text-[#a0a0b0]"}`}>
         <div className={`p-1 rounded-xl transition-all ${active ? "bg-[#ff6b00]/15" : ""}`}>
           <Icon className={`w-4 h-4 ${active ? "stroke-[2.5]" : "stroke-[1.8]"}`} />
         </div>
@@ -46,7 +46,7 @@ export default function BottomNav() {
               <NavLink href="/tournaments" icon={Trophy} label={t("bn_tournament")} />
               <NavLink href="/wallet" icon={Wallet} label={t("bn_wallet")} />
 
-              <button onClick={openCreateMatch} className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl transition-all min-w-[44px] group" aria-label="Create Match">
+              <button onClick={openCreateMatch} className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-xl transition-all min-w-[44px] group" aria-label="Create Match">
                 <div className="p-1 rounded-xl bg-[#ff6b00]/15 group-hover:bg-[#ff6b00]/25 transition-colors">
                   <Plus className="w-4 h-4 text-[#ff6b00] stroke-[2.5]" />
                 </div>
@@ -56,7 +56,7 @@ export default function BottomNav() {
 
               <NavLink href="/profile" icon={User} label={t("bn_profile")} />
 
-              <button onClick={() => setMenuOpen(true)} className="flex flex-col items-center gap-0.5 px-2 py-1 rounded-xl text-[#606070] hover:text-[#a0a0b0] transition-all min-w-[44px]">
+              <button onClick={() => setMenuOpen(true)} className="flex flex-col items-center gap-0.5 px-1.5 py-1 rounded-xl text-[#606070] hover:text-[#a0a0b0] transition-all min-w-[44px]">
                 <div className="p-1 rounded-xl">
                   <Menu className="w-4 h-4 stroke-[1.8]" />
                 </div>

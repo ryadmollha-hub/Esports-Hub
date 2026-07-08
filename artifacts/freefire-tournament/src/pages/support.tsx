@@ -91,22 +91,22 @@ export default function SupportPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-16 pb-20">
+      <div className="max-w-4xl mx-auto px-3 pt-16 pb-20">
 
-        <h1 className="text-2xl sm:text-4xl font-black uppercase mb-2">
+        <h1 className="text-2xl sm:text-4xl font-black uppercase mb-1.5">
           Support <span className="text-[#ff6b00]">Center</span>
         </h1>
-        <p className="text-[#a0a0b0] mb-10">
+        <p className="text-[#a0a0b0] mb-7">
           Get help instantly via WhatsApp or Telegram, or submit a support ticket.
         </p>
 
         {/* Quick Contact Buttons */}
-        <div className="grid sm:grid-cols-2 gap-4 mb-10">
+        <div className="grid sm:grid-cols-2 gap-3 mb-7">
           <a
             href={whatsappHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-4 bg-[#12121a] border border-[#00ff88]/20 hover:border-[#00ff88] rounded-2xl p-5 transition-all group"
+            className="flex items-center gap-3 bg-[#12121a] border border-[#00ff88]/20 hover:border-[#00ff88] rounded-2xl p-3.5 transition-all group"
           >
             <div className="w-12 h-12 bg-[#00ff88]/10 rounded-xl flex items-center justify-center group-hover:bg-[#00ff88]/20 transition-colors shrink-0">
               <MessageCircle className="w-6 h-6 text-[#00ff88]" />
@@ -123,7 +123,7 @@ export default function SupportPage() {
             href={settings.telegram_link}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-4 bg-[#12121a] border border-[#229ED9]/20 hover:border-[#229ED9] rounded-2xl p-5 transition-all group"
+            className="flex items-center gap-3 bg-[#12121a] border border-[#229ED9]/20 hover:border-[#229ED9] rounded-2xl p-3.5 transition-all group"
           >
             <div className="w-12 h-12 bg-[#229ED9]/10 rounded-xl flex items-center justify-center group-hover:bg-[#229ED9]/20 transition-colors shrink-0">
               <Send className="w-6 h-6 text-[#229ED9]" />
@@ -138,9 +138,9 @@ export default function SupportPage() {
         </div>
 
         {/* Support Ticket Section */}
-        <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-6 mb-6">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
+        <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-4 mb-4">
+          <div className="flex items-center justify-between mb-3.5">
+            <div className="flex items-center gap-2.5">
               <Ticket className="w-5 h-5 text-[#ff6b00]" />
               <h2 className="font-black text-lg uppercase">Submit a Ticket</h2>
             </div>
@@ -152,34 +152,34 @@ export default function SupportPage() {
           </div>
 
           {!user ? (
-            <div className="text-center py-10">
-              <AlertCircle className="w-12 h-12 text-[#a0a0b0] mx-auto mb-3 opacity-30" />
-              <p className="text-[#a0a0b0] mb-4">You need to be logged in to submit a support ticket.</p>
-              <Link href="/sign-in" className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
+            <div className="text-center py-7">
+              <AlertCircle className="w-12 h-12 text-[#a0a0b0] mx-auto mb-2.5 opacity-30" />
+              <p className="text-[#a0a0b0] mb-3">You need to be logged in to submit a support ticket.</p>
+              <Link href="/sign-in" className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
                 Sign In
               </Link>
             </div>
           ) : submitted ? (
-            <div className="text-center py-10">
-              <CheckCircle className="w-12 h-12 text-[#00ff88] mx-auto mb-3" />
+            <div className="text-center py-7">
+              <CheckCircle className="w-12 h-12 text-[#00ff88] mx-auto mb-2.5" />
               <h3 className="font-black text-white text-lg mb-1">Ticket Submitted!</h3>
-              <p className="text-[#a0a0b0] mb-5">We'll review your ticket and respond as soon as possible.</p>
-              <div className="flex items-center justify-center gap-3">
-                <Link href="/my-tickets" className="px-6 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
+              <p className="text-[#a0a0b0] mb-3.5">We'll review your ticket and respond as soon as possible.</p>
+              <div className="flex items-center justify-center gap-2.5">
+                <Link href="/my-tickets" className="px-4 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
                   View My Tickets
                 </Link>
                 <button
                   onClick={() => setSubmitted(false)}
-                  className="px-6 py-2.5 bg-[#1a1a24] text-[#a0a0b0] font-bold uppercase rounded-xl text-sm hover:text-white transition-colors"
+                  className="px-4 py-2 bg-[#1a1a24] text-[#a0a0b0] font-bold uppercase rounded-xl text-sm hover:text-white transition-colors"
                 >
                   New Ticket
                 </button>
               </div>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3">
               <div>
-                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Subject *</label>
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1 font-bold">Subject *</label>
                 <input
                   type="text"
                   value={form.subject}
@@ -187,17 +187,17 @@ export default function SupportPage() {
                   required
                   maxLength={200}
                   placeholder="Brief description of your issue"
-                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Category *</label>
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1 font-bold">Category *</label>
                 <select
                   value={form.category}
                   onChange={(e) => setForm({ ...form, category: e.target.value })}
                   required
-                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-[#ff6b00] transition-colors"
+                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2 text-white text-sm focus:outline-none focus:border-[#ff6b00] transition-colors"
                 >
                   <option value="">Select a category</option>
                   {CATEGORIES.map((c) => (
@@ -207,7 +207,7 @@ export default function SupportPage() {
               </div>
 
               <div>
-                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Message *</label>
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1 font-bold">Message *</label>
                 <textarea
                   value={form.message}
                   onChange={(e) => setForm({ ...form, message: e.target.value })}
@@ -215,15 +215,15 @@ export default function SupportPage() {
                   maxLength={5000}
                   rows={5}
                   placeholder="Describe your issue in detail..."
-                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors resize-none"
+                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors resize-none"
                 />
                 <div className="text-right text-[#4a4a5a] text-xs mt-1">{form.message.length}/5000</div>
               </div>
 
               <div>
-                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Screenshot (Optional)</label>
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1 font-bold">Screenshot (Optional)</label>
                 {screenshot ? (
-                  <div className="flex items-center gap-3 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5">
+                  <div className="flex items-center gap-2.5 bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2">
                     <img src={screenshot} alt="preview" className="w-10 h-10 object-cover rounded-lg" />
                     <span className="text-[#a0a0b0] text-sm flex-1 truncate">{screenshotName}</span>
                     <button type="button" onClick={() => { setScreenshot(null); setScreenshotName(null); if (fileRef.current) fileRef.current.value = ""; }} className="text-[#ff2244] hover:text-red-400">
@@ -234,7 +234,7 @@ export default function SupportPage() {
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="w-full bg-[#0a0a0f] border border-dashed border-[#2a2a36] rounded-xl px-4 py-4 text-[#4a4a5a] text-sm flex items-center justify-center gap-2 hover:border-[#ff6b00]/50 hover:text-[#a0a0b0] transition-colors"
+                    className="w-full bg-[#0a0a0f] border border-dashed border-[#2a2a36] rounded-xl px-3 py-3 text-[#4a4a5a] text-sm flex items-center justify-center gap-1.5 hover:border-[#ff6b00]/50 hover:text-[#a0a0b0] transition-colors"
                   >
                     <Upload className="w-4 h-4" />
                     Upload screenshot (JPEG, PNG, WebP, GIF · max 5 MB)
@@ -246,7 +246,7 @@ export default function SupportPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
+                className="w-full py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
               >
                 {submitting ? "Submitting..." : "Submit Ticket"}
               </button>

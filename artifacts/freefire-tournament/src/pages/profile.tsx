@@ -58,7 +58,7 @@ function matchStatusBadge(status: string) {
 
 const fadeUp = {
   hidden: { opacity: 0, y: 16 },
-  show: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.4, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] } }),
+  show: (i = 0) => ({ opacity: 1, y: 0, transition: { duration: 0.4, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] as const } }),
 };
 
 export default function ProfilePage() {
@@ -145,7 +145,7 @@ export default function ProfilePage() {
     <div className="min-h-screen bg-[#0a0a0f] text-white pb-24">
       <Navbar />
 
-      <div className="max-w-lg mx-auto px-4 pt-16 pb-6">
+      <div className="max-w-lg mx-auto px-3 pt-16 pb-4">
         <AnimatePresence mode="wait">
 
           {/* ── OVERVIEW ── */}
@@ -154,15 +154,15 @@ export default function ProfilePage() {
 
               {/* Profile Hero Card */}
               <motion.div variants={fadeUp} initial="hidden" animate="show" custom={0}
-                className="relative rounded-2xl overflow-hidden border border-[#ff6b00]/20 mb-4">
+                className="relative rounded-2xl overflow-hidden border border-[#ff6b00]/20 mb-3">
                 {/* Background gradient */}
                 <div className="absolute inset-0 bg-gradient-to-br from-[#ff6b00]/8 via-[#12121a] to-[#0d0d16]" />
                 <div className="absolute top-0 right-0 w-40 h-40 bg-[#ff6b00]/6 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-[#ffd700]/4 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl pointer-events-none" />
 
-                <div className="relative z-10 p-5">
+                <div className="relative z-10 p-3.5">
                   {/* Top row */}
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start gap-3">
                     {/* Avatar */}
                     <div className="relative shrink-0">
                       <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#ff6b00]/30 to-[#ff6b00]/10 border-2 border-[#ff6b00]/40 flex items-center justify-center shadow-[0_0_20px_rgba(255,107,0,0.2)]">
@@ -187,7 +187,7 @@ export default function ProfilePage() {
                         </div>
                       )}
                       {authUser?.isAdmin && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-[#ff6b00] bg-[#ff6b00]/10 px-2 py-0.5 rounded-full mt-1 border border-[#ff6b00]/20">
+                        <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-[#ff6b00] bg-[#ff6b00]/10 px-1.5 py-0.5 rounded-full mt-1 border border-[#ff6b00]/20">
                           <Shield className="w-2 h-2" /> Admin
                         </span>
                       )}
@@ -200,13 +200,13 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Stats */}
-                  <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/[0.06]">
+                  <div className="grid grid-cols-3 gap-1.5 mt-3 pt-3 border-t border-white/[0.06]">
                     {[
                       { label: "Kills", value: kills, icon: Target, color: "text-[#ff6b00]", bg: "bg-[#ff6b00]/8" },
                       { label: "Wins", value: wins, icon: Crown, color: "text-[#ffd700]", bg: "bg-[#ffd700]/8" },
                       { label: "Played", value: played, icon: Swords, color: "text-blue-400", bg: "bg-blue-400/8" },
                     ].map((stat) => (
-                      <div key={stat.label} className={`${stat.bg} rounded-xl p-2.5 text-center`}>
+                      <div key={stat.label} className={`${stat.bg} rounded-xl p-2 text-center`}>
                         <stat.icon className={`w-3.5 h-3.5 ${stat.color} mx-auto mb-1`} />
                         <div className={`text-lg font-black ${stat.color} leading-none`}>{stat.value}</div>
                         <div className="text-[#606070] text-[9px] uppercase tracking-wide mt-0.5">{stat.label}</div>
@@ -215,11 +215,11 @@ export default function ProfilePage() {
                   </div>
 
                   {/* Member since + rank pill */}
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/[0.06]">
+                  <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-white/[0.06]">
                     <span className="text-[#4a4a5a] text-[10px]">
                       Member since {prof?.createdAt ? new Date(prof.createdAt).toLocaleDateString("en-BD", { month: "short", year: "numeric" }) : "—"}
                     </span>
-                    <span className="text-[10px] text-[#ff6b00] font-black bg-[#ff6b00]/10 px-2 py-0.5 rounded-full border border-[#ff6b00]/20">
+                    <span className="text-[10px] text-[#ff6b00] font-black bg-[#ff6b00]/10 px-1.5 py-0.5 rounded-full border border-[#ff6b00]/20">
                       {earnedBadges.length} Badge{earnedBadges.length !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -228,20 +228,20 @@ export default function ProfilePage() {
 
               {/* ── BADGES ── */}
               <motion.div variants={fadeUp} initial="hidden" animate="show" custom={1}
-                className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-4 mb-4">
-                <div className="flex items-center gap-2 mb-3">
+                className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-3 mb-3">
+                <div className="flex items-center gap-1.5 mb-2.5">
                   <Medal className="w-4 h-4 text-[#ffd700]" />
                   <h3 className="font-black uppercase text-white text-xs tracking-wide">My Badges</h3>
                   <span className="ml-auto text-[9px] text-[#606070]">{earnedBadges.length}/{ALL_BADGES.length} earned</span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1.5">
                   {ALL_BADGES.map((badge, i) => {
                     const isEarned = earnedIds.has(badge.id);
                     return (
                       <motion.div key={badge.id} variants={fadeUp} initial="hidden" animate="show" custom={i * 0.5 + 2}
                         title={badge.desc}
-                        className={`relative rounded-xl p-2.5 text-center border bg-gradient-to-br transition-all ${
+                        className={`relative rounded-xl p-2 text-center border bg-gradient-to-br transition-all ${
                           isEarned
                             ? `${badge.color} cursor-default`
                             : "from-[#1a1a24]/50 to-[#12121a]/50 border-[#2a2a36]/50 opacity-40 grayscale"
@@ -262,15 +262,15 @@ export default function ProfilePage() {
                 </div>
 
                 {earnedBadges.length === 0 && (
-                  <p className="text-center text-[#4a4a5a] text-xs mt-2">Join a tournament to earn your first badge!</p>
+                  <p className="text-center text-[#4a4a5a] text-xs mt-1.5">Join a tournament to earn your first badge!</p>
                 )}
               </motion.div>
 
               {/* ── FF Arena Rank Card ── */}
               <motion.div variants={fadeUp} initial="hidden" animate="show" custom={2}
-                className="mb-4">
+                className="mb-3">
                 <Link href="/rankings"
-                  className="flex items-center gap-4 p-4 rounded-2xl border transition-all hover:opacity-90 group"
+                  className="flex items-center gap-3 p-3 rounded-2xl border transition-all hover:opacity-90 group"
                   style={arenaRating
                     ? { background: `${getTierInfo(arenaRating.rating).color}0d`, borderColor: `${getTierInfo(arenaRating.rating).color}35` }
                     : { background: "#12121a", borderColor: "#2a2a36" }
@@ -293,7 +293,7 @@ export default function ProfilePage() {
                       <>
                         <RankBadge rating={arenaRating.rating} size="md" showRating />
                         {/* Progress bar to next tier */}
-                        <div className="mt-2">
+                        <div className="mt-1.5">
                           <div className="flex justify-between text-[9px] text-[#606070] mb-1">
                             <span>{arenaRating.totalMatches} matches · {arenaRating.totalWins} wins</span>
                             <span>{getTierProgress(arenaRating.rating)}% to next</span>
@@ -325,7 +325,7 @@ export default function ProfilePage() {
               {/* My Match Requests button */}
               <motion.button variants={fadeUp} initial="hidden" animate="show" custom={3}
                 onClick={() => setSection("my-matches")}
-                className="w-full flex items-center gap-3 p-3.5 bg-[#12121a] rounded-2xl border border-[#2a2a36] hover:border-[#ff6b00]/25 transition-colors group mb-2">
+                className="w-full flex items-center gap-2.5 p-2.5 bg-[#12121a] rounded-2xl border border-[#2a2a36] hover:border-[#ff6b00]/25 transition-colors group mb-1.5">
                 <div className="w-9 h-9 rounded-xl border bg-[#ff6b00]/10 border-[#ff6b00]/20 flex items-center justify-center shrink-0">
                   <Swords className="w-4 h-4 text-[#ff6b00]" />
                 </div>
@@ -337,10 +337,10 @@ export default function ProfilePage() {
               </motion.button>
 
               {/* Quick Links */}
-              <motion.div variants={fadeUp} initial="hidden" animate="show" custom={4} className="space-y-2 mb-3">
+              <motion.div variants={fadeUp} initial="hidden" animate="show" custom={4} className="space-y-1.5 mb-2.5">
                 {quickLinks.map((item) => (
                   <Link key={item.href + item.label} href={item.href}
-                    className="flex items-center gap-3 p-3.5 bg-[#12121a] rounded-2xl border border-[#2a2a36] hover:border-[#ff6b00]/25 transition-colors group">
+                    className="flex items-center gap-2.5 p-2.5 bg-[#12121a] rounded-2xl border border-[#2a2a36] hover:border-[#ff6b00]/25 transition-colors group">
                     <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 ${item.iconBg}`}>
                       <item.icon className={`w-4 h-4 ${item.color}`} />
                     </div>
@@ -357,7 +357,7 @@ export default function ProfilePage() {
               {authUser?.isAdmin && (
                 <motion.div variants={fadeUp} initial="hidden" animate="show" custom={5}>
                   <Link href="/admin"
-                    className="flex items-center gap-3 p-3.5 bg-[#ff6b00]/5 rounded-2xl border border-[#ff6b00]/20 mb-2 hover:bg-[#ff6b00]/10 transition-colors group">
+                    className="flex items-center gap-2.5 p-2.5 bg-[#ff6b00]/5 rounded-2xl border border-[#ff6b00]/20 mb-1.5 hover:bg-[#ff6b00]/10 transition-colors group">
                     <div className="w-9 h-9 rounded-xl bg-[#ff6b00]/15 flex items-center justify-center shrink-0">
                       <Shield className="w-4 h-4 text-[#ff6b00]" />
                     </div>
@@ -373,7 +373,7 @@ export default function ProfilePage() {
               {/* Logout */}
               <motion.button variants={fadeUp} initial="hidden" animate="show" custom={6}
                 onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 py-3 mt-1 rounded-2xl border border-[#ff2244]/20 text-[#ff2244] font-bold uppercase text-xs hover:bg-[#ff2244]/5 transition-colors">
+                className="w-full flex items-center justify-center gap-1.5 py-2.5 mt-1 rounded-2xl border border-[#ff2244]/20 text-[#ff2244] font-bold uppercase text-xs hover:bg-[#ff2244]/5 transition-colors">
                 <LogOut className="w-3.5 h-3.5" /> Sign Out
               </motion.button>
             </motion.div>
@@ -382,7 +382,7 @@ export default function ProfilePage() {
           {/* ── MY MATCHES ── */}
           {section === "my-matches" && (
             <motion.div key="matches" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
-              <div className="flex items-center gap-3 mb-5">
+              <div className="flex items-center gap-2.5 mb-3.5">
                 <button onClick={() => setSection("overview")}
                   className="w-8 h-8 rounded-xl bg-[#12121a] border border-[#2a2a36] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors">
                   <X className="w-3.5 h-3.5" />
@@ -392,54 +392,54 @@ export default function ProfilePage() {
                   <p className="text-[#606070] text-xs">Your submitted match history</p>
                 </div>
                 <button onClick={openCreateMatch}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-xs hover:bg-[#e66000] transition-all shadow-[0_0_10px_rgba(255,107,0,0.3)] shrink-0">
+                  className="flex items-center gap-1 px-2.5 py-1 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-xs hover:bg-[#e66000] transition-all shadow-[0_0_10px_rgba(255,107,0,0.3)] shrink-0">
                   <Plus className="w-3 h-3" /> New
                 </button>
               </div>
 
               {myMatchesLoading ? (
-                <div className="space-y-3">{[1,2,3].map((i) => <div key={i} className="h-24 bg-[#12121a] rounded-2xl animate-pulse" />)}</div>
+                <div className="space-y-2.5">{[1,2,3].map((i) => <div key={i} className="h-24 bg-[#12121a] rounded-2xl animate-pulse" />)}</div>
               ) : myMatches.length === 0 ? (
                 <div className="text-center py-14">
-                  <Swords className="w-10 h-10 mx-auto mb-3 text-[#ff6b00]/20" />
+                  <Swords className="w-10 h-10 mx-auto mb-2.5 text-[#ff6b00]/20" />
                   <p className="font-bold text-white text-sm mb-1">No match requests yet</p>
-                  <p className="text-[#a0a0b0] text-xs mb-4">Create your first match using the button above.</p>
+                  <p className="text-[#a0a0b0] text-xs mb-3">Create your first match using the button above.</p>
                   <button onClick={openCreateMatch}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-xs hover:bg-[#e66000] transition-colors">
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-xs hover:bg-[#e66000] transition-colors">
                     <Plus className="w-3.5 h-3.5" /> Create Match
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {myMatches.map((m: any) => {
                     const badge = matchStatusBadge(m.status === "pending_approval" ? "pending" : m.status);
                     const BadgeIcon = badge.Icon;
                     return (
-                      <div key={m.id} className="bg-[#12121a] rounded-2xl border border-[#2a2a36] p-4">
-                        <div className="flex items-start justify-between gap-2 mb-3">
+                      <div key={m.id} className="bg-[#12121a] rounded-2xl border border-[#2a2a36] p-3">
+                        <div className="flex items-start justify-between gap-1.5 mb-2.5">
                           <div className="flex-1 min-w-0">
                             <div className="font-black text-white text-sm truncate">{m.matchName || `${m.matchType} Match`}</div>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                               <span className="text-[#606070] text-xs">
                                 {new Date(m.scheduledAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })}
                               </span>
                               {m.isPasswordProtected && (
-                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 border border-yellow-500/30">
                                   <Lock className="w-2.5 h-2.5" /> Private
                                 </span>
                               )}
                             </div>
                           </div>
-                          <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0 ${badge.color}`}>
+                          <span className={`inline-flex items-center gap-1 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border shrink-0 ${badge.color}`}>
                             <BadgeIcon className="w-2.5 h-2.5" /> {badge.label}
                           </span>
                         </div>
-                        <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div className="bg-[#0a0a0f] rounded-xl px-2.5 py-2">
+                        <div className="grid grid-cols-3 gap-1.5 text-xs">
+                          <div className="bg-[#0a0a0f] rounded-xl px-2 py-1.5">
                             <div className="text-[#606070] mb-0.5 text-[10px]">Prize Pool</div>
                             <div className="font-black text-[#ffd700] text-sm">৳{Number(m.prizePool).toLocaleString()}</div>
                           </div>
-                          <div className="bg-[#0a0a0f] rounded-xl px-2.5 py-2">
+                          <div className="bg-[#0a0a0f] rounded-xl px-2 py-1.5">
                             <div className="text-[#606070] mb-0.5 text-[10px]">Entry Fee</div>
                             {m.status === "approved" && Number(m.entryFee) >= 0 ? (
                               <div className={`font-black text-sm ${Number(m.entryFee) > 0 ? "text-[#00ff88]" : "text-[#a0a0b0]"}`}>
@@ -447,27 +447,27 @@ export default function ProfilePage() {
                               </div>
                             ) : <div className="font-black text-[#4a4a5a] text-sm">Pending</div>}
                           </div>
-                          <div className="bg-[#0a0a0f] rounded-xl px-2.5 py-2">
+                          <div className="bg-[#0a0a0f] rounded-xl px-2 py-1.5">
                             <div className="text-[#606070] mb-0.5 text-[10px]">Players</div>
                             <div className="font-black text-white text-sm">{m.filledSlots ?? 0}/{m.maxSlots}</div>
                           </div>
                         </div>
                         {m.adminNote && (
-                          <div className="mt-2 text-xs text-[#ff2244] bg-[#ff2244]/5 border border-[#ff2244]/10 rounded-lg px-2.5 py-2">Admin: {m.adminNote}</div>
+                          <div className="mt-1.5 text-xs text-[#ff2244] bg-[#ff2244]/5 border border-[#ff2244]/10 rounded-lg px-2 py-1.5">Admin: {m.adminNote}</div>
                         )}
-                        {m.description && <p className="text-[#4a4a5a] text-xs mt-2 italic">"{m.description}"</p>}
+                        {m.description && <p className="text-[#4a4a5a] text-xs mt-1.5 italic">"{m.description}"</p>}
                         {(m.status === "pending_approval" || m.status === "rejected") && (
-                          <div className="mt-3 pt-3 border-t border-[#2a2a36]">
+                          <div className="mt-2.5 pt-2.5 border-t border-[#2a2a36]">
                             {deletingMatchId === m.id ? (
                               <div>
-                                <p className="text-xs text-[#ff2244] font-bold mb-2 flex items-center gap-1"><AlertTriangle className="w-3 h-3 shrink-0" /> Delete this match?</p>
-                                <div className="flex gap-2">
-                                  <button onClick={() => deleteMatch(m.id)} className="px-3 py-1.5 bg-[#ff2244] text-white text-xs font-black rounded-lg hover:bg-[#dd1133] transition-colors">Confirm</button>
-                                  <button onClick={() => setDeletingMatchId(null)} className="px-3 py-1.5 text-[#a0a0b0] text-xs font-bold rounded-lg hover:text-white transition-colors">Cancel</button>
+                                <p className="text-xs text-[#ff2244] font-bold mb-1.5 flex items-center gap-1"><AlertTriangle className="w-3 h-3 shrink-0" /> Delete this match?</p>
+                                <div className="flex gap-1.5">
+                                  <button onClick={() => deleteMatch(m.id)} className="px-2.5 py-1 bg-[#ff2244] text-white text-xs font-black rounded-lg hover:bg-[#dd1133] transition-colors">Confirm</button>
+                                  <button onClick={() => setDeletingMatchId(null)} className="px-2.5 py-1 text-[#a0a0b0] text-xs font-bold rounded-lg hover:text-white transition-colors">Cancel</button>
                                 </div>
                               </div>
                             ) : (
-                              <button onClick={() => setDeletingMatchId(m.id)} className="flex items-center gap-1.5 text-[#606070] text-xs font-bold hover:text-[#ff2244] transition-colors">
+                              <button onClick={() => setDeletingMatchId(m.id)} className="flex items-center gap-1 text-[#606070] text-xs font-bold hover:text-[#ff2244] transition-colors">
                                 <Trash2 className="w-3 h-3" /> Delete
                               </button>
                             )}
@@ -484,7 +484,7 @@ export default function ProfilePage() {
           {/* ── EDIT PROFILE ── */}
           {section === "edit" && (
             <motion.div key="edit" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}>
-              <div className="flex items-center gap-3 mb-5">
+              <div className="flex items-center gap-2.5 mb-3.5">
                 <button onClick={() => setSection("overview")}
                   className="w-8 h-8 rounded-xl bg-[#12121a] border border-[#2a2a36] flex items-center justify-center text-[#a0a0b0] hover:text-white transition-colors">
                   <X className="w-3.5 h-3.5" />
@@ -495,7 +495,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="bg-[#12121a] rounded-2xl border border-[#2a2a36] p-4 space-y-3.5">
+              <div className="bg-[#12121a] rounded-2xl border border-[#2a2a36] p-3 space-y-2.5">
                 {[
                   { key: "username", label: "Username", placeholder: "your_username" },
                   { key: "displayName", label: "Display Name", placeholder: "Your Name" },
@@ -503,24 +503,24 @@ export default function ProfilePage() {
                   { key: "freefireNickname", label: "FF Nickname", placeholder: "ProPlayer99" },
                 ].map(({ key, label, placeholder }) => (
                   <div key={key}>
-                    <label className="block text-[#a0a0b0] text-[10px] uppercase tracking-wider mb-1.5">{label}</label>
+                    <label className="block text-[#a0a0b0] text-[10px] uppercase tracking-wider mb-1">{label}</label>
                     <input
                       value={pForm[key as keyof typeof pForm]}
                       onChange={(e) => setPForm({ ...pForm, [key]: e.target.value })}
                       placeholder={placeholder}
-                      className="w-full bg-[#0d0d16] border border-[#2a2a36] rounded-xl px-3.5 py-2.5 text-white placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
+                      className="w-full bg-[#0d0d16] border border-[#2a2a36] rounded-xl px-2.5 py-2 text-white placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
                     />
                   </div>
                 ))}
                 <div>
-                  <label className="block text-[#a0a0b0] text-[10px] uppercase tracking-wider mb-1.5">Email</label>
-                  <div className="w-full bg-[#0d0d16]/50 border border-[#2a2a36]/50 rounded-xl px-3.5 py-2.5 text-[#606070] text-sm cursor-not-allowed">{authUser?.email}</div>
+                  <label className="block text-[#a0a0b0] text-[10px] uppercase tracking-wider mb-1">Email</label>
+                  <div className="w-full bg-[#0d0d16]/50 border border-[#2a2a36]/50 rounded-xl px-2.5 py-2 text-[#606070] text-sm cursor-not-allowed">{authUser?.email}</div>
                   <p className="text-[#4a4a5a] text-xs mt-1">Email cannot be changed</p>
                 </div>
               </div>
 
               <button onClick={saveProfile} disabled={updateProfile.isPending}
-                className="w-full mt-4 py-3 bg-[#ff6b00] text-white font-black uppercase text-sm rounded-2xl hover:bg-[#e66000] transition-all shadow-[0_0_20px_rgba(255,107,0,0.3)] disabled:opacity-50 disabled:cursor-not-allowed">
+                className="w-full mt-3 py-2.5 bg-[#ff6b00] text-white font-black uppercase text-sm rounded-2xl hover:bg-[#e66000] transition-all shadow-[0_0_20px_rgba(255,107,0,0.3)] disabled:opacity-50 disabled:cursor-not-allowed">
                 {updateProfile.isPending ? "Saving…" : "Save Changes"}
               </button>
             </motion.div>

@@ -50,28 +50,28 @@ export default function RankingsPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-16 pb-24">
+      <div className="max-w-4xl mx-auto px-3 pt-16 pb-24">
 
         {/* ── Header ── */}
-        <div className="mt-6 mb-8 text-center">
-          <div className="inline-flex items-center gap-2 bg-[#ff6b00]/10 border border-[#ff6b00]/30 rounded-full px-4 py-1 text-[#ff6b00] text-xs font-black uppercase tracking-widest mb-3">
+        <div className="mt-4 mb-5 text-center">
+          <div className="inline-flex items-center gap-1.5 bg-[#ff6b00]/10 border border-[#ff6b00]/30 rounded-full px-3 py-1 text-[#ff6b00] text-xs font-black uppercase tracking-widest mb-2.5">
             <Flame className="w-3 h-3" /> FF Arena Exclusive
           </div>
           <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight">
             <span className="text-[#ff6b00]">Skill</span> Rankings
           </h1>
-          <p className="text-[#a0a0b0] text-sm mt-2 max-w-md mx-auto">
+          <p className="text-[#a0a0b0] text-sm mt-1.5 max-w-md mx-auto">
             The only verified custom-room skill rating in Bangladesh. Earn rating points from every tournament match — placement + kills.
           </p>
         </div>
 
         {/* ── Tab toggle ── */}
-        <div className="flex gap-2 mb-6 bg-[#12121a] rounded-2xl p-1 border border-[#2a2a36] max-w-xs mx-auto">
+        <div className="flex gap-1.5 mb-4 bg-[#12121a] rounded-2xl p-1 border border-[#2a2a36] max-w-xs mx-auto">
           {(["leaderboard", "tiers"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`flex-1 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${
+              className={`flex-1 py-1.5 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${
                 tab === t
                   ? "bg-[#ff6b00] text-white shadow-[0_0_12px_rgba(255,107,0,0.4)]"
                   : "text-[#a0a0b0] hover:text-white"
@@ -91,7 +91,7 @@ export default function RankingsPage() {
               </div>
             ) : players.length === 0 ? (
               <div className="text-center py-16">
-                <Trophy className="w-12 h-12 text-[#2a2a36] mx-auto mb-3" />
+                <Trophy className="w-12 h-12 text-[#2a2a36] mx-auto mb-2.5" />
                 <div className="text-[#a0a0b0] font-bold">No rankings yet</div>
                 <div className="text-[#606070] text-sm mt-1">Rankings appear after the first match results are published.</div>
               </div>
@@ -99,13 +99,13 @@ export default function RankingsPage() {
               <>
                 {/* Podium — top 3 */}
                 {top3.length >= 1 && (
-                  <div className="flex items-end justify-center gap-3 mb-8">
+                  <div className="flex items-end justify-center gap-2.5 mb-5">
                     {podiumOrder.map((i, vi) => {
                       const p = top3[i];
                       if (!p) return <div key={vi} className="w-24" />;
                       const tier = getTierInfo(p.rating);
                       return (
-                        <div key={i} className="flex flex-col items-center gap-2" style={{ flex: i === 0 ? "0 0 120px" : "0 0 96px" }}>
+                        <div key={i} className="flex flex-col items-center gap-1.5" style={{ flex: i === 0 ? "0 0 120px" : "0 0 96px" }}>
                           {/* Crown for 1st */}
                           {i === 0 && <Crown className="w-5 h-5 text-yellow-400" />}
 
@@ -147,7 +147,7 @@ export default function RankingsPage() {
                 {/* Ranks 4–100 table */}
                 {rest.length > 0 && (
                   <div className="rounded-2xl border border-[#2a2a36] bg-[#12121a] overflow-hidden">
-                    <div className="grid grid-cols-12 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-[#606070] border-b border-[#1a1a24]">
+                    <div className="grid grid-cols-12 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-[#606070] border-b border-[#1a1a24]">
                       <span className="col-span-1">#</span>
                       <span className="col-span-4">Player</span>
                       <span className="col-span-3">Tier</span>
@@ -159,7 +159,7 @@ export default function RankingsPage() {
                       return (
                         <div
                           key={p.userId}
-                          className="grid grid-cols-12 px-4 py-3 border-b border-[#1a1a24] last:border-0 hover:bg-[#1a1a24]/50 transition-colors items-center"
+                          className="grid grid-cols-12 px-3 py-2.5 border-b border-[#1a1a24] last:border-0 hover:bg-[#1a1a24]/50 transition-colors items-center"
                         >
                           <span className="col-span-1 text-[#606070] text-xs font-black">{p.position}</span>
                           <span className="col-span-4 text-white text-xs font-bold truncate">{p.playerName}</span>
@@ -181,13 +181,13 @@ export default function RankingsPage() {
             )}
 
             {/* How RP is earned */}
-            <div className="mt-8 bg-[#12121a] border border-[#2a2a36] rounded-2xl p-5">
-              <div className="flex items-center gap-2 text-white font-black uppercase text-sm mb-4">
+            <div className="mt-5 bg-[#12121a] border border-[#2a2a36] rounded-2xl p-3.5">
+              <div className="flex items-center gap-1.5 text-white font-black uppercase text-sm mb-3">
                 <Info className="w-4 h-4 text-[#ff6b00]" /> How Rating Points are Earned
               </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-2 gap-2.5 text-sm">
                 <div>
-                  <div className="text-[#a0a0b0] text-xs uppercase font-black mb-2 flex items-center gap-1">
+                  <div className="text-[#a0a0b0] text-xs uppercase font-black mb-1.5 flex items-center gap-1">
                     <Medal className="w-3 h-3 text-[#ff6b00]" /> Placement
                   </div>
                   {[
@@ -206,19 +206,19 @@ export default function RankingsPage() {
                   ))}
                 </div>
                 <div>
-                  <div className="text-[#a0a0b0] text-xs uppercase font-black mb-2 flex items-center gap-1">
+                  <div className="text-[#a0a0b0] text-xs uppercase font-black mb-1.5 flex items-center gap-1">
                     <Swords className="w-3 h-3 text-red-400" /> Per Kill
                   </div>
-                  <div className="flex justify-between text-xs py-2 border-b border-[#1a1a24]">
+                  <div className="flex justify-between text-xs py-1.5 border-b border-[#1a1a24]">
                     <span className="text-[#c0c0c8]">Each kill</span>
                     <span className="text-red-400 font-black">+3 RP</span>
                   </div>
-                  <div className="flex justify-between text-xs py-2">
+                  <div className="flex justify-between text-xs py-1.5">
                     <span className="text-[#c0c0c8]">Kill cap</span>
                     <span className="text-[#606070] font-black">20 kills max</span>
                   </div>
 
-                  <div className="mt-4 text-[#a0a0b0] text-xs uppercase font-black mb-2 flex items-center gap-1">
+                  <div className="mt-3 text-[#a0a0b0] text-xs uppercase font-black mb-1.5 flex items-center gap-1">
                     <TrendingUp className="w-3 h-3 text-green-400" /> Rating never drops
                   </div>
                   <div className="text-[#606070] text-xs leading-relaxed">
@@ -232,14 +232,14 @@ export default function RankingsPage() {
 
         {/* ══ TIERS TAB ══ */}
         {tab === "tiers" && (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {[...TIERS].reverse().map((tier, idx) => {
               const next = [...TIERS].reverse()[idx + 1];
               const range = next ? `${tier.min.toLocaleString()} – ${(next.min - 1).toLocaleString()} RP` : `${tier.min.toLocaleString()}+ RP`;
               return (
                 <div
                   key={tier.name}
-                  className="flex items-center gap-4 p-4 rounded-2xl border"
+                  className="flex items-center gap-3 p-3 rounded-2xl border"
                   style={{ background: `${tier.color}0d`, borderColor: `${tier.color}30` }}
                 >
                   <div
@@ -262,8 +262,8 @@ export default function RankingsPage() {
                 </div>
               );
             })}
-            <div className="mt-4 bg-[#12121a] border border-[#ff6b00]/20 rounded-2xl p-4 text-center">
-              <Flame className="w-6 h-6 text-[#ff6b00] mx-auto mb-2" />
+            <div className="mt-3 bg-[#12121a] border border-[#ff6b00]/20 rounded-2xl p-3 text-center">
+              <Flame className="w-6 h-6 text-[#ff6b00] mx-auto mb-1.5" />
               <div className="text-white font-black text-sm">Rating Never Resets</div>
               <div className="text-[#a0a0b0] text-xs mt-1">Your FF Arena rank is permanent. Play more tournaments to keep climbing.</div>
             </div>

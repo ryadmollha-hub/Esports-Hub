@@ -38,7 +38,7 @@ export default function Navbar() {
   const LangToggle = () => (
     <button
       onClick={() => setLang(lang === "en" ? "bn" : "en")}
-      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[#1a1a24] border border-[#2a2a36] text-[10px] font-black uppercase tracking-wide text-[#a0a0b0] hover:text-white hover:border-[#ff6b00]/40 transition-colors shrink-0"
+      className="flex items-center gap-1 px-1.5 py-1 rounded-lg bg-[#1a1a24] border border-[#2a2a36] text-[10px] font-black uppercase tracking-wide text-[#a0a0b0] hover:text-white hover:border-[#ff6b00]/40 transition-colors shrink-0"
       title="Toggle language"
     >
       {lang === "en" ? "🇧🇩 বাংলা" : "🇺🇸 EN"}
@@ -47,9 +47,9 @@ export default function Navbar() {
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0f]/95 backdrop-blur-md border-b border-[#ff6b00]/20 light:bg-white/95 light:border-[#ff6b00]/30">
-      <div className="max-w-7xl mx-auto px-4 h-12 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 h-12 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-1.5 shrink-0">
+        <Link href="/" className="flex items-center gap-1 shrink-0">
           <Flame className="w-5 h-5 text-[#ff6b00]" />
           <span className="text-base font-black uppercase tracking-wider text-white light:text-gray-900">
             FF <span className="text-[#ff6b00]">Arena</span>
@@ -57,7 +57,7 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop nav links */}
-        <div className="hidden lg:flex items-center gap-4">
+        <div className="hidden lg:flex items-center gap-3">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -72,7 +72,7 @@ export default function Navbar() {
         </div>
 
         {/* Desktop right side */}
-        <div className="hidden lg:flex items-center gap-1.5">
+        <div className="hidden lg:flex items-center gap-1">
           <LangToggle />
           <ThemeToggle />
           <NotificationBell />
@@ -80,7 +80,7 @@ export default function Navbar() {
           {isAdmin && (
             <Link
               href="/admin"
-              className="flex items-center gap-1 px-2.5 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors"
             >
               <Shield className="w-3 h-3" /> {t("nav_admin")}
             </Link>
@@ -100,10 +100,10 @@ export default function Navbar() {
 
           {!isUser && !isAdmin && !isAdminSession && (
             <>
-              <Link href="/sign-in" className="px-3 py-1.5 text-xs font-bold uppercase text-[#a0a0b0] hover:text-white transition-colors">
+              <Link href="/sign-in" className="px-2.5 py-1 text-xs font-bold uppercase text-[#a0a0b0] hover:text-white transition-colors">
                 {t("nav_signin")}
               </Link>
-              <Link href="/sign-up" className="px-4 py-1.5 text-xs font-bold uppercase bg-[#ff6b00] text-white rounded-lg hover:bg-[#e66000] transition-all shadow-[0_0_15px_rgba(255,107,0,0.3)]">
+              <Link href="/sign-up" className="px-3 py-1 text-xs font-bold uppercase bg-[#ff6b00] text-white rounded-lg hover:bg-[#e66000] transition-all shadow-[0_0_15px_rgba(255,107,0,0.3)]">
                 {t("nav_register")}
               </Link>
             </>
@@ -112,7 +112,7 @@ export default function Navbar() {
           {isAdminSession && !isUser && (
             <Link
               href="/admin"
-              className="flex items-center gap-1 px-2.5 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] text-xs font-black uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors"
             >
               <Shield className="w-3 h-3" /> {t("nav_admin")}
             </Link>
@@ -137,7 +137,7 @@ export default function Navbar() {
             </Link>
           )}
           {!isUser && !isAdmin && !isAdminSession && (
-            <Link href="/sign-in" className="px-2.5 py-1 text-xs font-bold uppercase bg-[#ff6b00] text-white rounded-lg">
+            <Link href="/sign-in" className="px-2 py-1 text-xs font-bold uppercase bg-[#ff6b00] text-white rounded-lg">
               {t("nav_signin")}
             </Link>
           )}

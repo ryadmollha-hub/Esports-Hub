@@ -156,22 +156,22 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
               <div className="absolute inset-0 bg-gradient-to-t from-[#0e0e17] via-[#0e0e17]/20 to-transparent" />
               {isLive && <div className="absolute inset-0 bg-[#00ff88]/3" />}
 
-              <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase tracking-wide ${modeColors[t.mode] ?? modeColors.squad}`} data-testid={`badge-mode-${t.id}`}>
+              <div className="absolute top-3 left-3 flex items-center gap-1 flex-wrap">
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wide ${modeColors[t.mode] ?? modeColors.squad}`} data-testid={`badge-mode-${t.id}`}>
                   {t.mode}
                 </span>
-                <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase flex items-center gap-0.5 ${sc.color}`} data-testid={`badge-status-${t.id}`}>
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5 ${sc.color}`} data-testid={`badge-status-${t.id}`}>
                   {sc.dot && <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${sc.dot}`} />}
                   {sc.label}
                 </span>
                 {activeMatchNumbers.map(n => (
-                  <span key={n} className="text-[10px] font-black px-2 py-0.5 rounded border uppercase bg-[#ff6b00]/20 text-[#ff6b00] border-[#ff6b00]/40">
+                  <span key={n} className="text-[10px] font-black px-1.5 py-0.5 rounded border uppercase bg-[#ff6b00]/20 text-[#ff6b00] border-[#ff6b00]/40">
                     Match #{n}
                   </span>
                 ))}
               </div>
 
-              <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-lg px-2 py-1 border border-[#ffd700]/20">
+              <div className="absolute top-3 right-3 flex items-center gap-1 bg-black/60 backdrop-blur-sm rounded-lg px-1.5 py-1 border border-[#ffd700]/20">
                 <Trophy className="w-3.5 h-3.5 text-[#ffd700]" />
                 <span className="text-[#ffd700] text-xs font-black" data-testid={`text-prize-${t.id}`}>
                   ৳{Number(t.prizePool).toLocaleString()}
@@ -180,19 +180,19 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
             </div>
 
             {/* Content */}
-            <div className="p-4 flex flex-col flex-1">
-              <h3 className="text-white font-black text-base leading-tight group-hover:text-[#ff6b00] transition-colors line-clamp-1 mb-2" data-testid={`text-tournament-name-${t.id}`}>
+            <div className="p-3 flex flex-col flex-1">
+              <h3 className="text-white font-black text-base leading-tight group-hover:text-[#ff6b00] transition-colors line-clamp-1 mb-1.5" data-testid={`text-tournament-name-${t.id}`}>
                 {t.name}
               </h3>
-              <div className="flex items-center gap-2 flex-wrap mb-3">
-                <div className="flex items-center gap-1 bg-[#1a1a24] rounded-lg px-2 py-1">
+              <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
+                <div className="flex items-center gap-1 bg-[#1a1a24] rounded-lg px-1.5 py-1">
                   <span className="text-[#a0a0b0] text-[10px] uppercase font-bold">Entry</span>
                   <span className={`text-xs font-black ${entryFee === 0 ? "text-[#00ff88]" : "text-white"}`}>
                     {entryFee === 0 ? "FREE" : `৳${entryFee.toLocaleString()}`}
                   </span>
                 </div>
                 {perKill > 0 && (
-                  <div className="flex items-center gap-0.5 bg-[#00ff88]/8 border border-[#00ff88]/15 rounded-lg px-2 py-1">
+                  <div className="flex items-center gap-0.5 bg-[#00ff88]/8 border border-[#00ff88]/15 rounded-lg px-1.5 py-1">
                     <Zap className="w-3 h-3 text-[#00ff88]" />
                     <span className="text-[#00ff88] text-[10px] font-black">+৳{perKill}/kill</span>
                   </div>
@@ -204,13 +204,13 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
               </div>
 
               {showCountdown && (
-                <div className="mb-3 bg-[#0a0a0f] rounded-xl px-3 py-2 border border-[#1e1e2e]">
-                  <div className="text-[9px] uppercase tracking-widest text-[#606070] font-bold mb-1.5">
+                <div className="mb-2.5 bg-[#0a0a0f] rounded-xl px-2.5 py-1.5 border border-[#1e1e2e]">
+                  <div className="text-[9px] uppercase tracking-widest text-[#606070] font-bold mb-1">
                     {effectiveStatus === "starting_soon" ? "⚡ Starting Soon" : effectiveStatus === "room_open" ? "🔑 Match Starts In" : "Starts In"}
                   </div>
-                  <CountdownTimer targetDate={targetDate} className="text-[11px] gap-1.5" />
+                  <CountdownTimer targetDate={targetDate} className="text-[11px] gap-1" />
                   {effectiveStatus === "room_open" && (
-                    <div className="mt-1.5 flex items-center gap-1">
+                    <div className="mt-1 flex items-center gap-1">
                       <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse shrink-0" />
                       <span className="text-orange-400 text-[9px] font-black uppercase tracking-wide">Room credentials available</span>
                     </div>
@@ -219,7 +219,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
               )}
 
               <div className="mt-auto">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   <div className="flex items-center gap-1 text-[#606070]">
                     <Users className="w-3 h-3" />
                     <span className="text-xs">{t.filledSlots}<span className="text-[#3a3a48]">/{t.maxSlots}</span></span>
@@ -240,10 +240,10 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
           </Link>
 
           {showResults && (
-            <div className="px-4 pb-4 pt-0">
+            <div className="px-3 pb-3 pt-0">
               <button
                 onClick={openLeaderboard}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-gradient-to-r from-[#ffd700]/15 to-[#ff6b00]/10 hover:from-[#ffd700]/25 hover:to-[#ff6b00]/20 border border-[#ffd700]/30 hover:border-[#ffd700]/60 text-[#ffd700] font-black text-xs uppercase rounded-xl transition-all duration-200 shadow-[0_2px_12px_rgba(255,215,0,0.08)] hover:shadow-[0_2px_20px_rgba(255,215,0,0.15)]"
+                className="w-full flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-[#ffd700]/15 to-[#ff6b00]/10 hover:from-[#ffd700]/25 hover:to-[#ff6b00]/20 border border-[#ffd700]/30 hover:border-[#ffd700]/60 text-[#ffd700] font-black text-xs uppercase rounded-xl transition-all duration-200 shadow-[0_2px_12px_rgba(255,215,0,0.08)] hover:shadow-[0_2px_20px_rgba(255,215,0,0.15)]"
               >
                 <Trophy className="w-3.5 h-3.5" />
                 🏆 View Leaderboard
@@ -263,7 +263,7 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
         data-testid={`card-tournament-${t.id}`}
         className="group flex flex-col rounded-xl border border-[#ff6b00]/15 bg-[#0e0e17] hover:border-[#ff6b00]/40 hover:shadow-[0_2px_14px_rgba(255,107,0,0.08)] transition-all duration-200 overflow-hidden"
       >
-        <Link href={`/tournaments/${t.id}`} className="flex items-center gap-3 p-3">
+        <Link href={`/tournaments/${t.id}`} className="flex items-center gap-2.5 p-2.5">
           <div className="relative w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-gradient-to-br from-[#1a1a24] to-[#0a0a0f]">
             {t.bannerUrl ? (
               <img src={t.bannerUrl} alt={t.name}
@@ -278,45 +278,45 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded border uppercase tracking-wide ${modeColors[t.mode] ?? modeColors.squad}`} data-testid={`badge-mode-${t.id}`}>
+            <div className="flex items-center gap-1 mb-1 flex-wrap">
+              <span className={`text-[9px] font-black px-1 py-0.5 rounded border uppercase tracking-wide ${modeColors[t.mode] ?? modeColors.squad}`} data-testid={`badge-mode-${t.id}`}>
                 {t.mode}
               </span>
-              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5 ${sc.color}`} data-testid={`badge-status-${t.id}`}>
+              <span className={`text-[9px] font-black px-1 py-0.5 rounded uppercase flex items-center gap-0.5 ${sc.color}`} data-testid={`badge-status-${t.id}`}>
                 {sc.dot && <span className={`w-1 h-1 rounded-full shrink-0 ${sc.dot}`} />}
                 {sc.label}
               </span>
               {activeMatchNumbers.map(n => (
-                <span key={n} className="text-[9px] font-black px-1.5 py-0.5 rounded border uppercase bg-[#ff6b00]/15 text-[#ff6b00] border-[#ff6b00]/30">
+                <span key={n} className="text-[9px] font-black px-1 py-0.5 rounded border uppercase bg-[#ff6b00]/15 text-[#ff6b00] border-[#ff6b00]/30">
                   Match #{n}
                 </span>
               ))}
             </div>
 
-            <h3 className="text-white font-black text-sm leading-tight group-hover:text-[#ff6b00] transition-colors line-clamp-1 mb-1.5" data-testid={`text-tournament-name-${t.id}`}>
+            <h3 className="text-white font-black text-sm leading-tight group-hover:text-[#ff6b00] transition-colors line-clamp-1 mb-1" data-testid={`text-tournament-name-${t.id}`}>
               {t.name}
             </h3>
 
-            <div className="flex items-center gap-2 flex-wrap mb-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap mb-1">
               <div className="flex items-center gap-1">
                 <Trophy className="w-3 h-3 text-[#ffd700]" />
                 <span className="text-[#ffd700] text-[10px] font-black" data-testid={`text-prize-${t.id}`}>৳{Number(t.prizePool).toLocaleString()}</span>
               </div>
-              <div className="flex items-center gap-1 bg-[#1a1a24] rounded px-1.5 py-0.5">
+              <div className="flex items-center gap-1 bg-[#1a1a24] rounded px-1 py-0.5">
                 <span className="text-[#a0a0b0] text-[9px] uppercase font-bold">Entry</span>
                 <span className={`text-[10px] font-black ${entryFee === 0 ? "text-[#00ff88]" : "text-white"}`}>
                   {entryFee === 0 ? "FREE" : `৳${entryFee.toLocaleString()}`}
                 </span>
               </div>
               {perKill > 0 && (
-                <div className="flex items-center gap-0.5 bg-[#00ff88]/8 border border-[#00ff88]/15 rounded px-1.5 py-0.5">
+                <div className="flex items-center gap-0.5 bg-[#00ff88]/8 border border-[#00ff88]/15 rounded px-1 py-0.5">
                   <Zap className="w-2.5 h-2.5 text-[#00ff88]" />
                   <span className="text-[#00ff88] text-[9px] font-black">+৳{perKill}/kill</span>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <div className="flex items-center gap-1 text-[#606070]">
                 <Users className="w-2.5 h-2.5" />
                 <span className="text-[10px]">{t.filledSlots}<span className="text-[#3a3a48]">/{t.maxSlots}</span></span>
@@ -353,10 +353,10 @@ export default function TournamentCard({ t, featured = false }: { t: Tournament;
         </Link>
 
         {showResults && (
-          <div className="px-3 pb-3 pt-0">
+          <div className="px-2.5 pb-2.5 pt-0">
             <button
               onClick={openLeaderboard}
-              className="w-full flex items-center justify-center gap-1.5 py-2 bg-gradient-to-r from-[#ffd700]/12 to-[#ff6b00]/8 hover:from-[#ffd700]/22 hover:to-[#ff6b00]/15 border border-[#ffd700]/25 hover:border-[#ffd700]/50 text-[#ffd700] font-black text-[10px] uppercase rounded-lg transition-all duration-200"
+              className="w-full flex items-center justify-center gap-1 py-1.5 bg-gradient-to-r from-[#ffd700]/12 to-[#ff6b00]/8 hover:from-[#ffd700]/22 hover:to-[#ff6b00]/15 border border-[#ffd700]/25 hover:border-[#ffd700]/50 text-[#ffd700] font-black text-[10px] uppercase rounded-lg transition-all duration-200"
             >
               <Trophy className="w-3 h-3" />
               🏆 View Leaderboard

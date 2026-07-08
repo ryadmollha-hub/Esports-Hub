@@ -45,13 +45,13 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-16 pb-28">
+      <div className="max-w-4xl mx-auto px-3 pt-16 pb-28">
 
         {/* ── Back button ── */}
-        <div className="mt-4 mb-5">
+        <div className="mt-3 mb-3.5">
           <Link
             href="/tournaments"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-[#0e0e18] border border-[#1e1e2e] hover:border-[#2a2a36] rounded-xl text-[#a0a0b0] hover:text-white transition-all text-xs font-black uppercase"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#0e0e18] border border-[#1e1e2e] hover:border-[#2a2a36] rounded-xl text-[#a0a0b0] hover:text-white transition-all text-xs font-black uppercase"
             style={{ textDecoration: "none" }}
           >
             <ArrowLeft className="w-3.5 h-3.5" />
@@ -60,10 +60,10 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
         </div>
 
         {/* ── Category header ── */}
-        <div className="mb-7">
+        <div className="mb-5">
           {/* Category badge */}
           <div
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-3 border"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-2.5 border"
             style={{
               background: `${meta.color}12`,
               borderColor: `${meta.color}30`,
@@ -74,7 +74,7 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
             Official · Admin Curated
           </div>
 
-          <div className="flex items-center gap-4 mb-2">
+          <div className="flex items-center gap-3 mb-1.5">
             {/* Icon */}
             <div
               className="flex items-center justify-center rounded-2xl shrink-0"
@@ -101,13 +101,13 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
 
           {/* Accent rule */}
           <div
-            className="h-px mt-4"
+            className="h-px mt-3"
             style={{ background: `linear-gradient(90deg, ${meta.color}40, transparent)` }}
           />
         </div>
 
         {/* ── Search + Status + Refresh ── */}
-        <div className="flex flex-col sm:flex-row gap-2 mb-5">
+        <div className="flex flex-col sm:flex-row gap-1.5 mb-3.5">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a0a0b0]" />
             <input
@@ -116,18 +116,18 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               data-testid="input-search-tournaments"
-              className="w-full pl-9 pr-3 py-2.5 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none transition-colors text-sm"
+              className="w-full pl-6 pr-2.5 py-2 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none transition-colors text-sm"
               style={{ outlineColor: meta.color }}
               onFocus={(e) => (e.target.style.borderColor = meta.color)}
               onBlur={(e) => (e.target.style.borderColor = "#2a2a36")}
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-1.5">
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
               data-testid="select-filter-status"
-              className="px-3 py-2.5 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none transition-colors text-sm"
+              className="px-2.5 py-2 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none transition-colors text-sm"
             >
               <option value="">All Status</option>
               <option value="upcoming">Upcoming</option>
@@ -138,7 +138,7 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
             <button
               onClick={() => refetch()}
               title="Refresh"
-              className="px-3 py-2.5 bg-[#12121a] border border-[#2a2a36] hover:border-[#3a3a46] rounded-xl text-[#a0a0b0] hover:text-white transition-all"
+              className="px-2.5 py-2 bg-[#12121a] border border-[#2a2a36] hover:border-[#3a3a46] rounded-xl text-[#a0a0b0] hover:text-white transition-all"
             >
               <RefreshCw className="w-4 h-4" />
             </button>
@@ -147,7 +147,7 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
 
         {/* ── Result count ── */}
         {!isLoading && (
-          <p className="text-[#4a4a5a] text-xs mb-4">
+          <p className="text-[#4a4a5a] text-xs mb-3">
             {tournaments.length}{" "}
             {tournaments.length === 1 ? "tournament" : "tournaments"}
             {gameMode && (
@@ -158,7 +158,7 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
 
         {/* ── Tournament grid ── */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {[1, 2, 3, 4].map((i) => (
               <div
                 key={i}
@@ -172,7 +172,7 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
             className="text-center py-16 border border-dashed rounded-2xl"
             style={{ borderColor: `${meta.color}25` }}
           >
-            <div className="text-5xl mb-4 opacity-20">{meta.icon}</div>
+            <div className="text-5xl mb-3 opacity-20">{meta.icon}</div>
             <h3 className="text-base font-bold text-white mb-1">
               No {meta.label}s yet
             </h3>
@@ -181,7 +181,7 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
             </p>
             <Link
               href="/tournaments"
-              className="inline-flex items-center gap-1.5 mt-5 text-xs font-black uppercase px-4 py-2 rounded-xl border transition-all"
+              className="inline-flex items-center gap-1 mt-3.5 text-xs font-black uppercase px-3 py-1.5 rounded-xl border transition-all"
               style={{
                 color: meta.color,
                 borderColor: `${meta.color}30`,
@@ -193,7 +193,7 @@ export default function TournamentCategoryPage({ gameMode, slug }: Props) {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {tournaments.map((t: any) => (
               <TournamentCard key={t.id} t={t} featured />
             ))}

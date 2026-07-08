@@ -66,20 +66,20 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-2xl mx-auto px-4 pt-16 pb-20">
-        <h1 className="text-2xl sm:text-4xl font-black uppercase mb-2" data-testid="heading-register">
+      <div className="max-w-2xl mx-auto px-3 pt-16 pb-20">
+        <h1 className="text-2xl sm:text-4xl font-black uppercase mb-1.5" data-testid="heading-register">
           Tournament <span className="text-[#ff6b00]">Registration</span>
         </h1>
-        <p className="text-[#a0a0b0] mb-8">Fill in your details to join the tournament</p>
+        <p className="text-[#a0a0b0] mb-5">Fill in your details to join the tournament</p>
 
-        <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/20 p-8">
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/20 p-5">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wide text-[#a0a0b0] mb-2">Tournament</label>
+              <label className="block text-sm font-bold uppercase tracking-wide text-[#a0a0b0] mb-1.5">Tournament</label>
               <select
                 {...form.register("tournamentId", { valueAsNumber: true })}
                 data-testid="select-tournament"
-                className="w-full px-4 py-3 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors"
+                className="w-full px-3 py-2.5 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors"
               >
                 <option value={0}>Select a tournament...</option>
                 {(tournaments as any[]).map((t: any) => (
@@ -94,12 +94,12 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wide text-[#a0a0b0] mb-2">Free Fire UID</label>
+              <label className="block text-sm font-bold uppercase tracking-wide text-[#a0a0b0] mb-1.5">Free Fire UID</label>
               <input
                 {...form.register("freefireUid")}
                 placeholder="Enter your FF UID"
                 data-testid="input-freefire-uid"
-                className="w-full px-4 py-3 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors font-mono"
+                className="w-full px-3 py-2.5 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors font-mono"
               />
               {form.formState.errors.freefireUid && (
                 <p className="text-[#ff2244] text-sm mt-1">{form.formState.errors.freefireUid.message}</p>
@@ -107,12 +107,12 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wide text-[#a0a0b0] mb-2">In-Game Name</label>
+              <label className="block text-sm font-bold uppercase tracking-wide text-[#a0a0b0] mb-1.5">In-Game Name</label>
               <input
                 {...form.register("playerName")}
                 placeholder="Your Free Fire nickname"
                 data-testid="input-player-name"
-                className="w-full px-4 py-3 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                className="w-full px-3 py-2.5 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors"
               />
               {form.formState.errors.playerName && (
                 <p className="text-[#ff2244] text-sm mt-1">{form.formState.errors.playerName.message}</p>
@@ -120,22 +120,22 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-bold uppercase tracking-wide text-[#a0a0b0] mb-2">
+              <label className="block text-sm font-bold uppercase tracking-wide text-[#a0a0b0] mb-1.5">
                 Payment Screenshot URL <span className="text-[#a0a0b0] font-normal normal-case text-xs">(optional)</span>
               </label>
               <input
                 {...form.register("paymentScreenshot")}
                 placeholder="https://..."
                 data-testid="input-payment-screenshot"
-                className="w-full px-4 py-3 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                className="w-full px-3 py-2.5 bg-[#1a1a24] border border-[#2a2a36] rounded-xl text-white placeholder-[#a0a0b0] focus:outline-none focus:border-[#ff6b00] transition-colors"
               />
               {form.formState.errors.paymentScreenshot && (
                 <p className="text-[#ff2244] text-sm mt-1">{form.formState.errors.paymentScreenshot.message}</p>
               )}
-              <p className="text-[#a0a0b0] text-xs mt-2">Upload your bKash/Nagad payment screenshot to an image host and paste the link here.</p>
+              <p className="text-[#a0a0b0] text-xs mt-1.5">Upload your bKash/Nagad payment screenshot to an image host and paste the link here.</p>
             </div>
 
-            <div className="bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-xl p-4 flex gap-3">
+            <div className="bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-xl p-3 flex gap-2.5">
               <Trophy className="w-5 h-5 text-[#ff6b00] shrink-0 mt-0.5" />
               <p className="text-[#a0a0b0] text-sm">
                 After submitting, your registration will be reviewed by the admin. You'll be notified once approved. Room details will be shared before the match starts.
@@ -146,7 +146,7 @@ export default function RegisterPage() {
               type="submit"
               disabled={register.isPending}
               data-testid="button-submit-registration"
-              className="w-full py-4 bg-[#ff6b00] text-white font-black uppercase text-lg rounded-xl hover:bg-[#e66000] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_rgba(255,107,0,0.3)]"
+              className="w-full py-3 bg-[#ff6b00] text-white font-black uppercase text-lg rounded-xl hover:bg-[#e66000] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-[0_0_20px_rgba(255,107,0,0.3)]"
             >
               {register.isPending ? "Submitting..." : "Submit Registration"}
             </button>

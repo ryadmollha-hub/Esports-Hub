@@ -147,19 +147,19 @@ export default function NotificationBell() {
 
       {/* Dropdown panel */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-1rem)] bg-[#12121a] border border-[#ff6b00]/20 rounded-2xl shadow-2xl shadow-black/60 z-[200] overflow-hidden">
+        <div className="absolute right-0 top-full mt-1.5 w-80 max-w-[calc(100vw-1rem)] bg-[#12121a] border border-[#ff6b00]/20 rounded-2xl shadow-2xl shadow-black/60 z-[200] overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[#ff6b00]/10">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#ff6b00]/10">
+            <div className="flex items-center gap-1.5">
               <Bell className="w-3.5 h-3.5 text-[#ff6b00]" />
               <span className="font-black uppercase text-xs text-white tracking-widest">নোটিফিকেশন</span>
               {unreadCount > 0 && (
-                <span className="bg-[#ff2244] text-white text-[9px] font-black rounded-full px-1.5 py-0.5 leading-none">
+                <span className="bg-[#ff2244] text-white text-[9px] font-black rounded-full px-1 py-0.5 leading-none">
                   {unreadCount}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               {notifications.some((n) => !n.isRead) && (
                 <button
                   onClick={markAllRead}
@@ -178,11 +178,11 @@ export default function NotificationBell() {
           {/* Body */}
           <div className="max-h-[22rem] overflow-y-auto">
             {loading && notifications.length === 0 ? (
-              <div className="py-10 flex items-center justify-center">
+              <div className="py-7 flex items-center justify-center">
                 <div className="w-5 h-5 border-2 border-[#ff6b00] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : notifications.length === 0 ? (
-              <div className="py-10 flex flex-col items-center gap-2 text-[#606070]">
+              <div className="py-7 flex flex-col items-center gap-1.5 text-[#606070]">
                 <Bell className="w-7 h-7 text-[#ff6b00]/20" />
                 <span className="text-xs font-bold uppercase">কোনো নোটিফিকেশন নেই</span>
               </div>
@@ -190,12 +190,12 @@ export default function NotificationBell() {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`px-4 py-3 border-b border-[#ff6b00]/5 last:border-0 transition-colors cursor-pointer group ${
+                  className={`px-3 py-2.5 border-b border-[#ff6b00]/5 last:border-0 transition-colors cursor-pointer group ${
                     n.isRead ? "opacity-60" : "bg-[#ff6b00]/5"
                   }`}
                   onClick={() => { if (!n.isRead) markRead(n.id); }}
                 >
-                  <div className="flex items-start gap-2.5">
+                  <div className="flex items-start gap-2">
                     <span className="text-base shrink-0 mt-0.5">{typeEmoji[n.type] ?? "🔔"}</span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-1">
@@ -223,7 +223,7 @@ export default function NotificationBell() {
           </div>
 
           {notifications.length > 0 && (
-            <div className="px-4 py-2 border-t border-[#ff6b00]/10 text-center">
+            <div className="px-3 py-1.5 border-t border-[#ff6b00]/10 text-center">
               <span className="text-[#606070] text-[10px]">সর্বশেষ {notifications.length}টি নোটিফিকেশন</span>
             </div>
           )}

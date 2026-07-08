@@ -45,10 +45,10 @@ export default function RankBadge({ rating, size = "sm", showRating = false, cla
   const tier = getTierInfo(rating);
 
   const sizeMap = {
-    xs: { emoji: "text-sm",  text: "text-[10px]", gap: "gap-0.5", px: "px-1.5 py-0.5" },
-    sm: { emoji: "text-base", text: "text-xs",     gap: "gap-1",   px: "px-2 py-0.5"   },
-    md: { emoji: "text-xl",   text: "text-sm",     gap: "gap-1.5", px: "px-2.5 py-1"   },
-    lg: { emoji: "text-2xl",  text: "text-base",   gap: "gap-2",   px: "px-3 py-1.5"   },
+    xs: { emoji: "text-sm",  text: "text-[10px]", gap: "gap-0.5", px: "px-1 py-0.5" },
+    sm: { emoji: "text-base", text: "text-xs",     gap: "gap-1",   px: "px-1.5 py-0.5"   },
+    md: { emoji: "text-xl",   text: "text-sm",     gap: "gap-1", px: "px-2 py-1"   },
+    lg: { emoji: "text-2xl",  text: "text-base",   gap: "gap-1.5",   px: "px-2.5 py-1"   },
   }[size];
 
   return (

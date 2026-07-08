@@ -102,9 +102,9 @@ function MatchCard({
       {/* Top accent + live bar */}
       <div className="h-[3px]" style={{ background: `linear-gradient(90deg, ${color}, ${color}20)` }} />
 
-      <div className="px-4 py-4">
+      <div className="px-3 py-3">
         {/* Row 1: title + badges */}
-        <div className="flex items-start gap-3 mb-3">
+        <div className="flex items-start gap-2.5 mb-2.5">
           {/* Mode icon */}
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 border"
@@ -114,26 +114,26 @@ function MatchCard({
           </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-0.5">
+            <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
               <span className="text-white font-black text-sm leading-tight truncate">
                 {m.matchName || `${TYPE_LABEL[m.matchType] ?? m.matchType} Match`}
               </span>
 
               {/* Live badge */}
               {isLive && (
-                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/25 px-1.5 py-0.5 rounded-full shrink-0">
+                <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 border border-[#00ff88]/25 px-1 py-0.5 rounded-full shrink-0">
                   <span className="w-1 h-1 rounded-full bg-[#00ff88] animate-pulse" /> {t("cm_live")}
                 </span>
               )}
               {/* Full badge */}
               {isFull && !isEnded && (
-                <span className="text-[9px] font-black uppercase text-[#ff2244] bg-[#ff2244]/10 border border-[#ff2244]/20 px-1.5 py-0.5 rounded-full shrink-0">
+                <span className="text-[9px] font-black uppercase text-[#ff2244] bg-[#ff2244]/10 border border-[#ff2244]/20 px-1 py-0.5 rounded-full shrink-0">
                   {t("cm_full")}
                 </span>
               )}
               {/* Mode badge */}
               <span
-                className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full border shrink-0"
+                className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border shrink-0"
                 style={{ color, background: `${color}10`, borderColor: `${color}25` }}
               >
                 {m.matchType === "LONE_WOLF" ? "LONE WOLF" : m.matchType}
@@ -144,7 +144,7 @@ function MatchCard({
             <p className="text-[#606070] text-[10px]">
               by <span className="text-[#a0a0b0]">{m.creatorName ?? "Player"}</span>
               {m.isPrivate && (
-                <span className="ml-1.5 inline-flex items-center gap-0.5 text-[9px] text-yellow-500">
+                <span className="ml-1 inline-flex items-center gap-0.5 text-[9px] text-yellow-500">
                   <Lock className="w-2.5 h-2.5" /> {t("cm_private")}
                 </span>
               )}
@@ -153,20 +153,20 @@ function MatchCard({
         </div>
 
         {/* Row 2: stats grid */}
-        <div className="grid grid-cols-3 gap-2 mb-3 text-center">
-          <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5">
+        <div className="grid grid-cols-3 gap-1.5 mb-2.5 text-center">
+          <div className="bg-[#0a0a0f] rounded-lg px-1.5 py-1">
             <div className="text-white font-black text-xs">
               {Number(m.entryFee) === 0 ? t("cm_free_entry") : `৳${Number(m.entryFee).toLocaleString()}`}
             </div>
             <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">{t("cm_entry")}</div>
           </div>
-          <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5">
+          <div className="bg-[#0a0a0f] rounded-lg px-1.5 py-1">
             <div className="text-[#ff6b00] font-black text-xs">
               ৳{Number(m.prizePool).toLocaleString()}
             </div>
             <div className="text-[#4a4a5a] text-[9px] uppercase font-bold mt-0.5">{t("cm_prize")}</div>
           </div>
-          <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5">
+          <div className="bg-[#0a0a0f] rounded-lg px-1.5 py-1">
             <div className="text-white font-black text-xs flex items-center justify-center gap-1">
               <Users className="w-2.5 h-2.5 text-[#606070]" />
               {m.filledSlots}/{m.maxSlots}
@@ -176,7 +176,7 @@ function MatchCard({
         </div>
 
         {/* Slot progress bar */}
-        <div className="h-1 bg-[#1a1a24] rounded-full mb-3 overflow-hidden">
+        <div className="h-1 bg-[#1a1a24] rounded-full mb-2.5 overflow-hidden">
           <div
             className="h-full rounded-full transition-all"
             style={{
@@ -187,7 +187,7 @@ function MatchCard({
         </div>
 
         {/* Row 3: schedule + countdown + join */}
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-2.5">
           <div className="text-[10px] text-[#606070]">
             {startsAt && !isLive ? (
               <CountdownTimer targetDate={startsAt} />
@@ -218,7 +218,7 @@ function MatchCard({
             <button
               onClick={onJoin}
               disabled={isFull}
-              className="flex items-center gap-1.5 px-4 py-2 text-[11px] font-black uppercase rounded-xl transition-all hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+              className="flex items-center gap-1 px-3 py-1.5 text-[11px] font-black uppercase rounded-xl transition-all hover:brightness-110 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
               style={{
                 background: isLive ? "#00ff88" : color,
                 color: isLive || color === "#ffd700" || color === "#00ff88" ? "#000" : "#fff",
@@ -390,13 +390,13 @@ export default function CommunityMatchesPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-6xl mx-auto px-4 pt-16 pb-24">
-        <div className="mt-4">
+      <div className="max-w-6xl mx-auto px-3 pt-16 pb-24">
+        <div className="mt-3">
 
           {/* ── Page header ── */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ff6b00]/10 border border-[#ff6b00]/20 text-[#ff6b00] text-[10px] font-black uppercase tracking-widest mb-3">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ff6b00]/10 border border-[#ff6b00]/20 text-[#ff6b00] text-[10px] font-black uppercase tracking-widest mb-2.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-[#ff6b00] animate-pulse" />
                 Player Created
               </div>
@@ -412,13 +412,13 @@ export default function CommunityMatchesPage() {
             {user ? (
               <button
                 onClick={openCreateMatch}
-                className="flex items-center gap-2 px-5 py-3 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black uppercase text-sm rounded-xl transition-all shadow-[0_4px_20px_rgba(255,107,0,0.35)] hover:shadow-[0_6px_28px_rgba(255,107,0,0.45)] hover:-translate-y-0.5 active:translate-y-0 shrink-0"
+                className="flex items-center gap-1.5 px-3.5 py-2.5 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black uppercase text-sm rounded-xl transition-all shadow-[0_4px_20px_rgba(255,107,0,0.35)] hover:shadow-[0_6px_28px_rgba(255,107,0,0.45)] hover:-translate-y-0.5 active:translate-y-0 shrink-0"
               >
                 <Plus className="w-4 h-4" /> {t("cm_create")}
               </button>
             ) : (
               <Link href="/sign-in">
-                <button className="flex items-center gap-2 px-5 py-3 bg-[#141420] hover:bg-[#1e1e2e] border border-[#ff6b00]/40 hover:border-[#ff6b00]/70 text-[#ff6b00] font-black uppercase text-sm rounded-xl transition-all shrink-0">
+                <button className="flex items-center gap-1.5 px-3.5 py-2.5 bg-[#141420] hover:bg-[#1e1e2e] border border-[#ff6b00]/40 hover:border-[#ff6b00]/70 text-[#ff6b00] font-black uppercase text-sm rounded-xl transition-all shrink-0">
                   <Plus className="w-4 h-4" /> Sign in to Create
                 </button>
               </Link>
@@ -427,18 +427,18 @@ export default function CommunityMatchesPage() {
 
           {/* ── My Messages (matches I joined) ── */}
           {user && myJoinedMatches.length > 0 && (
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-3">
+            <div className="mb-4">
+              <div className="flex items-center gap-1.5 mb-2.5">
                 <span className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse" />
                 <h2 className="text-xs font-black uppercase text-[#a0a0b0] tracking-wider">
                   {t("cm_my_matches")}
-                  <span className="ml-2 text-[#4a4a5a]">({myJoinedMatches.length})</span>
+                  <span className="ml-1.5 text-[#4a4a5a]">({myJoinedMatches.length})</span>
                 </h2>
                 <button onClick={fetchMyJoins} className="ml-auto text-[#4a4a5a] hover:text-[#a0a0b0] transition-colors">
                   <RefreshCw className="w-3 h-3" />
                 </button>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {myJoinedMatches.map((req: any) => {
                   const statusColor = req.status === "accepted" ? "#00ff88" : req.status === "rejected" ? "#ff2244" : "#ffd700";
                   const statusLabel = req.status === "accepted" ? "Accepted" : req.status === "rejected" ? "Rejected" : "Pending";
@@ -450,16 +450,16 @@ export default function CommunityMatchesPage() {
                   const copyText = (txt: string) => { navigator.clipboard.writeText(txt); toast({ title: "Copied!" }); };
 
                   return (
-                    <div key={req.joinId} className="bg-[#0d0d16] border border-[#1e1e2e] rounded-xl px-3 py-3 hover:border-[#2a2a36] transition-colors">
-                      <div className="flex items-center justify-between gap-3">
+                    <div key={req.joinId} className="bg-[#0d0d16] border border-[#1e1e2e] rounded-xl px-2.5 py-2.5 hover:border-[#2a2a36] transition-colors">
+                      <div className="flex items-center justify-between gap-2.5">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-white text-xs font-bold truncate max-w-[160px]">
                               {req.matchName || `${req.matchType} Match`}
                             </span>
                             <span className="text-[10px] text-[#606070]">{req.matchType}</span>
                             {isActive && (
-                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/30">
+                              <span className="inline-flex items-center gap-1 text-[9px] font-black uppercase px-1 py-0.5 rounded-full bg-[#00ff88]/10 text-[#00ff88] border border-[#00ff88]/30">
                                 <span className="w-1 h-1 rounded-full bg-[#00ff88] animate-pulse" /> LIVE
                               </span>
                             )}
@@ -467,7 +467,7 @@ export default function CommunityMatchesPage() {
                           <div className="text-[11px] text-[#606070] mt-0.5">by {req.creatorName}</div>
                         </div>
                         <span
-                          className="shrink-0 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border"
+                          className="shrink-0 text-[9px] font-black uppercase px-1.5 py-0.5 rounded-full border"
                           style={{ color: statusColor, borderColor: `${statusColor}30`, background: `${statusColor}10` }}
                         >
                           {statusLabel}
@@ -476,7 +476,7 @@ export default function CommunityMatchesPage() {
 
                       {/* Timer countdown */}
                       {req.status === "accepted" && startsAt && !isActive && (
-                        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#a0a0b0]">
+                        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[#a0a0b0]">
                           <Timer className="w-3 h-3 text-[#ff6b00]" />
                           <span>Starts in:</span>
                           <CountdownTimer targetDate={startsAt} className="text-[11px]" />
@@ -485,8 +485,8 @@ export default function CommunityMatchesPage() {
 
                       {/* Room credentials */}
                       {req.status === "accepted" && req.adminRoomId && isActive && (
-                        <div className="mt-2 grid grid-cols-2 gap-2">
-                          <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5 flex items-center gap-1.5 min-w-0">
+                        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                          <div className="bg-[#0a0a0f] rounded-lg px-1.5 py-1 flex items-center gap-1 min-w-0">
                             <span className="text-[#606070] text-[10px] shrink-0">Room</span>
                             <code className="text-[#00ff88] font-mono text-xs font-bold truncate flex-1">{req.adminRoomId}</code>
                             <button onClick={() => copyText(req.adminRoomId)} className="text-[#606070] hover:text-[#00ff88] shrink-0">
@@ -494,7 +494,7 @@ export default function CommunityMatchesPage() {
                             </button>
                           </div>
                           {req.adminRoomPassword && (
-                            <div className="bg-[#0a0a0f] rounded-lg px-2 py-1.5 flex items-center gap-1.5 min-w-0">
+                            <div className="bg-[#0a0a0f] rounded-lg px-1.5 py-1 flex items-center gap-1 min-w-0">
                               <span className="text-[#606070] text-[10px] shrink-0">Pass</span>
                               <code className="text-yellow-400 font-mono text-xs font-bold truncate flex-1">{req.adminRoomPassword}</code>
                               <button onClick={() => copyText(req.adminRoomPassword)} className="text-[#606070] hover:text-yellow-400 shrink-0">
@@ -507,7 +507,7 @@ export default function CommunityMatchesPage() {
 
                       {/* Accepted but no room set yet */}
                       {req.status === "accepted" && !req.adminRoomId && (
-                        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#00ff88]/70">
+                        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[#00ff88]/70">
                           <CheckCircle className="w-3 h-3 shrink-0" />
                           You're in! Room details will appear once admin sets them.
                         </div>
@@ -515,14 +515,14 @@ export default function CommunityMatchesPage() {
 
                       {/* Pending */}
                       {req.status === "pending" && (
-                        <div className="mt-2 text-[11px] text-yellow-400/70">
+                        <div className="mt-1.5 text-[11px] text-yellow-400/70">
                           Waiting for creator to approve your request.
                         </div>
                       )}
 
                       {/* Rejected */}
                       {req.status === "rejected" && (
-                        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-[#ff2244]/70">
+                        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-[#ff2244]/70">
                           <XCircle className="w-3 h-3 shrink-0" />
                           Your request was rejected.
                         </div>
@@ -537,8 +537,8 @@ export default function CommunityMatchesPage() {
           )}
 
           {/* ── Filter tabs (sticky) ── */}
-          <div className="sticky top-0 z-20 bg-[#0a0a0f] -mx-4 px-4 pt-1 pb-3 border-b border-[#12121a] mb-5">
-            <div className="flex gap-2 overflow-x-auto scrollbar-none">
+          <div className="sticky top-0 z-20 bg-[#0a0a0f] -mx-3 px-3 pt-1 pb-2.5 border-b border-[#12121a] mb-3.5">
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
               {TABS.map((tab) => {
                 const cnt = tab.key === "all"
                   ? communityMatches.length
@@ -547,7 +547,7 @@ export default function CommunityMatchesPage() {
                   <button
                     key={tab.key}
                     onClick={() => setActiveTab(tab.key)}
-                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase whitespace-nowrap transition-all flex-shrink-0 ${
+                    className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-black uppercase whitespace-nowrap transition-all flex-shrink-0 ${
                       activeTab === tab.key
                         ? "bg-[#ff6b00] text-white shadow-[0_4px_16px_rgba(255,107,0,0.35)]"
                         : "bg-[#12121a] border border-[#2a2a36] text-[#a0a0b0] hover:text-white hover:border-[#3a3a46]"
@@ -557,7 +557,7 @@ export default function CommunityMatchesPage() {
                     {tab.label}
                     {cnt > 0 && (
                       <span
-                        className={`ml-0.5 text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                        className={`ml-0.5 text-[9px] font-black px-1 py-0.5 rounded-full ${
                           activeTab === tab.key
                             ? "bg-white/20 text-white"
                             : "bg-[#1e1e2e] text-[#606070]"
@@ -572,7 +572,7 @@ export default function CommunityMatchesPage() {
 
               <button
                 onClick={fetchMatches}
-                className="ml-auto flex items-center gap-1.5 px-3 py-2 bg-[#12121a] border border-[#2a2a36] hover:border-[#3a3a46] rounded-xl text-[#606070] hover:text-[#a0a0b0] transition-all flex-shrink-0"
+                className="ml-auto flex items-center gap-1 px-2.5 py-1.5 bg-[#12121a] border border-[#2a2a36] hover:border-[#3a3a46] rounded-xl text-[#606070] hover:text-[#a0a0b0] transition-all flex-shrink-0"
               >
                 <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
               </button>
@@ -581,14 +581,14 @@ export default function CommunityMatchesPage() {
 
           {/* ── Match list ── */}
           {loading ? (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="h-44 bg-[#12121a] rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-center py-16 border border-dashed border-[#1e1e2e] rounded-2xl">
-              <div className="text-5xl mb-4 opacity-20">{activeTabMeta.icon}</div>
+              <div className="text-5xl mb-3 opacity-20">{activeTabMeta.icon}</div>
               <p className="text-[#606070] text-sm font-bold">
                 {activeTab === "all"
                   ? "No community matches yet"
@@ -600,14 +600,14 @@ export default function CommunityMatchesPage() {
               {user && (
                 <button
                   onClick={openCreateMatch}
-                  className="inline-flex items-center gap-2 px-4 py-2 mt-5 bg-[#ff6b00] text-white text-xs font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 mt-3.5 bg-[#ff6b00] text-white text-xs font-black uppercase rounded-xl hover:bg-[#e66000] transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" /> Create First Match
                 </button>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {filtered.map((m: any) => (
                 <MatchCard
                   key={m.id}
@@ -627,11 +627,11 @@ export default function CommunityMatchesPage() {
       {joinMatch && (
         <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/85 backdrop-blur-sm" onClick={() => setJoinMatch(null)} />
-          <div className="relative w-full sm:max-w-sm bg-[#0d0d16] border border-[#ff6b00]/20 rounded-t-3xl sm:rounded-2xl px-5 pb-6 pt-4 z-10 max-h-[90vh] overflow-y-auto">
-            <div className="sm:hidden w-10 h-1 bg-[#2a2a36] rounded-full mx-auto mb-4" />
+          <div className="relative w-full sm:max-w-sm bg-[#0d0d16] border border-[#ff6b00]/20 rounded-t-3xl sm:rounded-2xl px-3.5 pb-4 pt-3 z-10 max-h-[90vh] overflow-y-auto">
+            <div className="sm:hidden w-10 h-1 bg-[#2a2a36] rounded-full mx-auto mb-3" />
 
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-1.5">
                 <Swords className="w-5 h-5 text-[#ff6b00]" />
                 <div>
                   <h3 className="font-black text-white text-sm">Join Match</h3>
@@ -650,7 +650,7 @@ export default function CommunityMatchesPage() {
 
             {/* Entry fee notice */}
             {Number(joinMatch.entryFee) > 0 && (
-              <div className="mb-4 px-4 py-3 bg-[#ff6b00]/8 border border-[#ff6b00]/20 rounded-xl flex items-center gap-3">
+              <div className="mb-3 px-3 py-2.5 bg-[#ff6b00]/8 border border-[#ff6b00]/20 rounded-xl flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#ff6b00]/15 border border-[#ff6b00]/25 flex items-center justify-center text-base shrink-0">৳</div>
                 <div>
                   <div className="text-white font-black text-sm">Entry Fee: ৳{Number(joinMatch.entryFee).toLocaleString()}</div>
@@ -663,9 +663,9 @@ export default function CommunityMatchesPage() {
               </div>
             )}
 
-            <div className="space-y-3 mb-4">
+            <div className="space-y-2.5 mb-3">
               {joinPlayers.map((player, idx) => (
-                <div key={idx} className="space-y-2">
+                <div key={idx} className="space-y-1.5">
                   {joinPlayers.length > 1 && (
                     <div className="text-[#606070] text-[10px] font-black uppercase tracking-wider">Player {idx + 1}</div>
                   )}
@@ -674,21 +674,21 @@ export default function CommunityMatchesPage() {
                     placeholder="In-Game Name *"
                     value={player.name}
                     onChange={(e) => setJoinPlayers((prev) => prev.map((x, j) => j === idx ? { ...x, name: e.target.value } : x))}
-                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-3 text-white text-base placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-base placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
                   />
                   <input
                     type="text"
                     placeholder="Free Fire UID *"
                     value={player.uid}
                     onChange={(e) => setJoinPlayers((prev) => prev.map((x, j) => j === idx ? { ...x, uid: e.target.value } : x))}
-                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-3 text-white text-base font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
+                    className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2.5 text-white text-base font-mono placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors"
                   />
                   {idx < joinPlayers.length - 1 && <div className="border-t border-[#1a1a24] pt-1" />}
                 </div>
               ))}
               {joinMatch.isPasswordProtected && (
                 <div>
-                  <label className="flex items-center gap-1.5 text-yellow-400 text-[10px] font-black uppercase mb-1.5">
+                  <label className="flex items-center gap-1 text-yellow-400 text-[10px] font-black uppercase mb-1">
                     <Lock className="w-3 h-3" /> Match Password *
                   </label>
                   <input
@@ -696,14 +696,14 @@ export default function CommunityMatchesPage() {
                     placeholder="Enter match password"
                     value={joinPassword}
                     onChange={(e) => setJoinPassword(e.target.value)}
-                    className="w-full bg-[#0a0a0f] border border-yellow-500/30 rounded-xl px-4 py-3 text-white text-base placeholder-[#4a4a5a] focus:outline-none focus:border-yellow-400 transition-colors"
+                    className="w-full bg-[#0a0a0f] border border-yellow-500/30 rounded-xl px-3 py-2.5 text-white text-base placeholder-[#4a4a5a] focus:outline-none focus:border-yellow-400 transition-colors"
                   />
                 </div>
               )}
             </div>
 
             {walletBalance !== null && Number(joinMatch.entryFee) > 0 && walletBalance < Number(joinMatch.entryFee) && (
-              <div className="mb-3 p-3 bg-[#ff2244]/5 border border-[#ff2244]/20 rounded-xl text-center">
+              <div className="mb-2.5 p-2.5 bg-[#ff2244]/5 border border-[#ff2244]/20 rounded-xl text-center">
                 <p className="text-[#ff2244] text-sm font-bold">Insufficient balance</p>
                 <Link href="/wallet" onClick={() => setJoinMatch(null)} className="text-[#ff6b00] text-xs font-bold underline mt-1 block">
                   Top up wallet →
@@ -714,7 +714,7 @@ export default function CommunityMatchesPage() {
             <button
               onClick={doJoin}
               disabled={joinDisabled}
-              className="w-full py-3 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black uppercase rounded-xl text-sm disabled:opacity-40 transition-all"
+              className="w-full py-2.5 bg-[#ff6b00] hover:bg-[#e66000] text-white font-black uppercase rounded-xl text-sm disabled:opacity-40 transition-all"
             >
               {joining
                 ? "Joining…"

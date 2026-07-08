@@ -32,8 +32,8 @@ export default function LeaderboardPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-16 pb-20">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-5">
+      <div className="max-w-4xl mx-auto px-3 pt-16 pb-20">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 mb-3.5">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black uppercase" data-testid="heading-leaderboard">
               <span className="text-[#ff6b00]">Leaderboard</span>
@@ -44,7 +44,7 @@ export default function LeaderboardPage() {
             value={tournamentId ?? ""}
             onChange={(e) => setTournamentId(e.target.value ? parseInt(e.target.value) : null)}
             data-testid="select-tournament-filter"
-            className="w-full md:w-auto px-4 py-2.5 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
+            className="w-full md:w-auto px-3 py-2 bg-[#12121a] border border-[#2a2a36] rounded-xl text-white focus:outline-none focus:border-[#ff6b00] transition-colors text-sm"
           >
             <option value="">Global Rankings</option>
             {(tournaments as any[]).map((t: any) => (
@@ -55,7 +55,7 @@ export default function LeaderboardPage() {
 
         {/* Top 3 Podium */}
         {entries.length >= 3 && (
-          <div className="flex items-end justify-center gap-3 mb-6">
+          <div className="flex items-end justify-center gap-2.5 mb-4">
             {[1, 0, 2].map((i) => {
               const e = entries[i];
               if (!e) return null;
@@ -63,9 +63,9 @@ export default function LeaderboardPage() {
               const colors = ["bg-gray-300/10 border-gray-300/30", "bg-[#ffd700]/10 border-[#ffd700]/30", "bg-amber-600/10 border-amber-600/30"];
               const rankNum = [2, 1, 3];
               return (
-                <div key={i} className={`flex-1 max-w-[160px] rounded-t-xl border border-b-0 ${colors[i]} flex flex-col items-center justify-end ${heights[i]} pt-4 pb-3 px-3`} data-testid={`podium-rank-${rankNum[i]}`}>
+                <div key={i} className={`flex-1 max-w-[160px] rounded-t-xl border border-b-0 ${colors[i]} flex flex-col items-center justify-end ${heights[i]} pt-3 pb-2.5 px-2.5`} data-testid={`podium-rank-${rankNum[i]}`}>
                   {rankNum[i] === 1 && <Crown className="w-6 h-6 text-[#ffd700] mb-1" />}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm mb-2 ${rankBadge(rankNum[i])}`}>#{rankNum[i]}</div>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm mb-1.5 ${rankBadge(rankNum[i])}`}>#{rankNum[i]}</div>
                   <div className="text-white font-bold text-xs text-center truncate w-full" data-testid={`text-podium-name-${rankNum[i]}`}><PlayerIdentity playerName={e.playerName} /></div>
                   <div className="text-[#ff6b00] font-black text-sm">{e.points} pts</div>
                 </div>
@@ -75,7 +75,7 @@ export default function LeaderboardPage() {
         )}
 
         <div className="bg-[#12121a] rounded-xl border border-[#ff6b00]/20 overflow-hidden">
-          <div className="grid grid-cols-12 text-[#a0a0b0] text-xs uppercase py-2 px-3 border-b border-[#ff6b00]/10">
+          <div className="grid grid-cols-12 text-[#a0a0b0] text-xs uppercase py-1.5 px-2.5 border-b border-[#ff6b00]/10">
             <div className="col-span-1">#</div>
             <div className="col-span-5">Player</div>
             <div className="col-span-2 text-right">Kills</div>
@@ -84,17 +84,17 @@ export default function LeaderboardPage() {
           </div>
 
           {isLoading ? (
-            <div className="p-8 text-center text-[#a0a0b0]">Loading rankings...</div>
+            <div className="p-5 text-center text-[#a0a0b0]">Loading rankings...</div>
           ) : entries.length === 0 ? (
-            <div className="p-12 text-center">
-              <Trophy className="w-12 h-12 mx-auto mb-3 text-[#ff6b00]/30" />
+            <div className="p-8 text-center">
+              <Trophy className="w-12 h-12 mx-auto mb-2.5 text-[#ff6b00]/30" />
               <p className="text-[#a0a0b0]">No rankings yet. Matches need to be completed first.</p>
             </div>
           ) : (
             entries.map((entry: any) => (
               <div
                 key={entry.rank}
-                className={`grid grid-cols-12 items-center py-2 px-3 border-b border-[#ff6b00]/5 hover:bg-[#ff6b00]/5 transition-colors ${entry.rank <= 3 ? "bg-[#ff6b00]/5" : ""}`}
+                className={`grid grid-cols-12 items-center py-1.5 px-2.5 border-b border-[#ff6b00]/5 hover:bg-[#ff6b00]/5 transition-colors ${entry.rank <= 3 ? "bg-[#ff6b00]/5" : ""}`}
                 data-testid={`row-leaderboard-${entry.rank}`}
               >
                 <div className="col-span-1">

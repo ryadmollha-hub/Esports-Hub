@@ -26,7 +26,7 @@ function StatusBadge({ status }: { status: string }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.open;
   const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-bold uppercase ${cfg.cls}`}>
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border text-xs font-bold uppercase ${cfg.cls}`}>
       <Icon className="w-3 h-3" />
       {cfg.label}
     </span>
@@ -108,10 +108,10 @@ export default function MyTicketsPage() {
     return (
       <div className="min-h-screen bg-[#0a0a0f] text-white">
         <Navbar />
-        <div className="max-w-2xl mx-auto px-4 pt-24 text-center">
-          <AlertCircle className="w-12 h-12 text-[#a0a0b0] mx-auto mb-3 opacity-30" />
-          <p className="text-[#a0a0b0] mb-4">Sign in to view your tickets.</p>
-          <Link href="/sign-in" className="px-6 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">Sign In</Link>
+        <div className="max-w-2xl mx-auto px-3 pt-24 text-center">
+          <AlertCircle className="w-12 h-12 text-[#a0a0b0] mx-auto mb-2.5 opacity-30" />
+          <p className="text-[#a0a0b0] mb-3">Sign in to view your tickets.</p>
+          <Link href="/sign-in" className="px-4 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">Sign In</Link>
         </div>
       </div>
     );
@@ -120,19 +120,19 @@ export default function MyTicketsPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 pt-16 pb-20">
+      <div className="max-w-4xl mx-auto px-3 pt-16 pb-20">
 
         {selectedTicket ? (
           <div>
-            <button onClick={goBack} className="flex items-center gap-2 text-[#a0a0b0] hover:text-white text-sm mb-6 transition-colors">
+            <button onClick={goBack} className="flex items-center gap-1.5 text-[#a0a0b0] hover:text-white text-sm mb-4 transition-colors">
               <ArrowLeft className="w-4 h-4" /> Back to My Tickets
             </button>
 
-            <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-6 mb-4">
-              <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-4 mb-3">
+              <div className="flex items-start justify-between gap-2.5 mb-2.5">
                 <div>
                   <h2 className="font-black text-white text-lg leading-tight">{selectedTicket.subject}</h2>
-                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                     <StatusBadge status={selectedTicket.status} />
                     <span className="text-[#4a4a5a] text-xs">{CATEGORY_LABELS[selectedTicket.category] ?? selectedTicket.category}</span>
                     <span className="text-[#4a4a5a] text-xs">#{selectedTicket.id}</span>
@@ -141,29 +141,29 @@ export default function MyTicketsPage() {
                 <span className="text-[#4a4a5a] text-xs whitespace-nowrap shrink-0">{timeAgo(selectedTicket.createdAt)}</span>
               </div>
 
-              <div className="border-t border-[#ff6b00]/10 pt-4 mt-2">
-                <div className="flex gap-3 mb-4">
+              <div className="border-t border-[#ff6b00]/10 pt-3 mt-1.5">
+                <div className="flex gap-2.5 mb-3">
                   <div className="w-8 h-8 rounded-full bg-[#ff6b00]/20 flex items-center justify-center shrink-0 text-xs font-black text-[#ff6b00]">
                     {user.username?.[0]?.toUpperCase() ?? "U"}
                   </div>
-                  <div className="flex-1 bg-[#0a0a0f] rounded-xl p-3">
+                  <div className="flex-1 bg-[#0a0a0f] rounded-xl p-2.5">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-white text-xs font-bold">{user.displayName ?? user.username ?? "You"}</span>
                       <span className="text-[#4a4a5a] text-xs">{timeAgo(selectedTicket.createdAt)}</span>
                     </div>
                     <p className="text-[#a0a0b0] text-sm leading-relaxed whitespace-pre-wrap">{selectedTicket.message}</p>
                     {selectedTicket.screenshotUrl && (
-                      <img src={selectedTicket.screenshotUrl} alt="screenshot" className="mt-3 rounded-lg max-w-xs max-h-48 object-contain" />
+                      <img src={selectedTicket.screenshotUrl} alt="screenshot" className="mt-2.5 rounded-lg max-w-xs max-h-48 object-contain" />
                     )}
                   </div>
                 </div>
 
                 {(selectedTicket.replies ?? []).map((reply: any) => (
-                  <div key={reply.id} className={`flex gap-3 mb-4 ${reply.isAdmin ? "" : "flex-row-reverse"}`}>
+                  <div key={reply.id} className={`flex gap-2.5 mb-3 ${reply.isAdmin ? "" : "flex-row-reverse"}`}>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black ${reply.isAdmin ? "bg-[#ff6b00]/20 text-[#ff6b00]" : "bg-[#229ED9]/20 text-[#229ED9]"}`}>
                       {reply.isAdmin ? "A" : (user.username?.[0]?.toUpperCase() ?? "U")}
                     </div>
-                    <div className={`flex-1 rounded-xl p-3 ${reply.isAdmin ? "bg-[#ff6b00]/8 border border-[#ff6b00]/15" : "bg-[#0a0a0f]"}`}>
+                    <div className={`flex-1 rounded-xl p-2.5 ${reply.isAdmin ? "bg-[#ff6b00]/8 border border-[#ff6b00]/15" : "bg-[#0a0a0f]"}`}>
                       <div className="flex items-center justify-between mb-1">
                         <span className={`text-xs font-bold ${reply.isAdmin ? "text-[#ff6b00]" : "text-white"}`}>
                           {reply.isAdmin ? "Support Team" : (user.displayName ?? user.username ?? "You")}
@@ -178,19 +178,19 @@ export default function MyTicketsPage() {
             </div>
 
             {selectedTicket.status !== "closed" && (
-              <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-4">
-                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-2 font-bold">Reply</label>
+              <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/15 p-3">
+                <label className="block text-[#a0a0b0] text-xs uppercase tracking-wider mb-1.5 font-bold">Reply</label>
                 <textarea
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   rows={3}
                   placeholder="Add a reply to your ticket..."
-                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-4 py-2.5 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors resize-none mb-3"
+                  className="w-full bg-[#0a0a0f] border border-[#2a2a36] rounded-xl px-3 py-2 text-white text-sm placeholder-[#4a4a5a] focus:outline-none focus:border-[#ff6b00] transition-colors resize-none mb-2.5"
                 />
                 <button
                   onClick={sendReply}
                   disabled={sendingReply || !replyText.trim()}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] disabled:opacity-50 transition-all"
                 >
                   <Send className="w-4 h-4" />
                   {sendingReply ? "Sending..." : "Send Reply"}
@@ -198,56 +198,56 @@ export default function MyTicketsPage() {
               </div>
             )}
             {selectedTicket.status === "closed" && (
-              <div className="text-center py-4 text-[#a0a0b0] text-sm bg-[#12121a] rounded-2xl border border-[#a0a0b0]/10">
+              <div className="text-center py-3 text-[#a0a0b0] text-sm bg-[#12121a] rounded-2xl border border-[#a0a0b0]/10">
                 This ticket is closed. <Link href="/support" className="text-[#ff6b00] hover:underline">Open a new ticket</Link> if you need more help.
               </div>
             )}
           </div>
         ) : (
           <div>
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <div>
                 <h1 className="text-3xl font-black uppercase">My <span className="text-[#ff6b00]">Tickets</span></h1>
                 <p className="text-[#a0a0b0] text-sm mt-1">Track your support requests</p>
               </div>
-              <div className="flex items-center gap-3">
-                <button onClick={loadTickets} className="flex items-center gap-2 text-sm text-[#a0a0b0] hover:text-white transition-colors">
+              <div className="flex items-center gap-2.5">
+                <button onClick={loadTickets} className="flex items-center gap-1.5 text-sm text-[#a0a0b0] hover:text-white transition-colors">
                   <RefreshCw className="w-4 h-4" /> Refresh
                 </button>
-                <Link href="/support" className="flex items-center gap-2 px-4 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
+                <Link href="/support" className="flex items-center gap-1.5 px-3 py-1.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
                   <Ticket className="w-4 h-4" /> New Ticket
                 </Link>
               </div>
             </div>
 
             {loading ? (
-              <div className="space-y-3">{[1, 2, 3].map((i) => <div key={i} className="h-20 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
+              <div className="space-y-2.5">{[1, 2, 3].map((i) => <div key={i} className="h-20 bg-[#12121a] rounded-xl animate-pulse" />)}</div>
             ) : tickets.length === 0 ? (
               <div className="bg-[#12121a] rounded-2xl border border-[#ff6b00]/10 p-14 text-center">
-                <Ticket className="w-12 h-12 text-[#a0a0b0] mx-auto mb-3 opacity-20" />
+                <Ticket className="w-12 h-12 text-[#a0a0b0] mx-auto mb-2.5 opacity-20" />
                 <h3 className="text-white font-black text-lg mb-1">No tickets yet</h3>
-                <p className="text-[#a0a0b0] text-sm mb-5">Submit a support ticket and we'll help you out.</p>
-                <Link href="/support" className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
+                <p className="text-[#a0a0b0] text-sm mb-3.5">Submit a support ticket and we'll help you out.</p>
+                <Link href="/support" className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#ff6b00] text-white font-black uppercase rounded-xl text-sm hover:bg-[#e66000] transition-colors">
                   Submit a Ticket
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 {tickets.map((ticket: any) => (
                   <button
                     key={ticket.id}
                     onClick={() => openTicket(ticket.id)}
-                    className="w-full bg-[#12121a] border border-[#ff6b00]/10 hover:border-[#ff6b00]/30 rounded-xl p-4 text-left transition-colors flex items-center gap-4"
+                    className="w-full bg-[#12121a] border border-[#ff6b00]/10 hover:border-[#ff6b00]/30 rounded-xl p-3 text-left transition-colors flex items-center gap-3"
                   >
                     <div className="w-10 h-10 rounded-xl bg-[#ff6b00]/10 flex items-center justify-center shrink-0">
                       <MessageCircle className="w-5 h-5 text-[#ff6b00]" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start justify-between gap-1.5">
                         <span className="font-bold text-white text-sm truncate">{ticket.subject}</span>
                         <span className="text-[#4a4a5a] text-xs whitespace-nowrap shrink-0">{timeAgo(ticket.createdAt)}</span>
                       </div>
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                         <StatusBadge status={ticket.status} />
                         <span className="text-[#4a4a5a] text-xs">{CATEGORY_LABELS[ticket.category] ?? ticket.category}</span>
                         <span className="text-[#4a4a5a] text-xs">#{ticket.id}</span>
