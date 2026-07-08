@@ -11,3 +11,5 @@
 - [Prize Distribution System](prize-distribution.md) — Per-match prize distribution. matchesTable: prizeDistributed+prizeDistributedAt. walletTransactionsTable: matchId. Route: prizeDistribution.ts. Team members looked up by freefireUid (additional members have no userId stored, only captain does).
 - [Backend workflow — no waitForPort](backend-workflow-no-waitforport.md) — "Start Backend" console workflow must omit waitForPort; platform detector times out even though server binds 8080 fine.
 - [Skill Rating System](skill-rating-system.md) — FF Arena exclusive: additive rating, 7 tiers, (match_id,user_id) unique constraint as idempotency lock, fire-and-forget hooks in both result routes.
+- [Match live-status gating](match-live-gating.md) — computeMatchVisibility() gates LIVE at max(match.scheduledAt, tournament.startDate), so defaulting a blank scheduledAt to "now" is safe and won't cause premature LIVE status.
+- [Duplicate dev workflows](duplicate-dev-workflows.md) — only "Start application" is in .replit; other "artifacts/*" workflows are ad hoc duplicates that fight over the same ports (5000/8080/24250) and leave zombie processes after crashes.
