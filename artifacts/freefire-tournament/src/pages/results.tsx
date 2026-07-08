@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Trophy, Target } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PlayerIdentity from "@/components/PlayerIdentity";
 import { useListTournaments, useGetTournamentMatches, getGetTournamentMatchesQueryKey } from "@workspace/api-client-react";
 
 const rankColors = ["text-[#ffd700] font-black", "text-gray-300 font-black", "text-amber-600 font-black"];
@@ -79,7 +80,7 @@ export default function ResultsPage() {
                         .map((result: any) => (
                           <tr key={result.id} className="border-b border-[#ff6b00]/5 last:border-0 hover:bg-[#ff6b00]/5" data-testid={`row-result-${result.id}`}>
                             <td className={`py-2.5 px-4 ${rankColors[result.rank - 1] ?? "text-[#a0a0b0]"}`}>#{result.rank}</td>
-                            <td className="py-2.5 px-4 text-white font-medium" data-testid={`text-result-player-${result.id}`}>{result.playerName}</td>
+                            <td className="py-2.5 px-4 text-white font-medium" data-testid={`text-result-player-${result.id}`}><PlayerIdentity playerName={result.playerName} /></td>
                             <td className="py-2.5 px-4 text-right text-[#ff6b00] font-bold flex items-center justify-end gap-1">
                               <Target className="w-3 h-3" />{result.kills}
                             </td>

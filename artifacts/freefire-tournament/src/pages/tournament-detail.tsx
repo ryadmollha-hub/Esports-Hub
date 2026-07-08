@@ -11,6 +11,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CountdownTimer from "@/components/CountdownTimer";
 import LeaderboardModal from "@/components/LeaderboardModal";
+import PlayerIdentity from "@/components/PlayerIdentity";
 import { useGetTournament, getGetTournamentQueryKey } from "@workspace/api-client-react";
 import { useAuthContext } from "@/lib/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -1065,7 +1066,7 @@ export default function TournamentDetailPage() {
                                   <span className="font-black text-[#a0a0b0]">{medal ?? `#${r.rank}`}</span>
                                 </td>
                                 <td className="py-2.5 pr-3">
-                                  <div className="font-bold text-white">{r.playerName}</div>
+                                  <div className="font-bold text-white"><PlayerIdentity playerName={r.playerName} /></div>
                                 </td>
                                 <td className="py-2.5 pr-3 text-right">
                                   <span className="text-white font-bold">{r.kills}</span>
@@ -1108,7 +1109,7 @@ export default function TournamentDetailPage() {
                                 <div className="flex items-center gap-4">
                                   <div className="text-4xl shrink-0 leading-none">{cfg.emoji}</div>
                                   <div className="flex-1 min-w-0">
-                                    <div className={`font-black text-lg ${cfg.text}`}>{player.playerName}</div>
+                                    <div className={`font-black text-lg ${cfg.text}`}><PlayerIdentity playerName={player.playerName} size="sm" /></div>
                                     <div className="text-[#a0a0b0] text-xs font-mono">UID: {player.freefireUid}</div>
                                   </div>
                                   <div className="text-right shrink-0">
@@ -1152,7 +1153,7 @@ export default function TournamentDetailPage() {
                                   <tr key={player.id} className={`border-b border-[#1a1a24] last:border-0 ${player.userId === user?.userId ? "bg-[#ff6b00]/5" : ""}`}>
                                     <td className="py-2.5 pr-3"><span className="font-black text-[#a0a0b0]">{emoji ?? `#${rowNum}`}</span></td>
                                     <td className="py-2.5 pr-3">
-                                      <div className="font-bold text-white">{player.playerName}</div>
+                                      <div className="font-bold text-white"><PlayerIdentity playerName={player.playerName} userId={player.userId} /></div>
                                       {player.userId === user?.userId && <span className="text-[10px] text-[#00ff88] font-bold">You</span>}
                                     </td>
                                     <td className="py-2.5 pr-3 hidden sm:table-cell"><span className="text-[#a0a0b0] font-mono text-xs">{player.freefireUid}</span></td>
@@ -1276,7 +1277,7 @@ export default function TournamentDetailPage() {
                                     👑 Leader
                                   </span>
                                 )}
-                                <span className="text-white font-bold text-sm">{p.playerName}</span>
+                                <span className="text-white font-bold text-sm"><PlayerIdentity playerName={p.playerName} userId={p.userId} /></span>
                                 {p.userId === user?.userId && (
                                   <span className="text-[10px] font-black uppercase text-[#00ff88] bg-[#00ff88]/10 px-1.5 py-0.5 rounded-full">You</span>
                                 )}
@@ -1295,7 +1296,7 @@ export default function TournamentDetailPage() {
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                   <span className="text-[10px] font-black text-[#606070] uppercase">P{mi + 2}</span>
-                                  <span className="text-[#c0c0d0] text-xs font-medium">{m.name}</span>
+                                  <span className="text-[#c0c0d0] text-xs font-medium"><PlayerIdentity playerName={m.name} /></span>
                                 </div>
                                 <div className="text-[#505060] text-[10px] font-mono">UID: {m.uid}</div>
                               </div>
@@ -1413,7 +1414,7 @@ export default function TournamentDetailPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                               <span className={`text-xs font-black ${isMe ? "text-[#ff6b00]" : "text-[#c0c0d0]"}`}>
-                                {msg.playerName} {isMe && <span className="text-[9px] font-bold bg-[#ff6b00]/20 text-[#ff6b00] px-1.5 py-0.5 rounded-full ml-1">You</span>}
+                                <PlayerIdentity playerName={msg.playerName} userId={msg.userId} /> {isMe && <span className="text-[9px] font-bold bg-[#ff6b00]/20 text-[#ff6b00] px-1.5 py-0.5 rounded-full ml-1">You</span>}
                               </span>
                               <BadgeChips badges={msg.badges} />
                               <span className="text-[10px] text-[#404055]">{timeAgo}</span>

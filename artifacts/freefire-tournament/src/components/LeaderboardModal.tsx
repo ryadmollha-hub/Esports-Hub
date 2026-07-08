@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Trophy, X, Clock, Users, Swords, Zap, Star, Medal, RefreshCw } from "lucide-react";
 import { apiBase as BASE } from "@/lib/apiBase";
+import PlayerIdentity from "@/components/PlayerIdentity";
 
 export interface ModalTournament {
   id: number;
@@ -165,7 +166,7 @@ export default function LeaderboardModal({ tournament, onClose }: { tournament: 
                         }`}
                       >
                         <div className="flex items-center justify-center">{rankMedal(r.rank)}</div>
-                        <p className={`font-black text-xs truncate ${r.rank <= 3 ? "text-white" : "text-[#c0c0c0]"}`}>{r.playerName}</p>
+                        <p className={`font-black text-xs truncate ${r.rank <= 3 ? "text-white" : "text-[#c0c0c0]"}`}><PlayerIdentity playerName={r.playerName} /></p>
                         <div className="flex items-center justify-center gap-0.5">
                           <Zap className="w-2.5 h-2.5 text-[#ff6b00]" />
                           <span className="text-[#ff6b00] text-xs font-black">{r.kills}</span>

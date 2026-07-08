@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Calendar, Clock, Map, ChevronDown, ChevronUp, Trophy, Target, Star } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PlayerIdentity from "@/components/PlayerIdentity";
 import { useGetMatchSchedule, getGetMatchScheduleQueryKey } from "@workspace/api-client-react";
 import { formatBDTime, formatBDDate } from "@/lib/bdTime";
 
@@ -148,7 +149,7 @@ function MatchRow({ match, expanded, onToggle }: { match: any; expanded: boolean
                 <div key={r.id ?? r.rank} className={`bg-gradient-to-r ${colClass} border rounded-xl p-3 flex items-center gap-3`}>
                   <span className="text-2xl shrink-0">{emoji ?? `#${r.rank}`}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="font-black text-white truncate">{r.playerName}</div>
+                    <div className="font-black text-white truncate"><PlayerIdentity playerName={r.playerName} /></div>
                   </div>
                   <div className="flex gap-3 shrink-0 text-xs">
                     <div className="text-center">
@@ -185,7 +186,7 @@ function MatchRow({ match, expanded, onToggle }: { match: any; expanded: boolean
                   {match.results.slice(3).map((r: any) => (
                     <tr key={r.id ?? r.rank} className="border-b border-[#1a1a24] last:border-0 hover:bg-[#ff6b00]/3">
                       <td className="py-1.5 pr-2 text-[#a0a0b0] font-bold">#{r.rank}</td>
-                      <td className="py-1.5 pr-2 text-white font-medium">{r.playerName}</td>
+                      <td className="py-1.5 pr-2 text-white font-medium"><PlayerIdentity playerName={r.playerName} /></td>
                       <td className="py-1.5 pr-2 text-right text-[#ff6b00] font-bold">{r.kills}</td>
                       <td className="py-1.5 text-right text-white font-bold">{r.points}</td>
                     </tr>

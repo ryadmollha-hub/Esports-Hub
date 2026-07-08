@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Trophy, Target, Zap, Crown } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import PlayerIdentity from "@/components/PlayerIdentity";
 import { useGetGlobalLeaderboard, useListTournaments, useGetTournamentLeaderboard, getGetGlobalLeaderboardQueryKey, getGetTournamentLeaderboardQueryKey } from "@workspace/api-client-react";
 
 const rankBadge = (rank: number) => {
@@ -65,7 +66,7 @@ export default function LeaderboardPage() {
                 <div key={i} className={`flex-1 max-w-[160px] rounded-t-xl border border-b-0 ${colors[i]} flex flex-col items-center justify-end ${heights[i]} pt-4 pb-3 px-3`} data-testid={`podium-rank-${rankNum[i]}`}>
                   {rankNum[i] === 1 && <Crown className="w-6 h-6 text-[#ffd700] mb-1" />}
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center font-black text-sm mb-2 ${rankBadge(rankNum[i])}`}>#{rankNum[i]}</div>
-                  <div className="text-white font-bold text-xs text-center truncate w-full" data-testid={`text-podium-name-${rankNum[i]}`}>{e.playerName}</div>
+                  <div className="text-white font-bold text-xs text-center truncate w-full" data-testid={`text-podium-name-${rankNum[i]}`}><PlayerIdentity playerName={e.playerName} /></div>
                   <div className="text-[#ff6b00] font-black text-sm">{e.points} pts</div>
                 </div>
               );
@@ -102,7 +103,7 @@ export default function LeaderboardPage() {
                   </span>
                 </div>
                 <div className="col-span-5">
-                  <div className="font-bold text-white text-sm" data-testid={`text-lb-player-${entry.rank}`}>{entry.playerName}</div>
+                  <div className="font-bold text-white text-sm" data-testid={`text-lb-player-${entry.rank}`}><PlayerIdentity playerName={entry.playerName} size="sm" /></div>
                   {entry.teamName && <div className="text-[#a0a0b0] text-xs">{entry.teamName}</div>}
                 </div>
                 <div className="col-span-2 text-right">

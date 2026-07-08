@@ -5,6 +5,7 @@ import { motion, useInView, useMotionValue, useSpring } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import TournamentCard from "@/components/TournamentCard";
+import PlayerIdentity from "@/components/PlayerIdentity";
 import CountdownTimer from "@/components/CountdownTimer";
 import { useGetFeaturedTournaments, useListAnnouncements, useGetGlobalLeaderboard } from "@workspace/api-client-react";
 import { apiBase } from "@/lib/apiBase";
@@ -342,7 +343,7 @@ export default function Home() {
                         {entry.rank <= 3 ? ["🥇","🥈","🥉"][entry.rank - 1] : `#${entry.rank}`}
                       </span>
                     </td>
-                    <td className="py-1.5 px-3 font-medium text-white text-xs">{entry.playerName}</td>
+                    <td className="py-1.5 px-3 font-medium text-white text-xs"><PlayerIdentity playerName={entry.playerName} /></td>
                     <td className="py-1.5 px-3 text-right text-[#ff4500] font-bold text-xs">{entry.kills}</td>
                     <td className="py-1.5 px-3 text-right text-white font-bold text-xs">{entry.points}</td>
                   </motion.tr>
