@@ -40,14 +40,17 @@ function getPlayerCount(mode: string): number {
 }
 
 const statusConfig: Record<string, { color: string; label: string; dot: string }> = {
-  upcoming:     { color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",    label: "Upcoming",          dot: "bg-yellow-400" },
-  coming_soon:  { color: "bg-blue-500/20 text-blue-400 border border-blue-500/40",          label: "Coming Soon",       dot: "bg-blue-400" },
-  live:         { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",           dot: "bg-emerald-400 animate-pulse" },
-  ongoing:      { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",           dot: "bg-emerald-400 animate-pulse" },
-  room_open:    { color: "bg-orange-600/20 text-orange-400 border border-orange-500",       label: "🔑 Room Opening",   dot: "bg-orange-400 animate-pulse" },
-  ended:        { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Ended",             dot: "bg-red-400" },
-  completed:    { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Completed",         dot: "bg-red-400" },
-  cancelled:    { color: "bg-red-700/20 text-red-500 border border-red-700/40",             label: "Cancelled",         dot: "bg-red-500" },
+  upcoming:       { color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",    label: "Upcoming",          dot: "bg-yellow-400" },
+  coming_soon:    { color: "bg-blue-500/20 text-blue-400 border border-blue-500/40",          label: "Coming Soon",       dot: "bg-blue-400" },
+  scheduled:      { color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",    label: "Upcoming",          dot: "bg-yellow-400" },
+  // room_released = Phase 2: room credentials visible, match not yet started
+  room_released:  { color: "bg-orange-600/20 text-orange-400 border border-orange-500",       label: "🔑 Room Released",  dot: "bg-orange-400 animate-pulse" },
+  room_open:      { color: "bg-orange-600/20 text-orange-400 border border-orange-500",       label: "🔑 Room Released",  dot: "bg-orange-400 animate-pulse" },
+  live:           { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",           dot: "bg-emerald-400 animate-pulse" },
+  ongoing:        { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", label: "🔴 LIVE",           dot: "bg-emerald-400 animate-pulse" },
+  ended:          { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Ended",             dot: "bg-red-400" },
+  completed:      { color: "bg-red-500/20 text-red-400 border border-red-500/40",             label: "Completed",         dot: "bg-red-400" },
+  cancelled:      { color: "bg-red-700/20 text-red-500 border border-red-700/40",             label: "Cancelled",         dot: "bg-red-500" },
 };
 
 const podiumConfig = [
@@ -140,7 +143,7 @@ interface MatchInfo {
 // Uses refs for the interval so it self-stops at expiry with no leak.
 function MatchReleaseTimer({ roomReleaseAt, onExpire }: { roomReleaseAt: string; onExpire?: () => void }) {
   const [msLeft, setMsLeft] = useState<number>(() =>
-    Math.max(0, new Date(roomReleaseAt).getTime() - Date.now()),
+    Math.max(0, parseBDDate(roomReleaseAt).getTime() - Date.now()),
   );
   const onExpireRef = useRef(onExpire);
   onExpireRef.current = onExpire;
@@ -149,7 +152,7 @@ function MatchReleaseTimer({ roomReleaseAt, onExpire }: { roomReleaseAt: string;
 
   useEffect(() => {
     firedRef.current = false;
-    const targetMs = new Date(roomReleaseAt).getTime();
+    const targetMs = parseBDDate(roomReleaseAt).getTime();
 
     const stop = () => {
       if (intervalRef.current !== null) {
@@ -198,12 +201,12 @@ function MatchReleaseTimer({ roomReleaseAt, onExpire }: { roomReleaseAt: string;
 function MatchHideTimer({ roomHideAt, children }: { roomHideAt?: string | null; children: React.ReactNode }) {
   const [isClosed, setIsClosed] = useState<boolean>(() => {
     if (!roomHideAt) return false;
-    return Date.now() >= new Date(roomHideAt).getTime();
+    return Date.now() >= parseBDDate(roomHideAt).getTime();
   });
 
   useEffect(() => {
     if (!roomHideAt) return;
-    const hideMs = new Date(roomHideAt).getTime();
+    const hideMs = parseBDDate(roomHideAt).getTime();
     const delay = hideMs - Date.now();
     if (delay <= 0) { setIsClosed(true); return; }
     const t = setTimeout(() => setIsClosed(true), delay);
@@ -392,9 +395,9 @@ export default function TournamentDetailPage() {
     const now = Date.now();
     const eventMs = matches
       .flatMap((m) => [
-        m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null,
-        m.scheduledAt   ? new Date(m.scheduledAt).getTime()   : null,
-        m.roomHideAt    ? new Date(m.roomHideAt).getTime()     : null,
+        m.roomReleaseAt ? parseBDDate(m.roomReleaseAt).getTime() : null,
+        m.scheduledAt   ? parseBDDate(m.scheduledAt).getTime()   : null,
+        m.roomHideAt    ? parseBDDate(m.roomHideAt).getTime()     : null,
       ])
       .filter((t): t is number => t !== null && t > now);
 
