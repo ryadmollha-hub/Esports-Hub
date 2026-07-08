@@ -244,7 +244,7 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       return res.status(400).json({ error: "A valid match number is required." });
     }
 
-    // Validate that the tournament exists — fetch before using startDate as fallback.
+    // Validate that the tournament exists.
     const [tournament] = await db
       .select({ id: tournamentsTable.id, startDate: tournamentsTable.startDate })
       .from(tournamentsTable)
@@ -254,17 +254,15 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       return res.status(404).json({ error: "Tournament not found." });
     }
 
-    // When scheduledAt is omitted, default to the tournament's own startDate so the
-    // match inherits the correct start threshold and never instantly becomes LIVE.
-    const scheduledAtDate = scheduledAt
-      ? new Date(scheduledAt)
-      : tournament.startDate
-        ? new Date(tournament.startDate)
-        : null;
-
-    if (!scheduledAtDate || isNaN(scheduledAtDate.getTime())) {
-      return res.status(400).json({ error: "scheduledAt is required (or tournament must have a startDate)." });
-    }
+    // When scheduledAt is omitted (or invalid), default to the current server time.
+    // This is safe from the "instant LIVE" bug: computeMatchVisibility() always gates
+    // the live threshold at max(match.scheduledAt, tournament.startDate), so a match
+    // can never go live before the parent tournament officially starts, no matter
+    // what scheduledAt defaults to here.
+    const parsedScheduledAt = scheduledAt ? new Date(scheduledAt) : null;
+    const scheduledAtDate = parsedScheduledAt && !isNaN(parsedScheduledAt.getTime())
+      ? parsedScheduledAt
+      : new Date();
 
 
     // Default roomReleaseAt: 5 minutes before scheduledAt if not provided (Phase 2 boundary)
