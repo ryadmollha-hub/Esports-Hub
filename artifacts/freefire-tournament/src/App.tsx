@@ -119,7 +119,9 @@ function App() {
                         <Route path="/teams" component={TeamsPage} />
                         <Route path="/admin-login" component={AdminLoginPage} />
                         <Route path="/sign-in" component={LoginPage} />
+                        <Route path="/login" component={LoginPage} />
                         <Route path="/sign-up" component={SignUpPage} />
+                        <Route path="/signup" component={SignUpPage} />
                         <Route path="/forgot-password" component={ForgotPasswordPage} />
 
                         {/* User-only routes */}
