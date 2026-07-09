@@ -34,7 +34,7 @@ type StatusKey = "upcoming" | "starting_soon" | "live" | "ongoing" | "ended" | "
 const statusConfig: Record<StatusKey, { color: string; dot?: string; label: string }> = {
   upcoming:      { color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",                                      label: "Soon" },
   starting_soon: { color: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/40",  dot: "bg-yellow-400 animate-pulse", label: "STARTING SOON" },
-  room_open:     { color: "bg-orange-600/20 text-orange-400 border border-orange-500",     dot: "bg-orange-400 animate-pulse", label: "ROOM OPEN" },
+  room_open:     { color: "bg-orange-600/20 text-orange-400 border border-orange-500",     dot: "bg-orange-400 animate-pulse", label: "🔑 Room Released" },
   live:          { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", dot: "bg-emerald-400 animate-pulse", label: "LIVE" },
   ongoing:       { color: "bg-emerald-500/20 text-emerald-400 border border-emerald-500/50", dot: "bg-emerald-400 animate-pulse", label: "LIVE" },
   ended:         { color: "bg-red-500/20 text-red-400 border border-red-500/40",           label: "Ended" },
