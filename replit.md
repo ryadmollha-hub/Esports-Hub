@@ -5,7 +5,7 @@ A full-stack tournament management platform for Free Fire players. Users can reg
 ## Run & Operate
 
 On Replit two workflows run in parallel (see "Project" run button):
-- **Start Backend** — `pnpm --filter @workspace/db run push && pnpm --filter @workspace/api-server run build && PORT=8080 node --enable-source-maps /home/runner/workspace/artifacts/api-server/dist/index.mjs` (console, port 8080). Self-healing: pushes DB schema and rebuilds on every start, so a fresh environment requires no manual steps.
+- **Start Backend** — `pnpm install && pnpm --filter @workspace/db run push && pnpm --filter @workspace/api-server run build && PORT=8080 node --enable-source-maps /home/runner/workspace/artifacts/api-server/dist/index.mjs` (console, port 8080). Self-healing: installs deps, pushes DB schema, and rebuilds on every start, so a fresh environment requires no manual steps.
 - **Start application** — `pnpm install && PORT=5000 BASE_PATH=/ pnpm --filter @workspace/freefire-tournament run dev` (webview, port 5000). Vite proxies `/api` → `localhost:8080`.
 
 Other useful commands:
