@@ -17,7 +17,9 @@ const router: IRouter = Router();
 // `scheduledAt` has passed — this never touches room/registration/completion.
 //
 //   registrationOpen — lives on the tournament (tournamentsTable.registrationClosed);
-//                       toggled ONLY by an explicit admin action.
+//                       toggled by the explicit "Toggle Registration" admin action, OR
+//                       automatically closed (never re-opened) as a direct, bundled
+//                       consequence of the explicit "Release Room" click below.
 //   matchCreated      — a row exists in matchesTable. Creating it sets nothing else.
 //   roomReleased      — matchesTable.roomReleased. Set ONLY by POST /matches/:id/release-room.
 //   roomVisible       — derived read-only view: roomReleased && !roomHidden && roomId is set.
@@ -297,6 +299,11 @@ router.patch("/matches/:id/room", async (req, res) => {
 });
 
 // ─── Release room (admin) — the ONLY action that reveals credentials ─────────
+// This is also the ONLY action that closes registration for the match's
+// tournament: releasing the room and closing registration are bundled into
+// this single explicit admin click, never inferred from time or from any
+// other action. Registration stays open through match creation, room-time
+// configuration, etc. — right up until the admin actually releases the room.
 
 router.post("/matches/:id/release-room", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
@@ -315,7 +322,14 @@ router.post("/matches/:id/release-room", async (req, res) => {
       .where(eq(matchesTable.id, id))
       .returning();
 
-    res.json({ success: true, match: updated });
+    // Close registration for the parent tournament as a direct, explicit
+    // consequence of this release click (never automatic/time-based).
+    await db
+      .update(tournamentsTable)
+      .set({ registrationClosed: true })
+      .where(eq(tournamentsTable.id, updated.tournamentId));
+
+    res.json({ success: true, match: updated, registrationClosed: true });
 
     if (!existing.roomNotifiedAt) {
       try {

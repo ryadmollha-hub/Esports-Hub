@@ -167,7 +167,7 @@ export default function AdminPage() {
   const [showTournamentMatchForm, setShowTournamentMatchForm] = useState<Record<number, boolean>>({});
   const [tournamentMatchForms, setTournamentMatchForms] = useState<Record<number, { matchNumber: string; scheduledAt: string; mapName: string }>>({});
   const [creatingTournamentMatch, setCreatingTournamentMatch] = useState<Record<number, boolean>>({});
-  const [tournamentMatchRoomForms, setTournamentMatchRoomForms] = useState<Record<number, { roomId: string; roomPassword: string; releaseMode: "now" | "before10" | "custom"; hideMinutesAfter: string; customMins: string }>>({});
+  const [tournamentMatchRoomForms, setTournamentMatchRoomForms] = useState<Record<number, { roomId: string; roomPassword: string; releaseMode: "before5" | "before10" | "custom"; hideMinutesAfter: string; customMins: string }>>({});
   const [settingTournamentMatchRoom, setSettingTournamentMatchRoom] = useState<Record<number, boolean>>({});
   const [tournamentsLoading, setTournamentsLoading] = useState(false);
   const [matchesLoading, setMatchesLoading] = useState(false);
@@ -297,9 +297,11 @@ export default function AdminPage() {
     }
   }, [apiFetch, tournamentMatchForms, toast, loadTournamentMatchesById]);
 
-  // Saves room ID/password (+ an optional informational target time). This NEVER
-  // reveals credentials by itself — the admin must separately click "Release Room".
-  // If "Release Now" is chosen, we save then immediately call the explicit release action.
+  // Saves room ID/password + a required release-timing choice (5 min before match,
+  // 10 min before match, or a custom time). This NEVER reveals credentials or closes
+  // registration by itself — saving only sets the informational countdown target the
+  // admin picked. The admin must separately click "Release Room" to actually reveal
+  // credentials (which is also the ONLY action that closes registration).
   const setTournamentMatchRoomCredentials = useCallback(async (tournamentId: number, matchId: number) => {
     const form = tournamentMatchRoomForms[matchId];
     if (!form?.roomId) {
@@ -307,13 +309,11 @@ export default function AdminPage() {
       return;
     }
     const relMode = form.releaseMode ?? "before10";
+    const match = (tournamentMatchesList[tournamentId] ?? []).find((m: any) => m.id === matchId);
+    const mins = relMode === "before5" ? 5 : relMode === "custom" ? parseInt(form.customMins || "10") : 10;
     let roomReleaseAt: string | undefined;
-    if (relMode === "before10" || relMode === "custom") {
-      const match = (tournamentMatchesList[tournamentId] ?? []).find((m: any) => m.id === matchId);
-      const mins = relMode === "custom" ? parseInt(form.customMins || "10") : 10;
-      if (match?.scheduledAt) {
-        roomReleaseAt = new Date(new Date(match.scheduledAt).getTime() - mins * 60 * 1000).toISOString();
-      }
+    if (match?.scheduledAt) {
+      roomReleaseAt = new Date(new Date(match.scheduledAt).getTime() - mins * 60 * 1000).toISOString();
     }
     setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: true }));
     try {
@@ -326,17 +326,7 @@ export default function AdminPage() {
         }),
       });
       if (res.ok) {
-        if (relMode === "now") {
-          const relRes = await apiFetch(`/matches/${matchId}/release-room`, { method: "POST" });
-          if (relRes.ok) {
-            toast({ title: "✅ Room saved & released!", description: "Room credentials are visible to players now." });
-          } else {
-            const d = await safeJson(relRes);
-            toast({ title: "Room saved, but release failed", description: d.error, variant: "destructive" });
-          }
-        } else {
-          toast({ title: "✅ Room saved", description: "Not released yet — click \"Release Room\" when you're ready to reveal it to players." });
-        }
+        toast({ title: "✅ Room saved", description: "Not released yet — click \"Release Room\" when you're ready to reveal it to players." });
         setTournamentMatchRoomForms((prev) => { const n = { ...prev }; delete n[matchId]; return n; });
         loadTournamentMatchesById(tournamentId);
       } else {
@@ -351,13 +341,21 @@ export default function AdminPage() {
   }, [apiFetch, tournamentMatchRoomForms, tournamentMatchesList, toast, loadTournamentMatchesById]);
 
   // Explicit lifecycle actions — each is a single, independent admin click.
+  // Releasing the room is the ONLY action that reveals credentials AND the
+  // ONLY action that closes registration (bundled server-side in one explicit
+  // admin click — never automatic). Confirm first since it's not reversible
+  // from the player's perspective (credentials become visible immediately).
   const releaseMatchRoom = useCallback(async (tournamentId: number, matchId: number) => {
+    if (!window.confirm("Release the room now? This will immediately reveal the Room ID & Password to players and close registration for this tournament.")) {
+      return;
+    }
     setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: true }));
     try {
       const res = await apiFetch(`/matches/${matchId}/release-room`, { method: "POST" });
       if (res.ok) {
-        toast({ title: "✅ Room released!", description: "Players can now see the Room ID & Password." });
+        toast({ title: "✅ Room released!", description: "Players can now see the Room ID & Password. Registration is now closed." });
         loadTournamentMatchesById(tournamentId);
+        loadTournaments();
       } else {
         const d = await safeJson(res);
         toast({ title: "Error", description: d.error, variant: "destructive" });
@@ -367,7 +365,7 @@ export default function AdminPage() {
     } finally {
       setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: false }));
     }
-  }, [apiFetch, toast, loadTournamentMatchesById]);
+  }, [apiFetch, toast, loadTournamentMatchesById, loadTournaments]);
 
   const hideMatchRoom = useCallback(async (tournamentId: number, matchId: number) => {
     setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: true }));
@@ -2527,7 +2525,7 @@ export default function AdminPage() {
                                         if (!tournamentMatchRoomForms[m.id]) {
                                           setTournamentMatchRoomForms((prev) => ({
                                             ...prev,
-                                            [m.id]: { releaseMode: "before10", hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "", customMins: "" },
+                                            [m.id]: { releaseMode: "before5", hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "", customMins: "" },
                                           }));
                                         }
                                         setManageRoomModal({ tournamentId: t.id, matchId: m.id });
@@ -2582,7 +2580,7 @@ export default function AdminPage() {
             const { tournamentId, matchId } = manageRoomModal;
             const allMatches = Object.values(tournamentMatchesList).flat() as any[];
             const match = allMatches.find((m: any) => m.id === matchId);
-            const form = tournamentMatchRoomForms[matchId] ?? { releaseMode: "before10" as const, hideMinutesAfter: "5", roomId: match?.roomId ?? "", roomPassword: match?.roomPassword ?? "", customMins: "" };
+            const form = tournamentMatchRoomForms[matchId] ?? { releaseMode: "before5" as const, hideMinutesAfter: "5", roomId: match?.roomId ?? "", roomPassword: match?.roomPassword ?? "", customMins: "" };
             const updateForm = (patch: Partial<typeof form>) =>
               setTournamentMatchRoomForms((prev) => ({ ...prev, [matchId]: { ...form, ...patch } }));
             return (
@@ -2632,11 +2630,14 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Save vs Save+Release — release is a separate explicit action, never automatic */}
+                    {/* Release timing is ONLY a countdown target for players to see. It is
+                        never automatic — the admin must still click "Release Room" below
+                        (on the match row) once ready. That click is also the only action
+                        that reveals credentials and closes registration. */}
                     <div>
-                      <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">When should credentials become visible?</label>
+                      <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">Room Release Time</label>
                       <div className="flex gap-1.5 flex-wrap">
-                        {(["now", "before10", "custom"] as const).map((mode) => (
+                        {(["before5", "before10", "custom"] as const).map((mode) => (
                           <button
                             key={mode}
                             onClick={() => updateForm({ releaseMode: mode })}
@@ -2646,7 +2647,7 @@ export default function AdminPage() {
                                 : "bg-[#0d0d16] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"
                             }`}
                           >
-                            {mode === "now" ? "⚡ Release Now" : mode === "before10" ? "🕒 Save For Later (10m countdown)" : "✏️ Save For Later (Custom)"}
+                            {mode === "before5" ? "5 Minutes Before Match" : mode === "before10" ? "10 Minutes Before Match" : "✏️ Custom Release Time"}
                           </button>
                         ))}
                       </div>
@@ -2661,14 +2662,12 @@ export default function AdminPage() {
                             onChange={(e) => updateForm({ customMins: e.target.value })}
                             className="admin-input w-28"
                           />
-                          <span className="text-[#a0a0b0] text-xs">mins before match start (countdown display only — you still click Release when ready)</span>
+                          <span className="text-[#a0a0b0] text-xs">mins before match start</span>
                         </div>
                       )}
-                      {form.releaseMode !== "now" && (
-                        <p className="text-[#606070] text-[11px] mt-1.5 leading-relaxed">
-                          This only sets a countdown target for players to see. Credentials stay hidden until you click <span className="text-orange-400 font-bold">🔑 Release</span> on the match row.
-                        </p>
-                      )}
+                      <p className="text-[#606070] text-[11px] mt-1.5 leading-relaxed">
+                        This only sets the "Room Releases In" countdown players see. Credentials stay hidden — and registration stays open — until you click <span className="text-orange-400 font-bold">🔑 Release</span> on the match row.
+                      </p>
                     </div>
                   </div>
 

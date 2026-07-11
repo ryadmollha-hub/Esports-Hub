@@ -184,13 +184,19 @@ function MatchReleaseTimer({ roomReleaseAt, onExpire }: { roomReleaseAt: string;
   if (msLeft <= 0) return null;
 
   const pad = (n: number) => String(n).padStart(2, "0");
-  const mins = Math.floor(msLeft / 60000);
+  const hours = Math.floor(msLeft / 3600000);
+  const mins = Math.floor((msLeft % 3600000) / 60000);
   const secs = Math.floor((msLeft % 60000) / 1000);
 
   return (
-    <div className="mt-1.5 flex items-center gap-1 text-orange-400 text-xs font-bold">
-      <Clock className="w-3 h-3 shrink-0" />
-      Room ID releasing in: {pad(mins)}:{pad(secs)}
+    <div className="mt-1.5 flex flex-col items-center gap-0.5 bg-orange-500/5 border border-orange-500/20 rounded-lg px-3 py-2">
+      <div className="flex items-center gap-1 text-orange-400/80 text-[10px] font-bold uppercase tracking-wider">
+        <Clock className="w-3 h-3 shrink-0" />
+        Room Releases In
+      </div>
+      <div className="text-orange-400 font-mono font-black text-lg tabular-nums">
+        {pad(hours)}:{pad(mins)}:{pad(secs)}
+      </div>
     </div>
   );
 }
@@ -846,7 +852,7 @@ export default function TournamentDetailPage() {
                           <div>
                             <div className="text-orange-400 font-black text-sm">Room Not Released Yet</div>
                             <div className="text-orange-300/70 text-xs mt-0.5">
-                              The admin hasn't released the room yet. Room ID &amp; Password will appear here the moment it's released.
+                              Room ID &amp; Password will appear once the admin releases the room.
                             </div>
                           </div>
                         </div>
@@ -857,7 +863,7 @@ export default function TournamentDetailPage() {
                       ) : (
                         <div className="flex items-center gap-1.5 mt-1.5 text-[#a0a0b0] text-sm">
                           <Lock className="w-4 h-4" />
-                          Room details will appear here once released.
+                          Room ID &amp; Password will appear once the admin releases the room.
                         </div>
                       )}
                     </MatchHideTimer>
@@ -949,7 +955,7 @@ export default function TournamentDetailPage() {
                             <span className="text-base shrink-0">🔒</span>
                             <div className="text-[#a0a0b0] text-xs leading-relaxed">
                               {isJoined
-                                ? "Room ID & Password will appear here once the admin releases the room."
+                                ? "Room ID & Password will appear once the admin releases the room."
                                 : "Join the tournament to see Room ID & Password when the admin releases them."}
                             </div>
                           </div>
