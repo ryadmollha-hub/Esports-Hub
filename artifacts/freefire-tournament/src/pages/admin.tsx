@@ -261,15 +261,18 @@ export default function AdminPage() {
       toast({ title: "Match number is required", description: "Enter a valid match number (≥ 1).", variant: "destructive" });
       return;
     }
+    // Scheduled time must be an explicit admin choice. It must NEVER silently
+    // default to "now" — the scheduler auto-flips matchLive once scheduledAt
+    // passes, so defaulting to "now" would start the match within seconds of
+    // creating it, which is exactly the bug we're preventing here.
+    if (!form?.scheduledAt) {
+      toast({ title: "Scheduled time is required", description: "Pick a date & time for this match.", variant: "destructive" });
+      return;
+    }
     setCreatingTournamentMatch((prev) => ({ ...prev, [tournamentId]: true }));
     try {
       // Anchor admin-entered time to Bangladesh timezone (UTC+6).
-      // When the field is left blank, always send the current server time explicitly —
-      // safe because computeMatchVisibility() gates LIVE at max(scheduledAt, tournament.startDate),
-      // so the match can never go live before the tournament itself starts.
-      const scheduledAtISO = form?.scheduledAt
-        ? new Date(form.scheduledAt + "+06:00").toISOString()
-        : new Date().toISOString();
+      const scheduledAtISO = new Date(form.scheduledAt + "+06:00").toISOString();
       const res = await apiFetch(`/tournaments/${tournamentId}/matches`, {
         method: "POST",
         body: JSON.stringify({
@@ -1684,7 +1687,7 @@ export default function AdminPage() {
                         <div className="bg-[#0a0a14] border border-[#ff6b00]/20 rounded-xl p-3 mb-2.5">
                           <h3 className="text-xs font-black uppercase text-[#ff6b00] mb-2.5">New Match for {t.name}</h3>
                           <div className="text-[10px] text-[#606070] mb-2.5 bg-[#1a1a24] rounded-lg px-2.5 py-1.5 border border-[#2a2a36]">
-                            ⏱️ Scheduled At will be auto-set to current date & time
+                            ℹ️ This only creates the match. Registration stays open, and the room/match stay hidden and not live until you take those actions yourself later.
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                             <div>
@@ -1706,6 +1709,18 @@ export default function AdminPage() {
                                 onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { ...prev[t.id], matchNumber: prev[t.id]?.matchNumber ?? "", scheduledAt: prev[t.id]?.scheduledAt ?? "", mapName: e.target.value } }))}
                                 className="admin-input"
                               />
+                            </div>
+                            <div className="sm:col-span-2">
+                              <label className="text-[#606070] text-[10px] uppercase block mb-1">Scheduled At *</label>
+                              <input
+                                type="datetime-local"
+                                value={tournamentMatchForms[t.id]?.scheduledAt ?? ""}
+                                onChange={(e) => setTournamentMatchForms((prev) => ({ ...prev, [t.id]: { ...prev[t.id], matchNumber: prev[t.id]?.matchNumber ?? "", mapName: prev[t.id]?.mapName ?? "", scheduledAt: e.target.value } }))}
+                                className="admin-input"
+                              />
+                              <p className="text-[#606070] text-[10px] mt-1">
+                                Match auto-goes-live once this time passes — nothing else (room, registration) is affected by it.
+                              </p>
                             </div>
                           </div>
                           <div className="flex gap-1.5 mt-2.5">
