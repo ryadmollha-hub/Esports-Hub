@@ -28,59 +28,34 @@ export function startMatchScheduler(): void {
         logger.info({ count: expired.length, ids: expired.map((r) => r.id) }, "Auto-expired matches by roomHideTime");
       }
 
-      // ── 2. TRIGGER A: Room credentials released — notify registrants ──────
-      // Find tournament matches where roomReleaseAt has passed, credentials exist,
-      // but room-open notification hasn't been sent yet (idempotency guard).
-      const roomReadyMatches = await db
-        .select()
-        .from(matchesTable)
+      // NOTE: room release is NEVER time-driven. Credentials only become visible
+      // when an admin explicitly calls POST /matches/:id/release-room (which also
+      // sends the "room ready" notification itself, once, at that moment). The
+      // scheduler must not reveal or notify about rooms based on roomReleaseAt —
+      // that field is purely an informational countdown target for the UI.
+
+      // ── 2. Auto match-live: the ONE permitted automatic transition ────────
+      // Once scheduledAt has passed, flip matchLive true. This never touches
+      // room state, registration, or completion — fully decoupled.
+      const dueMatches = await db
+        .update(matchesTable)
+        .set({ matchLive: true, status: "live" })
         .where(
           and(
-            lte(matchesTable.roomReleaseAt, now),
-            isNull(matchesTable.roomNotifiedAt),
+            lte(matchesTable.scheduledAt, now),
+            eq(matchesTable.matchLive, false),
+            ne(matchesTable.status, "completed"),
           ),
-        );
+        )
+        .returning({ id: matchesTable.id, matchNumber: matchesTable.matchNumber });
 
-      for (const match of roomReadyMatches) {
-        if (!match.roomId) continue;
-        try {
-          // Mark as notified first to prevent double-send under concurrent ticks
-          const updated = await db
-            .update(matchesTable)
-            .set({ roomNotifiedAt: now })
-            .where(and(eq(matchesTable.id, match.id), isNull(matchesTable.roomNotifiedAt)))
-            .returning({ id: matchesTable.id });
-
-          if (updated.length === 0) continue; // Another tick already handled it
-
-          const registrants = await db
-            .select({ userId: registrationsTable.userId })
-            .from(registrationsTable)
-            .where(
-              and(
-                eq(registrationsTable.tournamentId, match.tournamentId),
-                eq(registrationsTable.status, "approved"),
-              ),
-            );
-
-          const userIds = [...new Set(registrants.map((r) => r.userId))];
-          if (userIds.length === 0) continue;
-
-          await bulkCreateNotifications(
-            userIds,
-            "রুম আইডি ও পাসওয়ার্ড রেডি! ⚡",
-            `আপনার টুর্নামেন্ট Match #${match.matchNumber} এর রুম আইডি ও পাসওয়ার্ড রিলিজ করা হয়েছে। জলদি চেক করে কাস্টম রুমে জয়েন করুন!`,
-            "success",
-          );
-
-          logger.info({ matchId: match.id, matchNumber: match.matchNumber, userCount: userIds.length }, "Room-open notifications sent");
-        } catch (err) {
-          logger.error({ err, matchId: match.id }, "Failed to send room-open notifications for match");
-        }
+      if (dueMatches.length > 0) {
+        logger.info({ count: dueMatches.length, ids: dueMatches.map((m) => m.id) }, "Auto-started matches whose scheduledAt has passed");
       }
 
       // ── 3. TRIGGER B: 5-minute match start warning ───────────────────────
-      // Matches starting in 4.5 – 5.5 min, still scheduled, warning not yet sent.
+      // Matches starting in 4.5 – 5.5 min, not yet live, warning not yet sent.
+      // This is a passive notification only — it never mutates room/registration state.
       const fiveMinFrom = new Date(now.getTime() + 4.5 * 60 * 1000);
       const fiveMinTo   = new Date(now.getTime() + 5.5 * 60 * 1000);
 
@@ -92,7 +67,8 @@ export function startMatchScheduler(): void {
             gte(matchesTable.scheduledAt, fiveMinFrom),
             lte(matchesTable.scheduledAt, fiveMinTo),
             isNull(matchesTable.startWarningNotifiedAt),
-            eq(matchesTable.status, "scheduled"),
+            eq(matchesTable.matchLive, false),
+            ne(matchesTable.status, "completed"),
           ),
         );
 

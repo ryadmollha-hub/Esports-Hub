@@ -294,6 +294,9 @@ export default function AdminPage() {
     }
   }, [apiFetch, tournamentMatchForms, toast, loadTournamentMatchesById]);
 
+  // Saves room ID/password (+ an optional informational target time). This NEVER
+  // reveals credentials by itself — the admin must separately click "Release Room".
+  // If "Release Now" is chosen, we save then immediately call the explicit release action.
   const setTournamentMatchRoomCredentials = useCallback(async (tournamentId: number, matchId: number) => {
     const form = tournamentMatchRoomForms[matchId];
     if (!form?.roomId) {
@@ -301,8 +304,14 @@ export default function AdminPage() {
       return;
     }
     const relMode = form.releaseMode ?? "before10";
-    const minutesBefore = relMode === "now" ? -1 : relMode === "custom" ? parseInt(form.customMins || "10") : 10;
-    const hideAfter = parseInt(form.hideMinutesAfter ?? "5") || 5;
+    let roomReleaseAt: string | undefined;
+    if (relMode === "before10" || relMode === "custom") {
+      const match = (tournamentMatchesList[tournamentId] ?? []).find((m: any) => m.id === matchId);
+      const mins = relMode === "custom" ? parseInt(form.customMins || "10") : 10;
+      if (match?.scheduledAt) {
+        roomReleaseAt = new Date(new Date(match.scheduledAt).getTime() - mins * 60 * 1000).toISOString();
+      }
+    }
     setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: true }));
     try {
       const res = await apiFetch(`/matches/${matchId}/room`, {
@@ -310,17 +319,21 @@ export default function AdminPage() {
         body: JSON.stringify({
           roomId: form.roomId,
           roomPassword: form.roomPassword ?? "",
-          roomReleaseMinutesBefore: minutesBefore,
-          roomHideMinutesAfter: hideAfter,
+          roomReleaseAt,
         }),
       });
       if (res.ok) {
-        const desc = relMode === "now"
-          ? "Room credentials are live immediately."
-          : relMode === "custom"
-          ? `Room opens ${minutesBefore} min before match · hides ${hideAfter} min after.`
-          : `Room opens 10 min before match · hides ${hideAfter} min after.`;
-        toast({ title: "✅ Room saved!", description: desc });
+        if (relMode === "now") {
+          const relRes = await apiFetch(`/matches/${matchId}/release-room`, { method: "POST" });
+          if (relRes.ok) {
+            toast({ title: "✅ Room saved & released!", description: "Room credentials are visible to players now." });
+          } else {
+            const d = await safeJson(relRes);
+            toast({ title: "Room saved, but release failed", description: d.error, variant: "destructive" });
+          }
+        } else {
+          toast({ title: "✅ Room saved", description: "Not released yet — click \"Release Room\" when you're ready to reveal it to players." });
+        }
         setTournamentMatchRoomForms((prev) => { const n = { ...prev }; delete n[matchId]; return n; });
         loadTournamentMatchesById(tournamentId);
       } else {
@@ -332,7 +345,62 @@ export default function AdminPage() {
     } finally {
       setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: false }));
     }
-  }, [apiFetch, tournamentMatchRoomForms, toast, loadTournamentMatchesById]);
+  }, [apiFetch, tournamentMatchRoomForms, tournamentMatchesList, toast, loadTournamentMatchesById]);
+
+  // Explicit lifecycle actions — each is a single, independent admin click.
+  const releaseMatchRoom = useCallback(async (tournamentId: number, matchId: number) => {
+    setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: true }));
+    try {
+      const res = await apiFetch(`/matches/${matchId}/release-room`, { method: "POST" });
+      if (res.ok) {
+        toast({ title: "✅ Room released!", description: "Players can now see the Room ID & Password." });
+        loadTournamentMatchesById(tournamentId);
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: false }));
+    }
+  }, [apiFetch, toast, loadTournamentMatchesById]);
+
+  const hideMatchRoom = useCallback(async (tournamentId: number, matchId: number) => {
+    setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: true }));
+    try {
+      const res = await apiFetch(`/matches/${matchId}/hide-room`, { method: "POST" });
+      if (res.ok) {
+        toast({ title: "🔒 Room credentials hidden" });
+        loadTournamentMatchesById(tournamentId);
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: false }));
+    }
+  }, [apiFetch, toast, loadTournamentMatchesById]);
+
+  const startMatchNow = useCallback(async (tournamentId: number, matchId: number) => {
+    setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: true }));
+    try {
+      const res = await apiFetch(`/matches/${matchId}/start`, { method: "POST" });
+      if (res.ok) {
+        toast({ title: "🔴 Match marked LIVE" });
+        loadTournamentMatchesById(tournamentId);
+      } else {
+        const d = await safeJson(res);
+        toast({ title: "Error", description: d.error, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Connection error", variant: "destructive" });
+    } finally {
+      setSettingTournamentMatchRoom((prev) => ({ ...prev, [matchId]: false }));
+    }
+  }, [apiFetch, toast, loadTournamentMatchesById]);
 
   const loadUserMatches = useCallback(async () => {
     setUserMatchesLoading(true);
@@ -902,7 +970,8 @@ export default function AdminPage() {
     }
   };
 
-  // Match room management
+  // Match room management — saves data only; release is a separate explicit action
+  // (see releaseMatchRoom/hideMatchRoom/startMatchNow above).
   const setMatchRoom = async (matchId: number) => {
     const form = matchRoomForm[matchId];
     if (!form?.roomId || !form?.roomPassword) {
@@ -915,12 +984,10 @@ export default function AdminPage() {
         body: JSON.stringify({
           roomId: form.roomId,
           roomPassword: form.roomPassword,
-          roomReleaseMinutesBefore: parseInt(form.releaseMinutes || "10"),
-          roomHideMinutesAfter: parseInt(form.hideMinutes || "5"),
         }),
       });
       if (res.ok) {
-        toast({ title: "✅ Room saved!", description: `Room opens ${form.releaseMinutes === "-1" ? "immediately" : `${form.releaseMinutes || "10"} min before`} match time.` });
+        toast({ title: "✅ Room saved (not released)", description: "Click Release when you're ready to reveal it to players." });
         loadMatches();
         setMatchRoomForm((prev) => ({ ...prev, [matchId]: { roomId: "", roomPassword: "", releaseMinutes: "10", hideMinutes: "5" } }));
       } else {
@@ -1548,7 +1615,30 @@ export default function AdminPage() {
                           <span>Entry: ৳{Number(t.entryFee).toLocaleString()}</span>
                         </div>
                       </div>
-                      <div className="flex gap-1.5 shrink-0">
+                      <div className="flex gap-1.5 shrink-0 items-start flex-wrap">
+                        <button
+                          onClick={async () => {
+                            const closed = !t.registrationClosed;
+                            const res = await apiFetch(`/tournaments/${t.id}/registration`, {
+                              method: "PATCH",
+                              body: JSON.stringify({ closed }),
+                            });
+                            if (res.ok) {
+                              toast({ title: closed ? "🔒 Registration closed" : "🟢 Registration opened" });
+                              loadTournaments();
+                            } else {
+                              const d = await safeJson(res);
+                              toast({ title: "Error", description: d.error, variant: "destructive" });
+                            }
+                          }}
+                          className={`flex items-center gap-1 px-2.5 py-1.5 border rounded-lg text-xs font-black uppercase transition-colors ${
+                            t.registrationClosed
+                              ? "bg-[#ff2244]/10 border-[#ff2244]/30 text-[#ff2244] hover:bg-[#ff2244]/20"
+                              : "bg-[#00ff88]/10 border-[#00ff88]/30 text-[#00ff88] hover:bg-[#00ff88]/20"
+                          }`}
+                        >
+                          {t.registrationClosed ? "🔒 Reg. Closed" : "🟢 Reg. Open"}
+                        </button>
                         <button onClick={() => editTournament(t)} className="p-1.5 bg-blue-400/10 border border-blue-400/20 rounded-lg text-blue-400 hover:bg-blue-400/20 transition-colors">
                           <Edit className="w-4 h-4" />
                         </button>
@@ -2388,16 +2478,20 @@ export default function AdminPage() {
                                 No matches yet — add matches in <span className="text-[#ff6b00] font-bold">Create &amp; Manage Tournaments</span>.
                               </div>
                             ) : matches.map((m: any) => {
-                              const now = Date.now();
-                              const rel = m.roomReleaseAt ? new Date(m.roomReleaseAt).getTime() : null;
-                              const hid = m.roomHideAt ? new Date(m.roomHideAt).getTime() : null;
-                              const statusBadge = (m.roomSet || m.roomReleaseAt)
-                                ? rel && now >= rel && (!hid || now < hid)
-                                  ? <span className="text-[#00ff88] text-[10px] font-black border border-[#00ff88]/30 bg-[#00ff88]/5 px-1.5 py-0.5 rounded-full">🟢 LIVE</span>
-                                  : rel && now < rel
-                                    ? <span className="text-yellow-400 text-[10px] font-black border border-yellow-400/20 bg-yellow-400/5 px-1.5 py-0.5 rounded-full">⏳ Scheduled</span>
-                                    : <span className="text-[#ff2244] text-[10px] font-black border border-[#ff2244]/20 bg-[#ff2244]/5 px-1.5 py-0.5 rounded-full">🔴 Hidden</span>
+                              // Every badge below reflects an EXPLICIT admin-controlled flag only —
+                              // never a time-based guess.
+                              const statusBadge = m.status === "completed"
+                                ? <span className="text-[#a0a0b0] text-[10px] font-black border border-[#2a2a36] bg-[#0d0d16] px-1.5 py-0.5 rounded-full">✅ Completed</span>
+                                : m.matchLive
+                                ? <span className="text-[#00ff88] text-[10px] font-black border border-[#00ff88]/30 bg-[#00ff88]/5 px-1.5 py-0.5 rounded-full">🔴 LIVE</span>
+                                : m.roomReleased && !m.roomHidden
+                                ? <span className="text-orange-400 text-[10px] font-black border border-orange-400/20 bg-orange-400/5 px-1.5 py-0.5 rounded-full">🔑 Room Released</span>
+                                : m.roomHidden
+                                ? <span className="text-[#ff2244] text-[10px] font-black border border-[#ff2244]/20 bg-[#ff2244]/5 px-1.5 py-0.5 rounded-full">🔒 Room Hidden</span>
+                                : (m.roomSet || m.roomId)
+                                ? <span className="text-yellow-400 text-[10px] font-black border border-yellow-400/20 bg-yellow-400/5 px-1.5 py-0.5 rounded-full">⏳ Room Set (Not Released)</span>
                                 : <span className="text-[#505060] text-[10px] font-black border border-[#2a2a36] bg-[#0d0d16] px-1.5 py-0.5 rounded-full">No Room Set</span>;
+                              const busy = !!settingTournamentMatchRoom[m.id];
                               return (
                                 <div key={m.id} className="flex items-center gap-2.5 px-3.5 py-2.5 flex-wrap">
                                   <div className="w-7 h-7 bg-[#ff6b00]/10 border border-[#ff6b00]/20 rounded-lg flex items-center justify-center shrink-0">
@@ -2412,20 +2506,49 @@ export default function AdminPage() {
                                     )}
                                   </div>
                                   {statusBadge}
-                                  <button
-                                    onClick={() => {
-                                      if (!tournamentMatchRoomForms[m.id]) {
-                                        setTournamentMatchRoomForms((prev) => ({
-                                          ...prev,
-                                          [m.id]: { releaseMode: "before10", hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "", customMins: "" },
-                                        }));
-                                      }
-                                      setManageRoomModal({ tournamentId: t.id, matchId: m.id });
-                                    }}
-                                    className="flex items-center gap-1 px-2.5 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] font-black text-xs uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors shrink-0"
-                                  >
-                                    <Settings className="w-3 h-3" /> ⚙️ Manage Room
-                                  </button>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <button
+                                      onClick={() => {
+                                        if (!tournamentMatchRoomForms[m.id]) {
+                                          setTournamentMatchRoomForms((prev) => ({
+                                            ...prev,
+                                            [m.id]: { releaseMode: "before10", hideMinutesAfter: "5", roomId: m.roomId ?? "", roomPassword: m.roomPassword ?? "", customMins: "" },
+                                          }));
+                                        }
+                                        setManageRoomModal({ tournamentId: t.id, matchId: m.id });
+                                      }}
+                                      className="flex items-center gap-1 px-2.5 py-1 bg-[#ff6b00]/10 border border-[#ff6b00]/30 text-[#ff6b00] font-black text-xs uppercase rounded-lg hover:bg-[#ff6b00]/20 transition-colors shrink-0"
+                                    >
+                                      <Settings className="w-3 h-3" /> ⚙️ Room
+                                    </button>
+                                    {!!m.roomId && !m.roomReleased && m.status !== "completed" && (
+                                      <button
+                                        disabled={busy}
+                                        onClick={() => releaseMatchRoom(t.id, m.id)}
+                                        className="flex items-center gap-1 px-2.5 py-1 bg-orange-500/10 border border-orange-500/30 text-orange-400 font-black text-xs uppercase rounded-lg hover:bg-orange-500/20 transition-colors shrink-0 disabled:opacity-50"
+                                      >
+                                        🔑 Release
+                                      </button>
+                                    )}
+                                    {m.roomReleased && !m.roomHidden && m.status !== "completed" && (
+                                      <button
+                                        disabled={busy}
+                                        onClick={() => hideMatchRoom(t.id, m.id)}
+                                        className="flex items-center gap-1 px-2.5 py-1 bg-[#1a1a24] border border-[#2a2a36] text-[#a0a0b0] font-black text-xs uppercase rounded-lg hover:text-white transition-colors shrink-0 disabled:opacity-50"
+                                      >
+                                        🔒 Hide
+                                      </button>
+                                    )}
+                                    {!m.matchLive && m.status !== "completed" && (
+                                      <button
+                                        disabled={busy}
+                                        onClick={() => startMatchNow(t.id, m.id)}
+                                        className="flex items-center gap-1 px-2.5 py-1 bg-[#00ff88]/10 border border-[#00ff88]/30 text-[#00ff88] font-black text-xs uppercase rounded-lg hover:bg-[#00ff88]/20 transition-colors shrink-0 disabled:opacity-50"
+                                      >
+                                        ▶️ Start
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               );
                             })}
@@ -2494,9 +2617,9 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Release Timing */}
+                    {/* Save vs Save+Release — release is a separate explicit action, never automatic */}
                     <div>
-                      <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">Release Timing</label>
+                      <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">When should credentials become visible?</label>
                       <div className="flex gap-1.5 flex-wrap">
                         {(["now", "before10", "custom"] as const).map((mode) => (
                           <button
@@ -2508,7 +2631,7 @@ export default function AdminPage() {
                                 : "bg-[#0d0d16] border-[#2a2a36] text-[#a0a0b0] hover:border-[#ff6b00]/40"
                             }`}
                           >
-                            {mode === "now" ? "⚡ Now" : mode === "before10" ? "🕒 10 Min Before" : "✏️ Custom"}
+                            {mode === "now" ? "⚡ Release Now" : mode === "before10" ? "🕒 Save For Later (10m countdown)" : "✏️ Save For Later (Custom)"}
                           </button>
                         ))}
                       </div>
@@ -2523,20 +2646,14 @@ export default function AdminPage() {
                             onChange={(e) => updateForm({ customMins: e.target.value })}
                             className="admin-input w-28"
                           />
-                          <span className="text-[#a0a0b0] text-xs">mins before match start</span>
+                          <span className="text-[#a0a0b0] text-xs">mins before match start (countdown display only — you still click Release when ready)</span>
                         </div>
                       )}
-                    </div>
-
-                    {/* Auto-hide */}
-                    <div>
-                      <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">Auto-hide (minutes after match start)</label>
-                      <input
-                        type="number" min="0" max="120" placeholder="5"
-                        value={form.hideMinutesAfter}
-                        onChange={(e) => updateForm({ hideMinutesAfter: e.target.value })}
-                        className="admin-input w-32"
-                      />
+                      {form.releaseMode !== "now" && (
+                        <p className="text-[#606070] text-[11px] mt-1.5 leading-relaxed">
+                          This only sets a countdown target for players to see. Credentials stay hidden until you click <span className="text-orange-400 font-bold">🔑 Release</span> on the match row.
+                        </p>
+                      )}
                     </div>
                   </div>
 

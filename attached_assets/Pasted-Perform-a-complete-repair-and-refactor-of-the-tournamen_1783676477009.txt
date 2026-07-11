@@ -1,0 +1,235 @@
+Perform a complete repair and refactor of the tournament lifecycle system. Do NOT use quick patches or temporary fixes. First analyze the existing architecture, identify why states are incorrectly coupled, then redesign the lifecycle while preserving all existing database schemas, APIs, authentication, user balances, wallet logic, tournament data, registrations, match history, rankings, notifications, translations, and UI styling.
+
+The current system has incorrect automatic state transitions. Adding a match should NEVER automatically release the room, close registration, start the match, or hide/show room credentials.
+
+Implement the following lifecycle exactly.
+
+========================================
+TOURNAMENT LIFECYCLE
+========================================
+
+Tournament Created
+↓
+
+Registration Open
+
+↓
+
+Admin Adds Match
+
+↓
+
+Admin Configures Room Release Time
+
+↓
+
+Admin Manually Releases Room
+
+↓
+
+Registration Closes
+
+↓
+
+Match Starts
+
+↓
+
+Admin Hides Room Credentials (optional)
+
+↓
+
+Admin Marks Match Completed
+
+↓
+
+Results Published
+
+Nothing should automatically skip any step.
+
+========================================
+MATCH CREATION
+========================================
+
+Creating a Match should ONLY:
+
+• create Match #1 / Match #2 etc.
+• save scheduled match time
+• save match name
+• save match number
+
+It must NOT
+
+• release room
+• close registration
+• mark match live
+• show room id
+• show password
+• hide room
+• complete match
+
+========================================
+ROOM RELEASE
+========================================
+
+Room ID and Password must only become visible after the admin explicitly clicks "Release Room".
+
+Before release:
+
+Display:
+
+"Room ID & Password will appear once the admin releases the room."
+
+Do NOT display credentials.
+
+========================================
+REGISTRATION
+========================================
+
+Registration remains OPEN until Room Release.
+
+Only after Room Release:
+
+• Registration Closed
+• Join button disabled
+• Existing registered players remain.
+
+Never close registration simply because a match was created.
+
+========================================
+ROOM RELEASE TIMER
+========================================
+
+Add a dedicated Room Release countdown.
+
+Example:
+
+Match Starts:
+1:00 PM
+
+Room Release:
+12:55 PM
+
+User sees:
+
+Room Releases In
+
+04:59
+
+After countdown reaches zero AND admin releases room:
+
+Show credentials.
+
+========================================
+MATCH TIMER
+========================================
+
+Keep Match Countdown independent.
+
+Example
+
+Match Starts In
+
+12 Minutes
+
+This timer must NOT control registration.
+
+========================================
+MATCH START
+========================================
+
+Match Start must be independent.
+
+It should happen ONLY when:
+
+• scheduled start time arrives OR
+• admin manually starts match
+
+Do NOT automatically release room.
+
+Do NOT automatically complete match.
+
+========================================
+MATCH COMPLETE
+========================================
+
+Match Complete only after admin clicks
+
+Complete Match
+
+Do not auto complete.
+
+========================================
+REQUIRED STATES
+========================================
+
+registrationOpen
+
+matchCreated
+
+roomReleased
+
+roomVisible
+
+matchLive
+
+matchCompleted
+
+Each state must be completely independent.
+
+Never infer one state from another.
+
+========================================
+UI REQUIREMENTS
+========================================
+
+Before Room Release:
+
+Coming Soon
+
+Room ID & Password will appear once the admin releases the room.
+
+After Release:
+
+Room ID
+Password
+
+After Hide:
+
+Room credentials hidden.
+
+Match is Live.
+
+========================================
+BUG FIXES
+========================================
+
+Fix every issue where:
+
+• Add Match instantly closes registration.
+• Add Match instantly shows "Match Live".
+• Room Release happens automatically.
+• Room credentials appear without admin action.
+• Match timer controls registration.
+• Registration closes too early.
+• Match states overlap.
+• Countdown reaches zero but incorrect state appears.
+• Cards overlap on mobile.
+• Responsive layout breaks.
+• Status badges overlap.
+
+========================================
+SAFE REFACTOR
+========================================
+
+Do NOT remove any existing features.
+
+Do NOT change database schema unless absolutely necessary.
+
+Maintain backward compatibility.
+
+Preserve all existing tournament data.
+
+Keep authentication, wallet, rankings, payments, admin permissions, translations, notifications, and APIs working.
+
+After implementation, verify every lifecycle step manually and ensure no existing functionality is broken.

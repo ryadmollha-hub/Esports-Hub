@@ -19,8 +19,11 @@ export const matchesTable = pgTable("matches", {
   mapName: text("map_name"),
   roomId: text("room_id"),
   roomPassword: text("room_password"),
-  roomReleaseAt: timestamp("room_release_at"), // when room details become visible to players
-  roomHideAt: timestamp("room_hide_at"),       // when to stop showing room (null = auto-hide at scheduledAt)
+  roomReleaseAt: timestamp("room_release_at"), // informational target time shown as a countdown to players; does NOT by itself reveal credentials
+  roomHideAt: timestamp("room_hide_at"),       // informational only; hiding is explicit via roomHidden
+  roomReleased: boolean("room_released").notNull().default(false), // TRUE only after admin explicitly clicks "Release Room"
+  roomHidden: boolean("room_hidden").notNull().default(false),     // TRUE only after admin explicitly clicks "Hide Room Credentials"
+  matchLive: boolean("match_live").notNull().default(false),       // TRUE once scheduledAt has passed OR admin manually started the match
   roomNotifiedAt: timestamp("room_notified_at"),           // set once room-open notifications are sent (idempotency guard)
   startWarningNotifiedAt: timestamp("start_warning_notified_at"), // set once 5-min-warning notifications are sent
   prizeDistributed: boolean("prize_distributed").notNull().default(false),

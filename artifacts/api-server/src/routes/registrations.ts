@@ -48,6 +48,9 @@ router.post("/tournaments/:id/registrations", async (req, res) => {
     if (tournament.status === "ended" || tournament.status === "cancelled") {
       return res.status(400).json({ error: "This tournament is no longer accepting registrations." });
     }
+    if (tournament.registrationClosed) {
+      return res.status(400).json({ error: "Registration is closed for this tournament." });
+    }
     if (tournament.filledSlots >= tournament.maxSlots) {
       return res.status(400).json({ error: "This tournament is full." });
     }

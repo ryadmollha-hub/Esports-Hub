@@ -24,6 +24,7 @@ export const tournamentsTable = pgTable("tournaments", {
   gameMode: text("game_mode"), // BR | CS | SOLO | LONE_WOLF | FREE (null = uncategorised)
   autoWinner: boolean("auto_winner").notNull().default(false),
   resultsPublished: boolean("results_published").notNull().default(false),
+  registrationClosed: boolean("registration_closed").notNull().default(false), // TRUE only after admin explicitly closes registration
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

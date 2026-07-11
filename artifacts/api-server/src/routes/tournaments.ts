@@ -7,7 +7,6 @@ import {
   registrationsTable,
   usersTable,
   walletTransactionsTable,
-  matchesTable,
 } from "@workspace/db";
 import { eq, desc, ilike, and, or, sql } from "drizzle-orm";
 import {
@@ -176,42 +175,11 @@ router.post("/tournaments/:id/join", async (req, res) => {
       return res.status(400).json({ error: "This tournament is no longer accepting players.", registrationClosed: true });
     }
 
-    // Guard: block join based on TIME, not stored DB status.
-    // The DB status ("live", "room_released") can be auto-written by GET /matches routes
-    // whenever someone loads the page — so using DB status as the gate causes false positives
-    // (e.g. a match is in the 5-min "room_released" window but DB already says "live").
-    // Rule: registration closes only when now >= scheduledAt (actual match start time).
-    // The Phase-2 "room_released" window (now < scheduledAt) MUST keep registration OPEN.
-    const allMatchesForTournament = await db
-      .select({ id: matchesTable.id, status: matchesTable.status, scheduledAt: matchesTable.scheduledAt })
-      .from(matchesTable)
-      .where(eq(matchesTable.tournamentId, id));
-
-    // Use explicit UTC epoch milliseconds — immune to Date constructor timezone quirks.
-    // Date.now() is always UTC epoch ms. Drizzle returns timestamp columns as Date objects;
-    // .getTime() extracts the epoch ms regardless of server timezone configuration.
-    const nowMs = Date.now();
-    // A match is "effectively live" only when current UTC epoch >= match start UTC epoch.
-    // Matches in "room_released" phase (nowMs < startMs) must NOT block registration.
-    const hasActuallyStarted = allMatchesForTournament.some(m => {
-      const startMs = m.scheduledAt instanceof Date
-        ? m.scheduledAt.getTime()
-        : new Date(m.scheduledAt).getTime();
-      return m.status !== "completed" && nowMs >= startMs;
-    });
-    const hasCompleted = allMatchesForTournament.some(m => m.status === "completed");
-
-    if (hasActuallyStarted) {
-      return res.status(400).json({ error: "Registration is closed. Match is already live.", registrationClosed: true });
-    }
-    if (hasCompleted) {
-      return res.status(400).json({ error: "This tournament is no longer accepting players.", registrationClosed: true });
-    }
-
-    // Also honour the tournament-level "live" flag in case admin set it manually
-    // and there are no individual match records to compare against.
-    if (allMatchesForTournament.length === 0 && (tournament.status === "live" || tournament.status === "ongoing")) {
-      return res.status(400).json({ error: "Registration is closed. Match is already live.", registrationClosed: true });
+    // Registration closes ONLY via the explicit admin toggle (registrationClosed),
+    // never inferred from match status, scheduledAt, room release, or match-live state.
+    // See PATCH /tournaments/:id/registration — the single source of truth for this gate.
+    if (tournament.registrationClosed) {
+      return res.status(400).json({ error: "Registration is closed for this tournament.", registrationClosed: true });
     }
 
     if (tournament.filledSlots >= tournament.maxSlots) {
@@ -672,6 +640,29 @@ router.patch("/tournaments/:id/room", async (req, res) => {
     res.json({ success: true, roomId: updated.roomId, roomPassword: updated.roomPassword });
   } catch {
     res.status(500).json({ error: "Failed to update room details." });
+  }
+});
+
+// ─── Open/close registration explicitly (admin) ──────────────────────────────
+// The ONLY way registration ever closes — never inferred from match creation,
+// room release, match start, or any timer.
+router.patch("/tournaments/:id/registration", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const { closed } = req.body as { closed: boolean };
+    if (typeof closed !== "boolean") {
+      return res.status(400).json({ error: "'closed' boolean is required." });
+    }
+    const [updated] = await db
+      .update(tournamentsTable)
+      .set({ registrationClosed: closed })
+      .where(eq(tournamentsTable.id, id))
+      .returning();
+    if (!updated) return res.status(404).json({ error: "Tournament not found." });
+    res.json({ success: true, registrationClosed: updated.registrationClosed });
+  } catch {
+    res.status(500).json({ error: "Failed to update registration status." });
   }
 });
 

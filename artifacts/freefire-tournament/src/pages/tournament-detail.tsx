@@ -133,6 +133,7 @@ interface MatchInfo {
   roomSet?: boolean;          // true if admin has saved credentials (regardless of visibility timing)
   roomReleaseAt?: string | null;
   roomHideAt?: string | null;
+  roomHidden?: boolean;
   results?: MatchResult[];
   resultsPublished?: boolean;
 }
@@ -195,31 +196,18 @@ function MatchReleaseTimer({ roomReleaseAt, onExpire }: { roomReleaseAt: string;
 }
 
 // ── MatchHideTimer ────────────────────────────────────────────────────────────
-// Wraps the credential / lock block for a live match.
-// When roomHideAt is reached client-side, replaces children with
-// "Room details are now closed." — even before the 30s poll syncs the server.
-function MatchHideTimer({ roomHideAt, children }: { roomHideAt?: string | null; children: React.ReactNode }) {
-  const [isClosed, setIsClosed] = useState<boolean>(() => {
-    if (!roomHideAt) return false;
-    return Date.now() >= parseBDDate(roomHideAt).getTime();
-  });
-
-  useEffect(() => {
-    if (!roomHideAt) return;
-    const hideMs = parseBDDate(roomHideAt).getTime();
-    const delay = hideMs - Date.now();
-    if (delay <= 0) { setIsClosed(true); return; }
-    const t = setTimeout(() => setIsClosed(true), delay);
-    return () => clearTimeout(t);
-  }, [roomHideAt]);
-
-  if (isClosed) {
+// Wraps the credential / lock block for a match. Hiding is decided ONLY by the
+// server's explicit `roomHidden` flag (via `roomVisible`/`status` in the match
+// payload) — never by a client-side clock. This component simply passes
+// children through; the parent already switches views based on server data.
+function MatchHideTimer({ roomHidden, children }: { roomHidden?: boolean; children: React.ReactNode }) {
+  if (roomHidden) {
     return (
       <div className="mt-2.5 flex items-center gap-2.5 bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2.5">
         <Lock className="w-4 h-4 text-gray-400 shrink-0" />
         <div>
           <div className="text-gray-300 font-bold text-sm">Room details are now closed.</div>
-          <div className="text-[#a0a0b0] text-xs mt-0.5">The match has ended. Results will be published shortly.</div>
+          <div className="text-[#a0a0b0] text-xs mt-0.5">The admin has hidden the room. Results will be published shortly.</div>
         </div>
       </div>
     );
@@ -812,7 +800,7 @@ export default function TournamentDetailPage() {
                     {/* Stage 3: Credentials visible to joined players — wrapped in MatchHideTimer
                         so the "Room details are now closed" message fires client-side exactly
                         when roomHideAt is reached, without waiting for the 30 s poll. */}
-                    <MatchHideTimer roomHideAt={match.roomHideAt}>
+                    <MatchHideTimer roomHidden={match.roomHidden}>
                       {match.roomVisible && match.roomId && isJoined ? (
                         <div className="grid grid-cols-2 gap-2.5 mt-2.5">
                           <div className="bg-[#0a0a0f]/60 rounded-lg p-2.5 border border-green-500/20">
@@ -858,7 +846,7 @@ export default function TournamentDetailPage() {
                           <div>
                             <div className="text-orange-400 font-black text-sm">Room Not Released Yet</div>
                             <div className="text-orange-300/70 text-xs mt-0.5">
-                              Releasing Soon — stay on this page. Room ID &amp; Password will appear here automatically.
+                              The admin hasn't released the room yet. Room ID &amp; Password will appear here the moment it's released.
                             </div>
                           </div>
                         </div>
@@ -961,8 +949,8 @@ export default function TournamentDetailPage() {
                             <span className="text-base shrink-0">🔒</span>
                             <div className="text-[#a0a0b0] text-xs leading-relaxed">
                               {isJoined
-                                ? "Room ID & Password will be revealed automatically here when the release timer hits zero."
-                                : "Join the tournament to see Room ID & Password when they are released."}
+                                ? "Room ID & Password will appear here once the admin releases the room."
+                                : "Join the tournament to see Room ID & Password when the admin releases them."}
                             </div>
                           </div>
                           {/* Dedicated room release countdown — visible to ALL users (joined or not) */}
@@ -995,10 +983,8 @@ export default function TournamentDetailPage() {
                       </div>
                       <div className="text-[#a0a0b0] text-xs">{formatBDDate(match.scheduledAt)}</div>
                     </div>
-                    {/* Stage 4 message: "Room details are now closed" when roomHideAt just
-                        passed; otherwise the generic "Match Ended" waiting state. */}
-                    {match.roomHideAt && Date.now() >= new Date(match.roomHideAt).getTime()
-                      && (Date.now() - new Date(match.roomHideAt).getTime()) < 4 * 60 * 60 * 1000 ? (
+                    {/* Stage 4 message: explicit roomHidden flag decides the copy — never time-based. */}
+                    {match.roomHidden ? (
                       <div className="flex items-center gap-2.5 bg-gray-500/10 border border-gray-500/20 rounded-lg px-3 py-2.5">
                         <Lock className="w-4 h-4 text-gray-400 shrink-0" />
                         <div>

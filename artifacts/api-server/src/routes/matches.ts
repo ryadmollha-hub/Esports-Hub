@@ -10,101 +10,40 @@ import { updateRatingsFromMatch } from "../lib/ratingEngine";
 
 const router: IRouter = Router();
 
-// Helper: compute effective match status, room visibility, and whether the
-// release window has opened (even when admin hasn't submitted credentials yet).
+// ─── Explicit, decoupled lifecycle ──────────────────────────────────────────
+// Each state below is a distinct, independently-controlled flag. NONE of them
+// is inferred from another, and NONE of them is inferred from wall-clock time
+// except `matchLive`, which the scheduler (or an admin) may flip on once
+// `scheduledAt` has passed — this never touches room/registration/completion.
 //
-// 5-Stage Tournament Lifecycle (Bangladesh Time — UTC+6):
-//   Phase 1 UPCOMING       — scheduledAt > now                           (room hidden)
-//   Phase 2 ROOM OPENING   — (scheduledAt-5min) <= now < scheduledAt     (window open, creds may or may not be set)
-//   Phase 3 LIVE           — scheduledAt <= now <= scheduledAt+2h         (room visible if creds set)
-//   Phase 4 COMPLETED      — admin sets completed OR now > scheduledAt+2h (room hidden, show "Ended" msg)
-//   Phase 5 RESULT PUBLISHED — admin submits scores                       (leaderboard visible)
+//   registrationOpen — lives on the tournament (tournamentsTable.registrationClosed);
+//                       toggled ONLY by an explicit admin action.
+//   matchCreated      — a row exists in matchesTable. Creating it sets nothing else.
+//   roomReleased      — matchesTable.roomReleased. Set ONLY by POST /matches/:id/release-room.
+//   roomVisible       — derived read-only view: roomReleased && !roomHidden && roomId is set.
+//   matchLive         — matchesTable.matchLive. Set by POST /matches/:id/start OR by the
+//                       scheduler once scheduledAt passes (never implies room release).
+//   matchCompleted    — matchesTable.status === "completed". Set ONLY by an explicit
+//                       "Complete Match" / results-submission admin action.
 //
-// Key fields returned:
-//   roomVisible    — true only when creds exist AND timing window is active
-//   roomWindowOpen — true when the release window has started, even if creds not set yet
-//                    (lets frontend show "⏳ Room Not Released Yet" placeholder)
-//   effectiveStatus — computed status string used for display and DB sync
-// Convert a Date object or string to Unix epoch milliseconds.
-// Drizzle returns timestamp columns as Date objects; guards against the rare
-// case where the pg driver returns a raw string (e.g. "2026-07-07 11:39:53.649").
-// Using explicit epoch ms throughout ensures comparison is never ambiguous.
-function toEpochMs(d: Date | string | null | undefined): number {
-  if (!d) return NaN;
-  if (d instanceof Date) return d.getTime();
-  // Parse ISO strings (with Z / +offset) as-is; naive strings are stored as UTC on this server
-  return new Date(d).getTime();
-}
-
-// tournamentStartMs is the parent tournament's startDate as UTC epoch ms.
-// A match MUST NOT become "live" before the tournament officially begins,
-// regardless of the match's own scheduledAt value.
-function computeMatchVisibility(
-  match: typeof matchesTable.$inferSelect,
-  tournamentStartMs?: number,
-) {
-  const nowMs = Date.now(); // always UTC epoch ms — cannot be affected by server timezone
-
-  const startMs = toEpochMs(match.scheduledAt);
-
-  // Guard: if parsed timestamps are NaN (corrupt/missing data) treat the match
-  // as safely upcoming so it never gets silently promoted to live or completed.
-  if (!Number.isFinite(startMs)) {
-    return { roomVisible: false, roomWindowOpen: false, effectiveStatus: match.status as string };
-  }
-  if (tournamentStartMs != null && !Number.isFinite(tournamentStartMs)) {
-    tournamentStartMs = undefined;
-  }
-
-  // A match may ONLY become LIVE when BOTH its own scheduledAt AND the parent
-  // tournament's startTime have been reached. This prevents matches created before
-  // (or with scheduledAt equal to) the creation timestamp from instantly going LIVE
-  // while the tournament is still in its upcoming phase.
-  //
-  // This gate also corrects matches that were incorrectly promoted to "live" in the DB
-  // before the tournament started (e.g. due to a creation-time scheduledAt bug).
-  const liveThresholdMs = tournamentStartMs != null
-    ? Math.max(startMs, tournamentStartMs)
-    : startMs;
-
-  // Default hide time: 2 hours after the LIVE threshold (not raw scheduledAt).
-  // This prevents stale records (where scheduledAt << tournament start) from
-  // auto-completing before the tournament has even begun.
-  const hideMs = match.roomHideAt
-    ? toEpochMs(match.roomHideAt)
-    : liveThresholdMs + 2 * 60 * 60 * 1000;
-
-  // If already manually marked completed, honour it immediately.
+// `effectiveStatus` below is a friendly label DERIVED for display only; it never
+// writes back to the DB and never causes a state transition on its own.
+function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
   if (match.status === "completed") {
     return { roomVisible: false, roomWindowOpen: false, effectiveStatus: "completed" as string };
   }
 
-  // Default release: 5 minutes before the live threshold (Phase 2 boundary).
-  const releaseMs = match.roomReleaseAt
-    ? toEpochMs(match.roomReleaseAt)
-    : liveThresholdMs - 5 * 60 * 1000;
+  const roomVisible = !!(match.roomReleased && !match.roomHidden && match.roomId);
+  // roomWindowOpen: the release stage has been explicitly entered by the admin,
+  // even if credentials aren't visible right now (e.g. briefly hidden).
+  const roomWindowOpen = !!(match.roomReleased && !match.roomHidden);
 
-  let roomVisible = false;
-  let roomWindowOpen = false;
-  let effectiveStatus: string = match.status;
-
-  if (nowMs >= hideMs) {
-    // Phase 4: past the hide/end time → auto-complete, hide room
-    effectiveStatus = "completed";
-    roomVisible = false;
-    roomWindowOpen = false;
-  } else if (nowMs >= releaseMs) {
-    // Phase 2 / 3: within the release window
-    roomWindowOpen = true;
-    if (match.roomId) {
-      // Admin has submitted credentials — show them
-      roomVisible = true;
-    }
-    if (effectiveStatus === "scheduled" || effectiveStatus === "room_released" || effectiveStatus === "live") {
-      effectiveStatus = nowMs >= liveThresholdMs ? "live" : "room_released";
-    }
+  let effectiveStatus: string = "scheduled";
+  if (match.matchLive) {
+    effectiveStatus = "live";
+  } else if (match.roomReleased) {
+    effectiveStatus = "room_released";
   }
-  // else Phase 1: Coming Soon — room hidden, window not open
 
   return { roomVisible, roomWindowOpen, effectiveStatus };
 }
@@ -114,15 +53,6 @@ function computeMatchVisibility(
 router.get("/tournaments/:id/matches", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-
-    // Fetch tournament startDate so computeMatchVisibility can enforce the rule:
-    // a match must NEVER become "live" before its parent tournament has started.
-    const [tournament] = await db
-      .select({ id: tournamentsTable.id, startDate: tournamentsTable.startDate })
-      .from(tournamentsTable)
-      .where(eq(tournamentsTable.id, id));
-
-    const tournamentStartMs = tournament?.startDate ? toEpochMs(tournament.startDate) : undefined;
 
     const matches = await db
       .select()
@@ -138,32 +68,17 @@ router.get("/tournaments/:id/matches", async (req, res) => {
           .where(eq(matchResultsTable.matchId, m.id))
           .orderBy(matchResultsTable.rank);
 
-        const { roomVisible, roomWindowOpen, effectiveStatus } = computeMatchVisibility(m, tournamentStartMs);
-
-        // Auto-sync DB status when the computed status differs from what's stored.
-        // Forward transitions (scheduled/room_released → live → completed) are written normally.
-        // Reverse correction (live → room_released): occurs when a match was incorrectly
-        // auto-promoted to "live" before the tournament's startTime was reached; correct it now.
-        if (effectiveStatus !== m.status) {
-          if (
-            effectiveStatus === "live" ||
-            effectiveStatus === "completed" ||
-            (m.status === "live" && effectiveStatus === "room_released")
-          ) {
-            await db.update(matchesTable)
-              .set({ status: effectiveStatus })
-              .where(eq(matchesTable.id, m.id));
-          }
-        }
+        // Purely read-only derivation — never writes back to the DB from a GET request.
+        const { roomVisible, roomWindowOpen, effectiveStatus } = computeMatchVisibility(m);
 
         return {
           ...m,
           status: effectiveStatus,
           roomId: roomVisible ? m.roomId : null,
           roomPassword: roomVisible ? m.roomPassword : null,
-          roomSet: !!(m.roomId),   // true if admin has saved credentials, regardless of visibility timing
+          roomSet: !!(m.roomId),   // true if admin has saved credentials, regardless of release state
           roomVisible,
-          roomWindowOpen,          // true when the 5-min release window is active (even if creds not set)
+          roomWindowOpen,          // true once the admin has explicitly released the room (and not hidden it)
           results,
         };
       })
@@ -205,14 +120,11 @@ router.get("/matches/live", async (_req, res) => {
       .orderBy(matchesTable.scheduledAt);
 
     // Filter for live matches and attach visibility info.
-    // Includes both "live" (Phase 3) and "room_released" (Phase 2) so players
-    // can see the Room Released → Match Live transition without a page change.
+    // Includes both "live" and "room_released" so players can see the
+    // Room Released → Match Live transition without a page change.
     const liveMatches = matches
       .map((m) => {
-        const tStartMs = (m.tournament as any)?.startDate
-          ? toEpochMs((m.tournament as any).startDate)
-          : undefined;
-        const { roomVisible, roomWindowOpen, effectiveStatus } = computeMatchVisibility(m as any, tStartMs);
+        const { roomVisible, roomWindowOpen, effectiveStatus } = computeMatchVisibility(m as any);
         return {
           ...m,
           status: effectiveStatus,
@@ -237,7 +149,10 @@ router.post("/tournaments/:id/matches", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
   try {
     const id = parseInt(req.params.id);
-    const { matchNumber, scheduledAt, mapName, status, roomId, roomPassword, roomReleaseAt } = req.body;
+    // NOTE: creating a match ONLY records its number/time/map. It must never
+    // release the room, close registration, mark the match live, or otherwise
+    // touch any other lifecycle field.
+    const { matchNumber, scheduledAt, mapName, roomId, roomPassword, roomReleaseAt } = req.body;
 
     const parsedMatchNumber = parseInt(matchNumber, 10);
     if (!matchNumber || isNaN(parsedMatchNumber) || parsedMatchNumber < 1) {
@@ -246,7 +161,7 @@ router.post("/tournaments/:id/matches", async (req, res) => {
 
     // Validate that the tournament exists.
     const [tournament] = await db
-      .select({ id: tournamentsTable.id, startDate: tournamentsTable.startDate })
+      .select({ id: tournamentsTable.id })
       .from(tournamentsTable)
       .where(eq(tournamentsTable.id, id));
 
@@ -254,24 +169,10 @@ router.post("/tournaments/:id/matches", async (req, res) => {
       return res.status(404).json({ error: "Tournament not found." });
     }
 
-    // When scheduledAt is omitted (or invalid), default to the current server time.
-    // This is safe from the "instant LIVE" bug: computeMatchVisibility() always gates
-    // the live threshold at max(match.scheduledAt, tournament.startDate), so a match
-    // can never go live before the parent tournament officially starts, no matter
-    // what scheduledAt defaults to here.
     const parsedScheduledAt = scheduledAt ? new Date(scheduledAt) : null;
     const scheduledAtDate = parsedScheduledAt && !isNaN(parsedScheduledAt.getTime())
       ? parsedScheduledAt
       : new Date();
-
-
-    // Default roomReleaseAt: 5 minutes before scheduledAt if not provided (Phase 2 boundary)
-    let releaseAt: Date | null = null;
-    if (roomReleaseAt) {
-      releaseAt = new Date(roomReleaseAt);
-    } else if (roomId) {
-      releaseAt = new Date(scheduledAtDate.getTime() - 5 * 60 * 1000);
-    }
 
     // Auto-generate permanent serial number (T-0001, T-0002, …)
     const serialNumber = await nextMatchSerial("tournament");
@@ -283,11 +184,18 @@ router.post("/tournaments/:id/matches", async (req, res) => {
         matchNumber: parsedMatchNumber,
         serialNumber,
         scheduledAt: scheduledAtDate,
-        status: status ?? "scheduled",
+        status: "scheduled",
         mapName: mapName ?? null,
+        // Room ID/password may be pre-filled here for convenience, but this NEVER
+        // releases them — roomReleased stays false until the admin explicitly
+        // clicks "Release Room".
         roomId: roomId ?? null,
         roomPassword: roomPassword ?? null,
-        roomReleaseAt: releaseAt,
+        // roomReleaseAt is purely an informational target time for the countdown UI.
+        roomReleaseAt: roomReleaseAt ? new Date(roomReleaseAt) : null,
+        roomReleased: false,
+        roomHidden: false,
+        matchLive: false,
       })
       .returning();
     res.status(201).json(match);
@@ -303,20 +211,13 @@ router.patch("/matches/:id", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
   try {
     const id = parseInt(req.params.id);
+    // NOTE: this endpoint edits basic match metadata only (number/time/map/room
+    // data fields). It must never toggle roomReleased, roomHidden, matchLive, or
+    // registration — those are explicit actions via their own endpoints below.
     const { matchNumber, scheduledAt, mapName, status, roomId, roomPassword, roomReleaseAt } = req.body;
 
     const [existing] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
     if (!existing) return res.status(404).json({ error: "Match not found." });
-
-    // Recalculate roomReleaseAt when roomId is set and scheduledAt changes
-    let newReleaseAt = existing.roomReleaseAt;
-    if (roomReleaseAt !== undefined) {
-      newReleaseAt = roomReleaseAt ? new Date(roomReleaseAt) : null;
-    } else if (roomId && scheduledAt) {
-      newReleaseAt = new Date(new Date(scheduledAt).getTime() - 5 * 60 * 1000);
-    } else if (roomId && !roomReleaseAt && existing.scheduledAt) {
-      newReleaseAt = new Date(new Date(existing.scheduledAt).getTime() - 5 * 60 * 1000);
-    }
 
     const [updated] = await db
       .update(matchesTable)
@@ -324,10 +225,12 @@ router.patch("/matches/:id", async (req, res) => {
         ...(matchNumber !== undefined && { matchNumber: parseInt(matchNumber) }),
         ...(scheduledAt && { scheduledAt: new Date(scheduledAt) }),
         ...(mapName !== undefined && { mapName }),
+        // "status" here is only accepted as an explicit admin override (e.g. manually
+        // marking a match completed from this generic endpoint); it never auto-derives.
         ...(status && { status }),
         ...(roomId !== undefined && { roomId: roomId || null }),
         ...(roomPassword !== undefined && { roomPassword: roomPassword || null }),
-        roomReleaseAt: newReleaseAt,
+        ...(roomReleaseAt !== undefined && { roomReleaseAt: roomReleaseAt ? new Date(roomReleaseAt) : null }),
       })
       .where(eq(matchesTable.id, id))
       .returning();
@@ -364,53 +267,58 @@ router.patch("/matches/:id", async (req, res) => {
 
 // ─── Set room details for a match (admin) ────────────────────────────────────
 
+// This ONLY stores room data + an informational target release time for the
+// countdown UI. It NEVER reveals credentials — that requires the explicit
+// "Release Room" action below.
 router.patch("/matches/:id/room", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
   try {
     const id = parseInt(req.params.id);
-    const { roomId, roomPassword, roomReleaseMinutesBefore, roomHideMinutesAfter } = req.body;
+    const { roomId, roomPassword, roomReleaseAt } = req.body;
 
     const [existing] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
     if (!existing) return res.status(404).json({ error: "Match not found." });
-
-    // Release time: N minutes BEFORE scheduledAt (default 5 min before — Phase 2 boundary)
-    const minutesBefore = roomReleaseMinutesBefore ?? 5;
-    const releaseAt = minutesBefore === -1
-      ? new Date() // -1 = manual/immediate release
-      : new Date(new Date(existing.scheduledAt).getTime() - minutesBefore * 60 * 1000);
-
-    // Hide time: N minutes AFTER scheduledAt, or null = auto-hide at scheduledAt
-    let hideAt: Date | null = null;
-    if (roomHideMinutesAfter != null) {
-      hideAt = new Date(new Date(existing.scheduledAt).getTime() + Number(roomHideMinutesAfter) * 60 * 1000);
-    }
 
     const [updated] = await db
       .update(matchesTable)
       .set({
         roomId: roomId ?? null,
         roomPassword: roomPassword ?? null,
-        roomReleaseAt: releaseAt,
-        roomHideAt: hideAt,
-        // Reset notification guard whenever room credentials are re-saved
-        // so the scheduler can re-fire if the room was updated
-        roomNotifiedAt: null,
+        // Purely informational — drives the "Room Releases In" countdown only.
+        roomReleaseAt: roomReleaseAt ? new Date(roomReleaseAt) : null,
       })
       .where(eq(matchesTable.id, id))
       .returning();
 
     res.json({ success: true, match: updated });
+  } catch {
+    res.status(500).json({ error: "Failed to update room details." });
+  }
+});
 
-    // ── Trigger A: immediate notification when room is released right now ──
-    // (minutesBefore === -1 means "Now" — release time is already in the past)
-    if (minutesBefore === -1 && updated.roomId) {
+// ─── Release room (admin) — the ONLY action that reveals credentials ─────────
+
+router.post("/matches/:id/release-room", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
+    if (!existing) return res.status(404).json({ error: "Match not found." });
+    if (!existing.roomId) {
+      return res.status(400).json({ error: "Set the Room ID (and password) before releasing the room." });
+    }
+
+    const now = new Date();
+    const [updated] = await db
+      .update(matchesTable)
+      .set({ roomReleased: true, roomHidden: false, roomNotifiedAt: existing.roomNotifiedAt ?? now })
+      .where(eq(matchesTable.id, id))
+      .returning();
+
+    res.json({ success: true, match: updated });
+
+    if (!existing.roomNotifiedAt) {
       try {
-        const now = new Date();
-        // Mark as notified immediately so the scheduler skips this match
-        await db.update(matchesTable)
-          .set({ roomNotifiedAt: now })
-          .where(and(eq(matchesTable.id, id)));
-
         const registrants = await db
           .select({ userId: registrationsTable.userId })
           .from(registrationsTable)
@@ -427,14 +335,57 @@ router.patch("/matches/:id/room", async (req, res) => {
             `আপনার টুর্নামেন্ট Match #${updated.matchNumber} এর রুম আইডি ও পাসওয়ার্ড রিলিজ করা হয়েছে। জলদি চেক করে কাস্টম রুমে জয়েন করুন!`,
             "success",
           );
-          logger.info({ matchId: id, userCount: userIds.length }, "Immediate room-open notifications sent");
+          logger.info({ matchId: id, userCount: userIds.length }, "Room-release notifications sent");
         }
       } catch (err) {
-        logger.error({ err }, "Failed to send immediate room notifications");
+        logger.error({ err }, "Failed to send room-release notifications");
       }
     }
   } catch {
-    res.status(500).json({ error: "Failed to update room details." });
+    res.status(500).json({ error: "Failed to release room." });
+  }
+});
+
+// ─── Hide room credentials (admin, optional) ─────────────────────────────────
+
+router.post("/matches/:id/hide-room", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
+    if (!existing) return res.status(404).json({ error: "Match not found." });
+    const [updated] = await db
+      .update(matchesTable)
+      .set({ roomHidden: true })
+      .where(eq(matchesTable.id, id))
+      .returning();
+    res.json({ success: true, match: updated });
+  } catch {
+    res.status(500).json({ error: "Failed to hide room." });
+  }
+});
+
+// ─── Start match (admin, manual) ─────────────────────────────────────────────
+// Normally the scheduler flips matchLive once scheduledAt passes; this lets an
+// admin start early. It never touches room state or registration.
+
+router.post("/matches/:id/start", async (req, res) => {
+  if (!await requireAdmin(req, res)) return;
+  try {
+    const id = parseInt(req.params.id);
+    const [existing] = await db.select().from(matchesTable).where(eq(matchesTable.id, id));
+    if (!existing) return res.status(404).json({ error: "Match not found." });
+    if (existing.status === "completed") {
+      return res.status(400).json({ error: "Match is already completed." });
+    }
+    const [updated] = await db
+      .update(matchesTable)
+      .set({ matchLive: true, status: "live" })
+      .where(eq(matchesTable.id, id))
+      .returning();
+    res.json({ success: true, match: updated });
+  } catch {
+    res.status(500).json({ error: "Failed to start match." });
   }
 });
 
@@ -448,7 +399,15 @@ router.delete("/matches/:id/room", async (req, res) => {
     if (!existing) return res.status(404).json({ error: "Match not found." });
     await db
       .update(matchesTable)
-      .set({ roomId: null, roomPassword: null, roomReleaseAt: null, roomHideAt: null })
+      .set({
+        roomId: null,
+        roomPassword: null,
+        roomReleaseAt: null,
+        roomHideAt: null,
+        roomReleased: false,
+        roomHidden: false,
+        roomNotifiedAt: null,
+      })
       .where(eq(matchesTable.id, id));
     res.json({ success: true });
   } catch {
@@ -478,12 +437,12 @@ router.patch("/matches/:id/results", async (req, res) => {
       return res.status(400).json({ error: "results array is required." });
     }
 
-    // Mark match completed and hide room details
+    // Mark match completed and hide room credentials (data is kept for records,
+    // only its visibility is turned off — an explicit part of this same admin action).
     await db.update(matchesTable)
       .set({
         status: "completed",
-        roomId: null,
-        roomPassword: null,
+        roomHidden: true,
       })
       .where(eq(matchesTable.id, id));
 
@@ -697,9 +656,9 @@ router.patch("/admin/matches/:id/team-results", async (req, res) => {
     // Insert wallet transactions
     if (walletInserts.length > 0) await db.insert(walletTransactionsTable).values(walletInserts);
 
-    // Mark match completed
+    // Mark match completed and hide room credentials (kept for records, only hidden)
     await db.update(matchesTable)
-      .set({ status: "completed" })
+      .set({ status: "completed", roomHidden: true })
       .where(eq(matchesTable.id, id));
 
     // Cascade tournament resultsPublished
@@ -780,10 +739,7 @@ router.get("/matches/schedule", async (_req, res) => {
     // Attach results for completed matches, apply visibility rules
     const result = await Promise.all(
       matches.map(async (m) => {
-        const tStartMs = (m.tournament as any)?.startDate
-          ? toEpochMs((m.tournament as any).startDate)
-          : undefined;
-        const { roomVisible, effectiveStatus } = computeMatchVisibility(m as any, tStartMs);
+        const { roomVisible, effectiveStatus } = computeMatchVisibility(m as any);
         let matchResults: any[] = [];
         if (m.status === "completed") {
           matchResults = await db
