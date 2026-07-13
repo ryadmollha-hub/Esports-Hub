@@ -1,0 +1,1 @@
+- [Orval api-zod barrel collision](orval-api-zod-barrel-collision.md) — some Orval versions auto-append a `generated/types` re-export that collides with `generated/api`; causes TS2308 after every codegen run.
