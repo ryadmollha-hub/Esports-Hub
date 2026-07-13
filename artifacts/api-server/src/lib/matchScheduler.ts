@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
-import { userMatchesTable, matchesTable, registrationsTable } from "@workspace/db";
-import { lt, lte, gte, and, ne, eq, isNull } from "drizzle-orm";
+import { userMatchesTable, matchesTable, registrationsTable, tournamentsTable } from "@workspace/db";
+import { lt, lte, gte, and, ne, eq, isNull, isNotNull } from "drizzle-orm";
 import { logger } from "./logger";
 import { bulkCreateNotifications } from "./notificationHelper";
 
@@ -28,11 +28,72 @@ export function startMatchScheduler(): void {
         logger.info({ count: expired.length, ids: expired.map((r) => r.id) }, "Auto-expired matches by roomHideTime");
       }
 
-      // NOTE: room release is NEVER time-driven. Credentials only become visible
-      // when an admin explicitly calls POST /matches/:id/release-room (which also
-      // sends the "room ready" notification itself, once, at that moment). The
-      // scheduler must not reveal or notify about rooms based on roomReleaseAt —
-      // that field is purely an informational countdown target for the UI.
+      // ── 1b. Auto-release rooms whose configured roomReleaseAt has passed ──
+      // Mirrors exactly what POST /matches/:id/release-room does manually:
+      // reveal credentials (roomReleased=true) and close registration for the
+      // parent tournament, bundled into one automatic step once the admin's
+      // chosen release time arrives. Requires roomId to already be set (the
+      // admin must have saved credentials first) and skips matches that are
+      // already released/hidden/completed so this only ever fires once.
+      // (computeMatchVisibility in routes/matches.ts also derives visibility
+      // from roomReleaseAt directly, so players see credentials the instant
+      // their countdown hits zero — this write is the durable follow-up that
+      // keeps roomReleased/registrationClosed consistent in the DB.)
+      const dueRooms = await db
+        .update(matchesTable)
+        .set({ roomReleased: true, roomHidden: false })
+        .where(
+          and(
+            isNotNull(matchesTable.roomReleaseAt),
+            lte(matchesTable.roomReleaseAt, now),
+            isNotNull(matchesTable.roomId),
+            eq(matchesTable.roomReleased, false),
+            eq(matchesTable.roomHidden, false),
+            ne(matchesTable.status, "completed"),
+          ),
+        )
+        .returning({ id: matchesTable.id, tournamentId: matchesTable.tournamentId, roomNotifiedAt: matchesTable.roomNotifiedAt });
+
+      for (const room of dueRooms) {
+        try {
+          await db
+            .update(tournamentsTable)
+            .set({ registrationClosed: true })
+            .where(eq(tournamentsTable.id, room.tournamentId));
+
+          if (!room.roomNotifiedAt) {
+            await db
+              .update(matchesTable)
+              .set({ roomNotifiedAt: now })
+              .where(and(eq(matchesTable.id, room.id), isNull(matchesTable.roomNotifiedAt)));
+
+            const registrants = await db
+              .select({ userId: registrationsTable.userId })
+              .from(registrationsTable)
+              .where(
+                and(
+                  eq(registrationsTable.tournamentId, room.tournamentId),
+                  eq(registrationsTable.status, "approved"),
+                ),
+              );
+            const userIds = [...new Set(registrants.map((r) => r.userId))];
+            if (userIds.length > 0) {
+              await bulkCreateNotifications(
+                userIds,
+                "রুম আইডি রিলিজ হয়েছে! 🔑",
+                "রুম আইডি ও পাসওয়ার্ড এখন দেখা যাচ্ছে। এখনই ম্যাচে যোগ দিন!",
+                "info",
+              );
+            }
+          }
+        } catch (err) {
+          logger.error({ err, matchId: room.id }, "Failed post-auto-release steps for match");
+        }
+      }
+
+      if (dueRooms.length > 0) {
+        logger.info({ count: dueRooms.length, ids: dueRooms.map((r) => r.id) }, "Auto-released rooms whose roomReleaseAt has passed");
+      }
 
       // ── 2. Auto match-live: the ONE permitted automatic transition ────────
       // Once scheduledAt has passed, flip matchLive true. This never touches

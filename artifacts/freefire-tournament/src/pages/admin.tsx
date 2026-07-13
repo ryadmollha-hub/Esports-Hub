@@ -298,10 +298,11 @@ export default function AdminPage() {
   }, [apiFetch, tournamentMatchForms, toast, loadTournamentMatchesById]);
 
   // Saves room ID/password + a required release-timing choice (5 min before match,
-  // 10 min before match, or a custom time). This NEVER reveals credentials or closes
-  // registration by itself — saving only sets the informational countdown target the
-  // admin picked. The admin must separately click "Release Room" to actually reveal
-  // credentials (which is also the ONLY action that closes registration).
+  // 10 min before match, or a custom time). Saving itself never reveals credentials
+  // or closes registration — it only sets the roomReleaseAt target. The room is then
+  // released automatically once that time arrives (server-side scheduler), which also
+  // closes registration. "Release Room" below remains available as a manual override
+  // for releasing early, before the configured time.
   const setTournamentMatchRoomCredentials = useCallback(async (tournamentId: number, matchId: number) => {
     const form = tournamentMatchRoomForms[matchId];
     if (!form?.roomId) {
@@ -2491,8 +2492,11 @@ export default function AdminPage() {
                                 No matches yet — add matches in <span className="text-[#ff6b00] font-bold">Create &amp; Manage Tournaments</span>.
                               </div>
                             ) : matches.map((m: any) => {
-                              // Every badge below reflects an EXPLICIT admin-controlled flag only —
-                              // never a time-based guess.
+                              // Every badge below reflects a real matchesTable flag — never a
+                              // client-side guess. roomReleased may flip to true either from an
+                              // explicit admin click or automatically once roomReleaseAt passes
+                              // (server-side scheduler), so this badge can lag the player-facing
+                              // view by up to ~60s while that write lands.
                               const statusBadge = m.status === "completed"
                                 ? <span className="text-[#a0a0b0] text-[10px] font-black border border-[#2a2a36] bg-[#0d0d16] px-1.5 py-0.5 rounded-full">✅ Completed</span>
                                 : m.matchLive
@@ -2630,10 +2634,10 @@ export default function AdminPage() {
                       </div>
                     </div>
 
-                    {/* Release timing is ONLY a countdown target for players to see. It is
-                        never automatic — the admin must still click "Release Room" below
-                        (on the match row) once ready. That click is also the only action
-                        that reveals credentials and closes registration. */}
+                    {/* Sets the roomReleaseAt countdown target. The room releases
+                        automatically once that time arrives (also closing registration).
+                        "Release Room" on the match row still works as a manual override
+                        to release early. */}
                     <div>
                       <label className="text-[#606070] text-[10px] uppercase font-bold block mb-1">Room Release Time</label>
                       <div className="flex gap-1.5 flex-wrap">
@@ -2666,7 +2670,7 @@ export default function AdminPage() {
                         </div>
                       )}
                       <p className="text-[#606070] text-[11px] mt-1.5 leading-relaxed">
-                        This only sets the "Room Releases In" countdown players see. Credentials stay hidden — and registration stays open — until you click <span className="text-orange-400 font-bold">🔑 Release</span> on the match row.
+                        Sets the "Room Releases In" countdown players see. Credentials release automatically — and registration closes — once this time arrives. Use <span className="text-orange-400 font-bold">🔑 Release</span> on the match row if you need to release earlier.
                       </p>
                     </div>
                   </div>

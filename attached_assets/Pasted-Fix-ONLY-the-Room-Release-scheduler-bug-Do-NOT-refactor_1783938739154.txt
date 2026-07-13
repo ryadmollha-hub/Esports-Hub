@@ -1,0 +1,42 @@
+Fix ONLY the Room Release scheduler bug. Do NOT refactor or modify any unrelated code.
+
+Current behavior:
+- Tournament creation works.
+- Match creation works.
+- Room ID and Password are saved correctly.
+- Release time (5 min, 10 min, or Custom) is saved.
+- Countdown sometimes appears correctly.
+- However, when the countdown reaches zero, Room ID & Password never become visible to players.
+- Sometimes the countdown does not appear at all when using Custom Release Time.
+
+Your task is ONLY to find and fix the bug.
+
+Check the following carefully:
+
+1. Verify that the selected release time is correctly saved in the database.
+2. Verify that the frontend and backend use the same field name for the room release timestamp.
+3. Verify that the countdown reads the correct release timestamp.
+4. When current time >= release time, automatically update:
+   - roomReleased = true
+   - roomVisible = true
+   - registrationClosed = true
+5. Ensure the player API returns roomReleased=true after automatic release.
+6. Ensure the tournament details page immediately displays the Room ID and Password once roomReleased becomes true.
+7. Fix the Custom Release Time countdown so it always appears and counts down correctly.
+8. Do not require any manual Release button when a release time has been configured. Automatic release must happen exactly when the configured release time is reached.
+
+Important:
+- Do NOT change tournament lifecycle.
+- Do NOT modify wallet, authentication, users, payments, rankings, notifications, translations, admin permissions, APIs, or database schema unless absolutely necessary.
+- Do NOT refactor unrelated files.
+- Preserve all existing functionality.
+
+After fixing, verify this exact flow:
+
+Admin saves Room ID + Password
+→ Admin selects Release Time
+→ Countdown appears
+→ Countdown reaches zero
+→ roomReleased becomes true automatically
+→ Registration closes automatically
+→ Room ID & Password become visible immediately without refreshing the page.

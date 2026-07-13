@@ -19,10 +19,14 @@ const router: IRouter = Router();
 //   registrationOpen — lives on the tournament (tournamentsTable.registrationClosed);
 //                       toggled by the explicit "Toggle Registration" admin action, OR
 //                       automatically closed (never re-opened) as a direct, bundled
-//                       consequence of the explicit "Release Room" click below.
+//                       consequence of the room being released (explicitly via
+//                       POST /matches/:id/release-room, or automatically once
+//                       roomReleaseAt passes — see matchScheduler.ts).
 //   matchCreated      — a row exists in matchesTable. Creating it sets nothing else.
-//   roomReleased      — matchesTable.roomReleased. Set ONLY by POST /matches/:id/release-room.
-//   roomVisible       — derived read-only view: roomReleased && !roomHidden && roomId is set.
+//   roomReleased      — matchesTable.roomReleased. Set by POST /matches/:id/release-room,
+//                       OR automatically by the scheduler once roomReleaseAt passes.
+//   roomVisible       — derived read-only view: (roomReleased || roomReleaseAt has
+//                       passed) && !roomHidden && roomId is set.
 //   matchLive         — matchesTable.matchLive. Set by POST /matches/:id/start OR by the
 //                       scheduler once scheduledAt passes (never implies room release).
 //   matchCompleted    — matchesTable.status === "completed". Set ONLY by an explicit
@@ -35,15 +39,25 @@ function computeMatchVisibility(match: typeof matchesTable.$inferSelect) {
     return { roomVisible: false, roomWindowOpen: false, effectiveStatus: "completed" as string };
   }
 
-  const roomVisible = !!(match.roomReleased && !match.roomHidden && match.roomId);
-  // roomWindowOpen: the release stage has been explicitly entered by the admin,
-  // even if credentials aren't visible right now (e.g. briefly hidden).
-  const roomWindowOpen = !!(match.roomReleased && !match.roomHidden);
+  // Automatic release: once the configured roomReleaseAt has passed, the room
+  // is effectively released even in the brief window before the 60s scheduler
+  // tick (see matchScheduler.ts) has persisted roomReleased=true to the DB.
+  // Computing it here too means the player-facing countdown hitting zero is
+  // reflected immediately on the very next fetch, with no dependency on
+  // scheduler timing and no page refresh required.
+  const releaseTimeReached = !!(match.roomReleaseAt && new Date(match.roomReleaseAt).getTime() <= Date.now());
+  const effectivelyReleased = !!(match.roomReleased || releaseTimeReached);
+
+  const roomVisible = !!(effectivelyReleased && !match.roomHidden && match.roomId);
+  // roomWindowOpen: the release stage has been entered (explicitly or because
+  // the configured release time has passed), even if credentials aren't
+  // visible right now (e.g. briefly hidden).
+  const roomWindowOpen = !!(effectivelyReleased && !match.roomHidden);
 
   let effectiveStatus: string = "scheduled";
   if (match.matchLive) {
     effectiveStatus = "live";
-  } else if (match.roomReleased) {
+  } else if (effectivelyReleased) {
     effectiveStatus = "room_released";
   }
 
@@ -298,12 +312,12 @@ router.patch("/matches/:id/room", async (req, res) => {
   }
 });
 
-// ─── Release room (admin) — the ONLY action that reveals credentials ─────────
-// This is also the ONLY action that closes registration for the match's
-// tournament: releasing the room and closing registration are bundled into
-// this single explicit admin click, never inferred from time or from any
-// other action. Registration stays open through match creation, room-time
-// configuration, etc. — right up until the admin actually releases the room.
+// ─── Release room (admin) — manual/early release ──────────────────────────────
+// Lets the admin reveal credentials (and close registration) immediately,
+// without waiting for the configured roomReleaseAt. The same release +
+// registration-close bundle also happens automatically once roomReleaseAt
+// passes — see the scheduler tick in matchScheduler.ts — so this button is an
+// override, not a requirement.
 
 router.post("/matches/:id/release-room", async (req, res) => {
   if (!await requireAdmin(req, res)) return;
